@@ -10,6 +10,8 @@ import {
   normalizeAccountUrl,
   normalizeBrowserProfileId,
   normalizeHost,
+  normalizeLoginUrl,
+  resolveLoginUrl,
   upsertSessionForContext,
   validateSessionForStaging,
 } from "../index.js";
@@ -18,6 +20,7 @@ const state = await loadInitialState();
 let activeMode = "draft_only";
 let activeDraft = null;
 let media = [];
+let browserZoom = Number(state.browserZoom || 0.85);
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -26,6 +29,7 @@ const els = {
   account: document.querySelector("#account-select"),
   accountHandle: document.querySelector("#account-handle"),
   accountUrl: document.querySelector("#account-url"),
+  accountLoginUrl: document.querySelector("#account-login-url"),
   accountHost: document.querySelector("#account-host"),
   accountProfile: document.querySelector("#account-profile"),
   activeTarget: document.querySelector("#active-target"),
@@ -65,8 +69,11 @@ document.querySelector("#approve-draft").addEventListener("click", approveDraft)
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
+document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
 document.querySelector("#exit-focus").addEventListener("click", () => setBrowserFocus(false));
+document.querySelector("#zoom-out").addEventListener("click", () => adjustBrowserZoom(-0.1));
+document.querySelector("#zoom-in").addEventListener("click", () => adjustBrowserZoom(0.1));
 document.querySelector("#check-session").addEventListener("click", checkSession);
 document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
@@ -151,11 +158,12 @@ function render() {
 }
 
 function renderAccountSettings(account) {
-  if (document.activeElement && ["account-handle", "account-url", "account-host", "account-profile"].includes(document.activeElement.id)) {
+  if (document.activeElement && ["account-handle", "account-url", "account-login-url", "account-host", "account-profile"].includes(document.activeElement.id)) {
     return;
   }
   els.accountHandle.value = account.handle || "";
   els.accountUrl.value = account.accountUrl || "";
+  els.accountLoginUrl.value = account.loginUrl || resolveLoginUrl(account);
   els.accountHost.value = account.expectedHost || "";
   els.accountProfile.value = account.browserProfileId || "";
 }
@@ -189,6 +197,7 @@ async function saveAccountSettings() {
   const previousProfile = account.browserProfileId;
   account.handle = els.accountHandle.value.trim();
   account.accountUrl = normalizeAccountUrl(els.accountUrl.value.trim(), account.platform);
+  account.loginUrl = normalizeLoginUrl(els.accountLoginUrl.value.trim(), account.platform);
   account.expectedHost = normalizeHost(els.accountHost.value.trim() || account.accountUrl);
   account.browserProfileId = normalizeBrowserProfileId(els.accountProfile.value.trim() || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
 
@@ -261,6 +270,7 @@ function replaceWebview(partition, src) {
   next.setAttribute("allowpopups", "");
   els.webview.replaceWith(next);
   els.webview = next;
+  wireWebviewEvents(next);
   requestAnimationFrame(sizeWebviewToShell);
 }
 
@@ -272,6 +282,17 @@ function openActiveAccount() {
   }
   els.webview.src = account.accountUrl || "about:blank";
   log(`Opened ${account.platform.toUpperCase()} account target.`);
+}
+
+function openLogin() {
+  const { account } = getActiveRows();
+  const loginUrl = resolveLoginUrl(account);
+  if (!loginUrl) {
+    log("Open login refused: login URL is not configured.");
+    return;
+  }
+  els.webview.src = loginUrl;
+  log(`Opened ${account.platform.toUpperCase()} login flow.`);
 }
 
 function checkSession() {
@@ -381,6 +402,27 @@ function setBrowserFocus(focused) {
   log(focused ? "Browser focus mode enabled." : "Browser focus mode closed.");
 }
 
+function wireWebviewEvents(webview) {
+  webview.addEventListener("dom-ready", () => {
+    applyBrowserZoom();
+    sizeWebviewToShell();
+  });
+}
+
+function applyBrowserZoom() {
+  if (typeof els.webview.setZoomFactor === "function") {
+    els.webview.setZoomFactor(browserZoom);
+  }
+}
+
+async function adjustBrowserZoom(delta) {
+  browserZoom = Math.min(1.4, Math.max(0.5, Number((browserZoom + delta).toFixed(2))));
+  state.browserZoom = browserZoom;
+  applyBrowserZoom();
+  await window.diamond.saveState(state);
+  log(`Browser zoom set to ${Math.round(browserZoom * 100)}%.`);
+}
+
 function sizeWebviewToShell() {
   const rect = els.browserShell.getBoundingClientRect();
   const width = Math.max(320, Math.floor(rect.width));
@@ -390,3 +432,5 @@ function sizeWebviewToShell() {
   els.webview.setAttribute("width", String(width));
   els.webview.setAttribute("height", String(height));
 }
+
+wireWebviewEvents(els.webview);

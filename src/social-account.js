@@ -9,6 +9,21 @@ export function normalizeAccountUrl(value, platform) {
   return `https://${raw}`;
 }
 
+export function defaultLoginUrlForPlatform(platform) {
+  return platform === "x" ? "https://x.com/i/flow/login" : "";
+}
+
+export function normalizeLoginUrl(value, platform) {
+  const raw = String(value || "").trim();
+  if (!raw) return defaultLoginUrlForPlatform(platform);
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+export function resolveLoginUrl(account) {
+  return normalizeLoginUrl(account?.loginUrl, account?.platform) || normalizeAccountUrl(account?.accountUrl, account?.platform);
+}
+
 export function normalizeHost(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";

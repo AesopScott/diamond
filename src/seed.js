@@ -35,6 +35,7 @@ export function createSeedWorkspace() {
         brandId: context.brandId,
         platform: context.platform,
         accountUrl: "https://x.com/",
+        loginUrl: "https://x.com/i/flow/login",
         expectedHost: "x.com",
         sessionStatus: "unknown",
         browserProfileId: context.browserProfileId,

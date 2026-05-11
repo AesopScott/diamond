@@ -7,11 +7,14 @@ import {
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
+  defaultLoginUrlForPlatform,
   getSessionForContext,
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
   normalizeBrowserProfileId,
   normalizeHost,
+  normalizeLoginUrl,
+  resolveLoginUrl,
   updateAccountSession,
   validateSessionForStaging,
 } from "../src/index.js";
@@ -70,6 +73,9 @@ assert.equal(inferSessionStatusFromUrl("https://x.com/login", workspace.socialAc
 assert.equal(inferSessionStatusFromUrl("https://x.com/home", workspace.socialAccounts[0]).status, "ready");
 assert.equal(normalizeAccountUrl("@TheCard", "x"), "https://x.com/TheCard");
 assert.equal(normalizeAccountUrl("thecard", "x"), "https://x.com/thecard");
+assert.equal(defaultLoginUrlForPlatform("x"), "https://x.com/i/flow/login");
+assert.equal(normalizeLoginUrl("", "x"), "https://x.com/i/flow/login");
+assert.equal(resolveLoginUrl(workspace.socialAccounts[0]), "https://x.com/i/flow/login");
 assert.equal(normalizeHost("https://www.x.com/thecard"), "x.com");
 assert.equal(normalizeBrowserProfileId("Aesop / The Card / X"), "aesop-the-card-x");
 

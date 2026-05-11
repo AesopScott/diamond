@@ -61,6 +61,10 @@
             <input id="account-url" type="url" placeholder="https://x.com/youraccount">
           </label>
           <label>
+            Login URL
+            <input id="account-login-url" type="url" placeholder="https://x.com/i/flow/login">
+          </label>
+          <label>
             Expected host
             <input id="account-host" type="text" placeholder="x.com">
           </label>
@@ -124,8 +128,11 @@
               <span>Visible Social Browser</span>
               <div class="browser-actions">
                 <button id="open-account" type="button">Open account</button>
+                <button id="open-login" type="button">Open login</button>
                 <button id="focus-browser" type="button">Focus browser</button>
                 <button id="exit-focus" class="hidden" type="button">Exit focus</button>
+                <button id="zoom-out" type="button" title="Zoom browser out">Zoom -</button>
+                <button id="zoom-in" type="button" title="Zoom browser in">Zoom +</button>
                 <button id="check-session" type="button">Check session</button>
                 <button id="mark-ready" type="button">Mark ready</button>
                 <button id="reload-webview" type="button">Reload</button>
