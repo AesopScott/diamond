@@ -53,6 +53,23 @@ Right: generated post package, approval controls, logs, and screenshots
 
 Each social account tab should open to the correct account/page/composer for the selected company. The AI can stage posts through the visible tab, but the user can take over at any time.
 
+## Confidence Proof Phase
+
+Before expanding beyond one platform, Diamond should prove the risky parts with a narrow validation sequence. This phase should happen after the multitenant data model is sketched and before Instagram/TikTok/LinkedIn work begins.
+
+| Proof Step | Goal | Confidence Impact |
+|---|---|---|
+| Inspect Polaris routines | Confirm how routines are defined, scheduled, and allowed to call local tools. | Raises confidence that Diamond can run inside Polaris cleanly. |
+| Confirm Firebase admin JSON path | Verify how Polaris loads the service account JSON and how Diamond should reuse it. | Removes backend credential uncertainty. |
+| Choose browser strategy | Decide Electron embedded browser, Playwright persistent Chromium, or hybrid. | Resolves the biggest architecture risk. |
+| Create one real X browser profile | Log in once, preserve session, and confirm no password storage is needed. | Validates account/session handling. |
+| Stage one X post | Fill composer, attach one rendered image, screenshot, and stop before publish. | Proves the assisted-posting workflow. |
+| Repeat staging 3 times | Run the same staged flow across separate sessions. | Proves the workflow is not a one-off. |
+| Verify tenant isolation | Confirm the staged post cannot use the wrong company/account/browser profile. | Proves multitenancy guardrails. |
+| Document failure modes | Capture login challenge, selector miss, media upload failure, account mismatch, and manual takeover behavior. | Makes the system operable instead of mysterious. |
+
+Confidence target: move from 7/10 to 8.5/10 before building additional platform routines, and toward 9/10 after repeated staging works with a real account.
+
 ## Posting Modes
 
 | Mode | Behavior |
@@ -110,6 +127,7 @@ All records must be company-scoped. The first implementation should prefer neste
 | P0 | Add multitenant company/brand/account model | Queued | Company is the root of all social objects. |
 | P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
 | P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
+| P0 | Run confidence proof phase | Queued | Polaris routines, Firebase admin JSON, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
 | P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |
