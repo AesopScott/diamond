@@ -28,6 +28,7 @@ companies/{companyId}
   brands/{brandId}
     socialAccounts/{accountId}
     campaigns/{campaignId}
+    scheduledPosts/{scheduledPostId}
     postDrafts/{draftId}
     postRuns/{runId}
     replies/{replyId}
@@ -123,6 +124,7 @@ Diamond is not only a posting robot. It should act as a multitenant social opera
 |---|---|---|
 | Content strategy | Define campaign goals, audience personas, content pillars, offers, CTAs, platform angles, competitor/reference accounts, and "why would anyone care?" checks. | P0 |
 | Editorial calendar | Plan post slots, themes, platform assignments, language variants, asset needs, and approval deadlines before routines generate drafts. | P0 |
+| Scheduled posts | Let operators schedule approved drafts, view upcoming posts on a calendar, and hand scheduled posts to routines at the right time. | P0 |
 | Brand library | Store company/brand voice, examples, banned phrases, founder voice rules, company voice rules, colors, fonts, logos, and links. | P0 |
 | Claim library | Store approved prize language, free-to-play language, regulatory disclaimers, banned claims, and requires-review claims. | P0 |
 | Human identity rules | Define when Diamond speaks as a company, founder, team member, or draft-only assistant. No fake personal anecdotes or fake customer claims. | P0 |
@@ -144,6 +146,7 @@ Routines should generate from the editorial calendar and strategy layer, not inv
 | `companyBrands` or nested `brands` | Brand voice, colors, links, languages, logo/media references. |
 | `socialAccounts` | Platform account/page metadata per company/brand. |
 | `socialCampaigns` | Campaign briefs, languages, CTAs, date windows. |
+| `scheduledPosts` | Approved drafts assigned to publish windows, calendar status, platform/account target, and routine handoff state. |
 | `socialPostDrafts` | Generated copy, assets, approval state, platform target. |
 | `socialPostRuns` | Routine executions, status, logs, screenshots, errors. |
 | `socialBrowserProfiles` | Metadata only for browser profile names and session state. No passwords. |
@@ -188,6 +191,7 @@ These controls are part of the build, not cleanup work. Each risk gets handled a
 | Embedded browser strategy fails | Electron browser tabs and Playwright control do not fit cleanly together. | Decide strategy during proof phase; allow hybrid embedded browser plus Playwright persistent profile. | P0 confidence proof. |
 | Platform/account risk | Automated behavior looks spammy or violates platform expectations. | Human-paced staging, no CAPTCHA/2FA bypass, no mass replies, no scraping, conservative cadence. | P0 guardrails and platform skills. |
 | Useless metrics | Posts go out but Diamond cannot learn what worked. | Log post package, URL, screenshot, campaign, tenant, and later metrics from day one. | P0 post run logging, P1 metrics logging. |
+| Schedule drift | Scheduled posts fire at the wrong time, wrong account, or after a campaign window closes. | Scheduled posts must store timezone, target tenant/account, status, campaign window, and routine handoff logs; calendar view must make conflicts visible. | P0 scheduling/calendar model. |
 | Firebase/admin exposure | Service account JSON or tenant data leaks into renderer/browser code. | Keep Firebase admin access server/local-tool side only; never expose service account to browser surfaces. | P0 Firebase admin path confirmation. |
 | Bland AI content | The system generates generic content at scale. | Platform skills require examples, voice rules, banned phrases, review feedback, and performance notes. | P0 `social-x` skill, P1 metrics loop. |
 
@@ -204,6 +208,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
 | P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
 | P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
+| P0 | Add Schedule Post button and scheduled-post records | Queued | Operators can schedule an approved draft for a specific date/time/account without publishing immediately. |
+| P0 | Add scheduled-post calendar view | Queued | Calendar shows upcoming scheduled posts by campaign, platform, account, status, and timezone. |
 | P0 | Add brand and claim libraries | Queued | Voice rules, approved language, banned claims, identity rules. |
 | P0 | Validate plan against Diamond reality | Queued | Inspect standalone app shell, Firebase admin JSON option, local hooks, Electron/browser patterns. |
 | P0 | Run confidence proof phase | Queued | Standalone app shell, Firebase admin option, browser strategy, repeated X staging. |
