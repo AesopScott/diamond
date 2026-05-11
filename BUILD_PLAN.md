@@ -90,6 +90,27 @@ Confidence target: move from 7/10 to 8.5/10 before building additional platform 
 | P3 | `social-facebook` | Community and group-friendly posts. |
 | P3 | `social-reddit-monitoring` | Monitor and suggest replies only. |
 
+## Social Operating Layer
+
+Diamond is not only a posting robot. It should act as a multitenant social operating system with strategy, governance, memory, approval, lead capture, and learning.
+
+| Layer | Purpose | Build Stage |
+|---|---|---|
+| Content strategy | Define campaign goals, audience personas, content pillars, offers, CTAs, platform angles, competitor/reference accounts, and "why would anyone care?" checks. | P0 |
+| Editorial calendar | Plan post slots, themes, platform assignments, language variants, asset needs, and approval deadlines before routines generate drafts. | P0 |
+| Brand library | Store company/brand voice, examples, banned phrases, founder voice rules, company voice rules, colors, fonts, logos, and links. | P0 |
+| Claim library | Store approved prize language, free-to-play language, regulatory disclaimers, banned claims, and requires-review claims. | P0 |
+| Human identity rules | Define when Diamond speaks as a company, founder, team member, or draft-only assistant. No fake personal anecdotes or fake customer claims. | P0 |
+| Asset management | Manage templates, sizes, safe zones, alt text, generated asset history, media library, do-not-use assets, and per-company asset permissions. | P1 |
+| Inbox triage | Classify replies/comments as support, bug, investor, influencer, product, hostile, spam, legal, money, or regulatory before drafting responses. | P1 |
+| Cadence controls | Enforce max posts/day, max replies/hour, quiet hours, cooldowns after warnings, duplicate prevention, and repeated CTA limits. | P1 |
+| Do-not-engage rules | Define silence/escalation rules for trolls, legal bait, gambling accusations, harassment, minors, financial questions, and crisis topics. | P1 |
+| Post memory | Track what each company has already posted to prevent stale, repetitive, contradictory, or overused content. | P1 |
+| Draft evaluation | Score drafts for brand fit, clarity, platform fit, CTA strength, risk, novelty, Spanish quality, visual fit, and audience value before staging. | P1 |
+| Lead/support routing | Convert replies into support tickets, bug reports, investor leads, influencer leads, or ignored items. | P1 |
+
+Routines should generate from the editorial calendar and strategy layer, not invent from nothing every morning.
+
 ## Firebase Collections
 
 | Collection | Purpose |
@@ -105,6 +126,15 @@ Confidence target: move from 7/10 to 8.5/10 before building additional platform 
 | `socialResponseDrafts` | Suggested responses and approval state. |
 | `socialMetrics` | Post performance, clicks, signups, league joins, notes. |
 | `socialTemplates` | Reusable prompts, image templates, CTA variants. |
+| `contentStrategies` | Company/brand goals, personas, pillars, offers, CTAs, competitor references. |
+| `editorialCalendar` | Planned slots, platform assignments, language variants, asset needs, approval deadlines. |
+| `brandLibraries` | Voice rules, examples, banned phrases, colors, fonts, logos, identity rules. |
+| `claimLibraries` | Approved/banned/requires-review claims and compliance copy. |
+| `assetLibrary` | Media, templates, generated asset history, safe-zone metadata, do-not-use assets. |
+| `postMemory` | Prior posts/replies and semantic history used to prevent repetition and contradiction. |
+| `inboxTriage` | Classified inbound items with priority, owner, and suggested action. |
+| `cadencePolicies` | Posting/reply limits, quiet hours, cooldown rules, duplicate prevention. |
+| `draftEvaluations` | Preflight scores and reasons for approve/rewrite/hold decisions. |
 
 All records must be company-scoped. The first implementation should prefer nested `companies/{companyId}/...` paths unless Polaris already has a strong top-level collection convention.
 
@@ -147,6 +177,9 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
 | P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
 | P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
+| P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
+| P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
+| P0 | Add brand and claim libraries | Queued | Voice rules, approved language, banned claims, identity rules. |
 | P0 | Run confidence proof phase | Queued | Polaris routines, Firebase admin JSON, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
@@ -157,6 +190,11 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add image rendering templates | Queued | Leaderboard, prize, country, founder, campaign cards. |
 | P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
 | P1 | Add content quality feedback loop | Queued | Voice examples, banned phrases, post review notes, performance notes. |
+| P1 | Add asset library and safe-zone metadata | Queued | Media library, templates, alt text, generated history, do-not-use assets. |
+| P1 | Add inbox triage before reply drafting | Queued | Priority, owner, action, and escalation before writing responses. |
+| P1 | Add cadence and do-not-engage policies | Queued | Rate limits, quiet hours, cooldowns, silence rules. |
+| P1 | Add post memory and draft evaluation | Queued | Prevent repetition/contradiction and score drafts before staging. |
+| P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |
 | P3 | Add Reddit monitoring only | Queued | No autoposting initially. |
 
