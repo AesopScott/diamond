@@ -2,13 +2,13 @@ import { createTenantContext } from "./tenant-context.js";
 
 export function createSeedWorkspace() {
   const context = createTenantContext({
-    companyId: "Aesop Academy",
+    companyId: "thecard.bet",
     brandId: "The Card",
     platform: "x",
     socialAccountId: "the-card-main",
     campaignId: "world-cup-2026",
     approvalPolicyId: "default-risk-review",
-    browserProfileId: "aesop-the-card-x-main",
+    browserProfileId: "thecard-bet-x-main",
     postingMode: "stage_for_review",
   });
 
@@ -16,7 +16,7 @@ export function createSeedWorkspace() {
     companies: [
       {
         id: context.companyId,
-        name: "Aesop Academy",
+        name: "thecard.bet",
         defaultApprovalPolicyId: context.approvalPolicyId,
       },
     ],

@@ -14,6 +14,7 @@ import {
   normalizeLoginUrl,
   resolveComposeUrl,
   resolveLoginUrl,
+  migrateWorkspaceState,
   upsertSessionForContext,
   validateSessionForStaging,
 } from "../index.js";
@@ -99,7 +100,11 @@ document.querySelector("#pick-media").addEventListener("click", async () => {
 
 async function loadInitialState() {
   const saved = await window.diamond.getState();
-  if (saved) return saved;
+  if (saved) {
+    const migrated = migrateWorkspaceState(saved);
+    if (migrated !== saved) await window.diamond.saveState(migrated);
+    return migrated;
+  }
   const seed = createSeedWorkspace();
   return {
     ...seed,

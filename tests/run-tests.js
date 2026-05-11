@@ -11,6 +11,7 @@ import {
   defaultLoginUrlForPlatform,
   getSessionForContext,
   inferSessionStatusFromUrl,
+  migrateWorkspaceState,
   normalizeAccountUrl,
   normalizeBrowserProfileId,
   normalizeComposeUrl,
@@ -32,7 +33,7 @@ const safeDraft = createPostDraft({
 
 assert.equal(safeDraft.approvalLevel, "auto_allowed");
 assert.equal(canStageDraft(safeDraft).ok, true);
-assert.match(safeDraft.firestorePath, /^companies\/aesop-academy\/brands\/the-card\/postdrafts\//);
+assert.match(safeDraft.firestorePath, /^companies\/thecard-bet\/brands\/the-card\/postdrafts\//);
 
 const prizeDraft = createPostDraft({
   context: workspace.context,
@@ -53,7 +54,7 @@ assert.equal(contextsMatch(workspace.context, workspace.context), true);
 assert.equal(contextsMatch(workspace.context, otherContext), false);
 assert.equal(
   browserProfilePath(workspace.context),
-  "browser-profiles/aesop-academy/x/the-card-main/aesop-the-card-x-main",
+  "browser-profiles/thecard-bet/x/the-card-main/thecard-bet-x-main",
 );
 
 const risk = approvalLevelForText("Is this gambling or regulated by the CFTC?", workspace.approvalPolicies[0]);
@@ -94,5 +95,23 @@ assert.equal(normalizeComposeUrl("", "x"), "https://x.com/compose/post");
 assert.equal(resolveComposeUrl(workspace.socialAccounts[0]), "https://x.com/compose/post");
 assert.equal(normalizeHost("https://www.x.com/thecard"), "x.com");
 assert.equal(normalizeBrowserProfileId("Aesop / The Card / X"), "aesop-the-card-x");
+
+const legacyWorkspace = {
+  companies: [{ id: "aesop-academy", name: "Aesop Academy", defaultApprovalPolicyId: "default-risk-review" }],
+  brands: [{ id: "the-card", companyId: "aesop-academy", name: "The Card" }],
+  socialAccounts: [{ id: "the-card-main", companyId: "aesop-academy", browserProfileId: "aesop-the-card-x-main" }],
+  campaigns: [{ id: "world-cup-2026", companyId: "aesop-academy" }],
+  approvalPolicies: [{ id: "default-risk-review", companyId: "aesop-academy" }],
+  context: { ...workspace.context, companyId: "aesop-academy", browserProfileId: "aesop-the-card-x-main" },
+  drafts: [{ context: { ...workspace.context, companyId: "aesop-academy", browserProfileId: "aesop-the-card-x-main" }, firestorePath: "companies/aesop-academy/brands/the-card/postDrafts/x-1" }],
+  sessions: { old: { status: "ready" } },
+};
+const migratedWorkspace = migrateWorkspaceState(legacyWorkspace);
+assert.equal(migratedWorkspace.companies[0].id, "thecard-bet");
+assert.equal(migratedWorkspace.companies[0].name, "thecard.bet");
+assert.equal(migratedWorkspace.socialAccounts[0].browserProfileId, "thecard-bet-x-main");
+assert.equal(migratedWorkspace.context.companyId, "thecard-bet");
+assert.equal(migratedWorkspace.drafts[0].firestorePath, "companies/thecard-bet/brands/the-card/postDrafts/x-1");
+assert.deepEqual(migratedWorkspace.sessions, {});
 
 console.log("All Diamond tests passed.");
