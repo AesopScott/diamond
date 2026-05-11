@@ -47,6 +47,7 @@ const els = {
   browserTabs: document.querySelector("#browser-tabs"),
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
+  runHistory: document.querySelector("#run-history"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
   sessionNote: document.querySelector("#session-note"),
@@ -74,6 +75,7 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelector("#evaluate-draft").addEventListener("click", evaluateDraft);
 document.querySelector("#approve-draft").addEventListener("click", approveDraft);
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
+document.querySelector("#assist-media").addEventListener("click", assistMediaUpload);
 document.querySelector("#capture-run").addEventListener("click", captureCurrentRun);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
@@ -87,6 +89,7 @@ document.querySelector("#check-session").addEventListener("click", checkSession)
 document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
+els.runHistory.addEventListener("click", handleRunHistoryClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
   if (activeDraft) {
@@ -114,6 +117,7 @@ async function loadInitialState() {
   return {
     ...seed,
     drafts: [],
+    postRuns: [],
     sessions: {},
     runLog: [],
   };
@@ -172,6 +176,7 @@ function render() {
   renderBrowserTabs();
   renderMedia();
   renderRiskCard();
+  renderRunHistory();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
@@ -417,14 +422,36 @@ async function stageDraft() {
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
   const fillResult = await fillComposerText(activeDraft.text);
+  const mediaResult = media.length ? await prepareMediaUpload() : { ok: true, reason: "No media selected." };
   await capturePostRun({
-    status: fillResult.ok ? "staged" : "needs_manual_finish",
-    note: fillResult.ok ? "Composer text inserted. Media upload remains manual." : `Composer opened. ${fillResult.reason}.`,
+    status: fillResult.ok && mediaResult.ok ? "staged" : "needs_manual_finish",
+    note: buildStageNote(fillResult, mediaResult),
   });
   log(fillResult.ok
-    ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file(s) selected for manual upload. ` : ""}Review it, attach media if needed, then publish manually.`
+    ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file path(s) copied for upload. ` : ""}Review it, attach media if needed, then publish manually.`
     : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
+}
+
+async function assistMediaUpload() {
+  const result = await prepareMediaUpload();
+  log(result.ok ? result.reason : `Media upload helper could not finish: ${result.reason}.`);
+}
+
+async function prepareMediaUpload() {
+  if (!media.length) return { ok: false, reason: "No media selected." };
+  await window.diamond.writeClipboard(media.join("\n"));
+  const picker = await openPlatformMediaPicker();
+  const reason = picker.ok
+    ? `Copied ${media.length} media path(s) and opened the platform file picker.`
+    : `Copied ${media.length} media path(s). ${picker.reason}`;
+  return { ok: picker.ok, reason };
+}
+
+function buildStageNote(fillResult, mediaResult) {
+  const textNote = fillResult.ok ? "Composer text inserted." : `Composer text not inserted: ${fillResult.reason}.`;
+  const mediaNote = media.length ? mediaResult.reason : "No media selected.";
+  return `${textNote} ${mediaNote}`;
 }
 
 async function captureCurrentRun() {
@@ -459,6 +486,7 @@ async function capturePostRun({ status, note }) {
   activeDraft.lastRunId = run.id;
   activeDraft.screenshotPath = screenshotPath;
   await window.diamond.saveState(state);
+  renderRunHistory();
   return run;
 }
 
@@ -504,6 +532,58 @@ function renderRiskCard() {
 
   els.riskCard.className = activeDraft.approvalLevel === "auto_allowed" ? "risk-card good" : "risk-card warn";
   els.riskCard.textContent = `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`;
+}
+
+function renderRunHistory() {
+  const runs = state.postRuns || [];
+  els.runHistory.innerHTML = "";
+  if (!runs.length) {
+    const empty = document.createElement("div");
+    empty.className = "run-history-empty";
+    empty.textContent = "No post runs captured yet.";
+    els.runHistory.append(empty);
+    return;
+  }
+
+  runs.slice(0, 8).forEach((run) => {
+    const item = document.createElement("article");
+    item.className = "run-item";
+    const created = run.createdAt ? new Date(run.createdAt).toLocaleString() : "Unknown time";
+    item.innerHTML = `
+      <header>
+        <strong>${run.status}</strong>
+        <span class="session-label">${created}</span>
+      </header>
+      <p>${run.note || "No note."}</p>
+      <p>${run.media?.length || 0} media file(s) - ${run.platformUrl || "No platform URL"}</p>
+      <div class="run-actions">
+        <button type="button" data-run-action="copy-url" data-run-id="${run.id}">Copy URL</button>
+        <button type="button" data-run-action="copy-shot" data-run-id="${run.id}">Copy screenshot</button>
+        <button type="button" data-run-action="copy-media" data-run-id="${run.id}">Copy media</button>
+      </div>
+    `;
+    els.runHistory.append(item);
+  });
+}
+
+async function handleRunHistoryClick(event) {
+  const button = event.target.closest("button[data-run-action]");
+  if (!button) return;
+  const run = (state.postRuns || []).find((item) => item.id === button.dataset.runId);
+  if (!run) return;
+
+  if (button.dataset.runAction === "copy-url") {
+    await window.diamond.writeClipboard(run.platformUrl || "");
+    log(`Copied run URL for ${run.id}.`);
+  }
+  if (button.dataset.runAction === "copy-shot") {
+    await window.diamond.writeClipboard(run.screenshotPath || "");
+    log(run.screenshotPath ? `Copied screenshot path for ${run.id}.` : `Run ${run.id} has no screenshot path.`);
+  }
+  if (button.dataset.runAction === "copy-media") {
+    await window.diamond.writeClipboard((run.media || []).join("\n"));
+    log(`Copied ${run.media?.length || 0} media path(s) for ${run.id}.`);
+  }
 }
 
 function log(message) {
@@ -611,6 +691,27 @@ async function insertTextIntoComposer(text) {
       editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
       const value = editor.innerText || editor.textContent || "";
       return { ok: value.includes(text.slice(0, Math.min(24, text.length))), reason: "composer text inserted" };
+    })();
+  `;
+
+  try {
+    return await els.webview.executeJavaScript(script);
+  } catch (error) {
+    return { ok: false, reason: error.message || "script execution failed" };
+  }
+}
+
+async function openPlatformMediaPicker() {
+  if (typeof els.webview.executeJavaScript !== "function") {
+    return { ok: false, reason: "embedded browser does not support script execution" };
+  }
+
+  const script = `
+    (() => {
+      const input = document.querySelector('input[data-testid="fileInput"][type="file"], input[type="file"]');
+      if (!input) return { ok: false, reason: "file input was not found" };
+      input.click();
+      return { ok: true, reason: "platform file picker opened" };
     })();
   `;
 

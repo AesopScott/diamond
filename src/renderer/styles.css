@@ -311,6 +311,11 @@ webview {
   white-space: nowrap;
 }
 
+.media-item strong {
+  color: var(--accent);
+  font-size: 11px;
+}
+
 .validation-list {
   display: grid;
   gap: 8px;
@@ -345,6 +350,59 @@ webview {
 .run-log div {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   padding-bottom: 6px;
+}
+
+.run-history-panel.panel {
+  margin: 0;
+}
+
+.run-history {
+  display: grid;
+  gap: 8px;
+  max-height: 170px;
+  overflow: auto;
+}
+
+.run-history-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.run-item {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.run-item header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.run-item strong {
+  font-size: 13px;
+}
+
+.run-item p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.run-actions button {
+  font-size: 12px;
+  padding: 7px 9px;
 }
 
 body.browser-focus #app {
