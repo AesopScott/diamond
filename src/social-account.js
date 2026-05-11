@@ -13,6 +13,10 @@ export function defaultLoginUrlForPlatform(platform) {
   return platform === "x" ? "https://x.com/i/flow/login" : "";
 }
 
+export function defaultComposeUrlForPlatform(platform) {
+  return platform === "x" ? "https://x.com/compose/post" : "";
+}
+
 export function normalizeLoginUrl(value, platform) {
   const raw = String(value || "").trim();
   if (!raw) return defaultLoginUrlForPlatform(platform);
@@ -20,8 +24,19 @@ export function normalizeLoginUrl(value, platform) {
   return `https://${raw}`;
 }
 
+export function normalizeComposeUrl(value, platform) {
+  const raw = String(value || "").trim();
+  if (!raw) return defaultComposeUrlForPlatform(platform);
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
 export function resolveLoginUrl(account) {
   return normalizeLoginUrl(account?.loginUrl, account?.platform) || normalizeAccountUrl(account?.accountUrl, account?.platform);
+}
+
+export function resolveComposeUrl(account) {
+  return normalizeComposeUrl(account?.composeUrl, account?.platform) || normalizeAccountUrl(account?.accountUrl, account?.platform);
 }
 
 export function normalizeHost(value) {

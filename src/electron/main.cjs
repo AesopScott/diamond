@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -69,6 +69,10 @@ ipcMain.handle("diamond:get-paths", () => ({
   screenshotsDir: path.join(APP_DIR, "screenshots"),
 }));
 ipcMain.handle("diamond:open-external", (_event, url) => shell.openExternal(url));
+ipcMain.handle("diamond:write-clipboard", (_event, text) => {
+  clipboard.writeText(String(text || ""));
+  return true;
+});
 ipcMain.handle("diamond:pick-media", async () => {
   const result = await dialog.showOpenDialog({
     title: "Select social media asset",

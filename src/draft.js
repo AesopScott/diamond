@@ -30,7 +30,7 @@ export function createPostDraft(input) {
 export function canStageDraft(draft, options = {}) {
   if (!draft) return { ok: false, reason: "Missing draft" };
   if (draft.status === "blocked") return { ok: false, reason: "Draft is blocked" };
-  if (draft.approvalLevel === "review_required" && draft.status !== "approved") {
+  if (draft.approvalLevel === "review_required" && !["approved", "staged"].includes(draft.status)) {
     return { ok: false, reason: "Review required before staging" };
   }
   if (draft.context.postingMode === "draft_only") {

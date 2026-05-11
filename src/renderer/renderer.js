@@ -9,15 +9,17 @@ import {
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
   normalizeBrowserProfileId,
+  normalizeComposeUrl,
   normalizeHost,
   normalizeLoginUrl,
+  resolveComposeUrl,
   resolveLoginUrl,
   upsertSessionForContext,
   validateSessionForStaging,
 } from "../index.js";
 
 const state = await loadInitialState();
-let activeMode = "draft_only";
+let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
@@ -30,6 +32,7 @@ const els = {
   accountHandle: document.querySelector("#account-handle"),
   accountUrl: document.querySelector("#account-url"),
   accountLoginUrl: document.querySelector("#account-login-url"),
+  accountComposeUrl: document.querySelector("#account-compose-url"),
   accountHost: document.querySelector("#account-host"),
   accountProfile: document.querySelector("#account-profile"),
   activeTarget: document.querySelector("#active-target"),
@@ -111,6 +114,7 @@ function hydrate() {
   fillSelect(els.campaign, state.campaigns);
   fillSelect(els.account, state.socialAccounts, (account) => `${account.platform.toUpperCase()} / ${account.id}`);
   els.draftText.value = "Join the free World Cup league, make your picks, and see where your country lands on the board.";
+  syncModeButtons();
 }
 
 function fillSelect(select, rows, labeler = (row) => row.name || row.id) {
@@ -157,16 +161,18 @@ function render() {
   renderBrowserTabs();
   renderMedia();
   renderRiskCard();
+  syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
 
 function renderAccountSettings(account) {
-  if (document.activeElement && ["account-handle", "account-url", "account-login-url", "account-host", "account-profile"].includes(document.activeElement.id)) {
+  if (document.activeElement && ["account-handle", "account-url", "account-login-url", "account-compose-url", "account-host", "account-profile"].includes(document.activeElement.id)) {
     return;
   }
   els.accountHandle.value = account.handle || "";
   els.accountUrl.value = account.accountUrl || "";
   els.accountLoginUrl.value = account.loginUrl || resolveLoginUrl(account);
+  els.accountComposeUrl.value = account.composeUrl || resolveComposeUrl(account);
   els.accountHost.value = account.expectedHost || "";
   els.accountProfile.value = account.browserProfileId || "";
 }
@@ -201,6 +207,7 @@ async function saveAccountSettings() {
   account.handle = els.accountHandle.value.trim();
   account.accountUrl = normalizeAccountUrl(els.accountUrl.value.trim(), account.platform);
   account.loginUrl = normalizeLoginUrl(els.accountLoginUrl.value.trim(), account.platform);
+  account.composeUrl = normalizeComposeUrl(els.accountComposeUrl.value.trim(), account.platform);
   account.expectedHost = normalizeHost(els.accountHost.value.trim() || account.accountUrl);
   account.browserProfileId = normalizeBrowserProfileId(els.accountProfile.value.trim() || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
 
@@ -363,7 +370,7 @@ function approveDraft() {
   renderRiskCard();
 }
 
-function stageDraft() {
+async function stageDraft() {
   if (!activeDraft) evaluateDraft();
   const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
   const check = canStageDraft(activeDraft, { sessionCheck });
@@ -373,7 +380,17 @@ function stageDraft() {
     return;
   }
 
-  log("Staging handoff ready. Browser is visible; manual paste/upload remains required in this slice.");
+  const { account } = getActiveRows();
+  const composeUrl = resolveComposeUrl(account);
+  await window.diamond.writeClipboard(activeDraft.text);
+  activeDraft.status = "staged";
+  activeDraft.stagedAt = new Date().toISOString();
+  activeDraft.updatedAt = activeDraft.stagedAt;
+  activeDraft.stageUrl = composeUrl;
+  await window.diamond.saveState(state);
+  els.webview.src = composeUrl;
+  setBrowserFocus(true);
+  log("Draft copied to clipboard and X compose opened. Paste the text, attach media if needed, then publish manually.");
   renderRiskCard();
 }
 
@@ -397,6 +414,12 @@ function log(message) {
   const div = document.createElement("div");
   div.textContent = `[${time}] ${message}`;
   els.runLog.prepend(div);
+}
+
+function syncModeButtons() {
+  document.querySelectorAll(".mode").forEach((button) => {
+    button.classList.toggle("active", button.dataset.mode === activeMode);
+  });
 }
 
 function setBrowserFocus(focused) {

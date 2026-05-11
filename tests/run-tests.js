@@ -4,6 +4,7 @@ import {
   browserProfilePath,
   canStageDraft,
   contextsMatch,
+  defaultComposeUrlForPlatform,
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
@@ -12,8 +13,10 @@ import {
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
   normalizeBrowserProfileId,
+  normalizeComposeUrl,
   normalizeHost,
   normalizeLoginUrl,
+  resolveComposeUrl,
   resolveLoginUrl,
   updateAccountSession,
   validateSessionForStaging,
@@ -69,6 +72,16 @@ assert.equal(validateSessionForStaging(readySession, workspace.context).ok, true
 assert.equal(canStageDraft(safeDraft, { sessionCheck: validateSessionForStaging(readySession, workspace.context) }).ok, true);
 assert.equal(validateSessionForStaging(readySession, otherContext).ok, false);
 
+const stagedReviewDraft = {
+  ...prizeDraft,
+  status: "staged",
+  context: {
+    ...prizeDraft.context,
+    postingMode: "stage_for_review",
+  },
+};
+assert.equal(canStageDraft(stagedReviewDraft, { sessionCheck: validateSessionForStaging(readySession, workspace.context) }).ok, true);
+
 assert.equal(inferSessionStatusFromUrl("https://x.com/login", workspace.socialAccounts[0]).status, "login_required");
 assert.equal(inferSessionStatusFromUrl("https://x.com/home", workspace.socialAccounts[0]).status, "ready");
 assert.equal(normalizeAccountUrl("@TheCard", "x"), "https://x.com/TheCard");
@@ -76,6 +89,9 @@ assert.equal(normalizeAccountUrl("thecard", "x"), "https://x.com/thecard");
 assert.equal(defaultLoginUrlForPlatform("x"), "https://x.com/i/flow/login");
 assert.equal(normalizeLoginUrl("", "x"), "https://x.com/i/flow/login");
 assert.equal(resolveLoginUrl(workspace.socialAccounts[0]), "https://x.com/i/flow/login");
+assert.equal(defaultComposeUrlForPlatform("x"), "https://x.com/compose/post");
+assert.equal(normalizeComposeUrl("", "x"), "https://x.com/compose/post");
+assert.equal(resolveComposeUrl(workspace.socialAccounts[0]), "https://x.com/compose/post");
 assert.equal(normalizeHost("https://www.x.com/thecard"), "x.com");
 assert.equal(normalizeBrowserProfileId("Aesop / The Card / X"), "aesop-the-card-x");
 
