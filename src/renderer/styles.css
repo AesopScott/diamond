@@ -269,6 +269,7 @@ textarea {
   background: #05070a;
   border: 1px solid var(--line);
   border-radius: 10px;
+  display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -276,10 +277,11 @@ textarea {
 }
 
 webview {
-  display: block;
+  display: flex;
+  flex: 1;
   height: 100%;
-  inset: 0;
-  position: absolute;
+  min-height: 0;
+  position: relative;
   width: 100%;
 }
 

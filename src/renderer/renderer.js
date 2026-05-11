@@ -74,6 +74,7 @@ document.querySelector("#open-account").addEventListener("click", openActiveAcco
 document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
 document.querySelector("#exit-focus").addEventListener("click", () => setBrowserFocus(false));
+document.querySelector("#fit-browser").addEventListener("click", refreshGuestBounds);
 document.querySelector("#zoom-out").addEventListener("click", () => adjustBrowserZoom(-0.1));
 document.querySelector("#zoom-in").addEventListener("click", () => adjustBrowserZoom(0.1));
 document.querySelector("#check-session").addEventListener("click", checkSession);
@@ -270,6 +271,8 @@ function replaceWebview(partition, src) {
   next.setAttribute("partition", partition);
   next.setAttribute("src", src);
   next.setAttribute("allowpopups", "");
+  next.style.width = "100%";
+  next.style.height = "100%";
   els.webview.replaceWith(next);
   els.webview = next;
   wireWebviewEvents(next);
@@ -402,7 +405,7 @@ function setBrowserFocus(focused) {
   document.querySelector("#exit-focus").classList.toggle("hidden", !focused);
   requestAnimationFrame(sizeWebviewToShell);
   setTimeout(sizeWebviewToShell, 120);
-  setTimeout(sizeWebviewToShell, 300);
+  setTimeout(refreshGuestBounds, 300);
   log(focused ? "Browser focus mode enabled." : "Browser focus mode closed.");
 }
 
@@ -431,10 +434,28 @@ function sizeWebviewToShell() {
   const rect = els.browserShell.getBoundingClientRect();
   const width = Math.max(320, Math.floor(rect.width));
   const height = Math.max(320, Math.floor(rect.height));
+  els.webview.style.minWidth = `${width}px`;
+  els.webview.style.minHeight = `${height}px`;
   els.webview.style.width = `${width}px`;
   els.webview.style.height = `${height}px`;
   els.webview.setAttribute("width", String(width));
   els.webview.setAttribute("height", String(height));
+  requestGuestLayout();
 }
 
 wireWebviewEvents(els.webview);
+
+function requestGuestLayout() {
+  if (typeof els.webview.executeJavaScript !== "function") return;
+  els.webview.executeJavaScript(
+    "window.dispatchEvent(new Event('resize')); document.documentElement.style.minHeight = '100vh'; document.body.style.minHeight = '100vh';",
+  ).catch(() => {});
+}
+
+function refreshGuestBounds() {
+  sizeWebviewToShell();
+  const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
+  const partition = els.webview.getAttribute("partition");
+  replaceWebview(partition, currentUrl || "about:blank");
+  log("Browser surface refreshed at full size.");
+}
