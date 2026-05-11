@@ -50,6 +50,8 @@ const els = {
 hydrate();
 render();
 window.addEventListener("resize", () => requestAnimationFrame(sizeWebviewToShell));
+const browserResizeObserver = new ResizeObserver(() => requestAnimationFrame(sizeWebviewToShell));
+browserResizeObserver.observe(els.browserShell);
 
 document.querySelector("#save-state").addEventListener("click", async () => {
   await window.diamond.saveState(state);
@@ -272,6 +274,7 @@ function replaceWebview(partition, src) {
   els.webview = next;
   wireWebviewEvents(next);
   requestAnimationFrame(sizeWebviewToShell);
+  setTimeout(sizeWebviewToShell, 250);
 }
 
 function openActiveAccount() {
@@ -399,6 +402,7 @@ function setBrowserFocus(focused) {
   document.querySelector("#exit-focus").classList.toggle("hidden", !focused);
   requestAnimationFrame(sizeWebviewToShell);
   setTimeout(sizeWebviewToShell, 120);
+  setTimeout(sizeWebviewToShell, 300);
   log(focused ? "Browser focus mode enabled." : "Browser focus mode closed.");
 }
 

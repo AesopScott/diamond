@@ -339,17 +339,56 @@ body.browser-focus .log-panel {
 }
 
 body.browser-focus .workspace {
-  padding: 10px;
+  height: 100vh;
+  padding: 0;
 }
 
 body.browser-focus .grid {
   display: block;
+  height: 100vh;
+  min-height: 100vh;
 }
 
 body.browser-focus .browser.panel {
-  height: calc(100vh - 20px);
+  background: #05070a;
+  border: 0;
+  border-radius: 0;
+  display: block;
+  height: 100vh;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  width: 100vw;
+  z-index: 50;
+}
+
+body.browser-focus .browser.panel > .panel-heading {
+  align-items: center;
+  background: rgba(13, 17, 26, 0.92);
+  border: 1px solid rgba(40, 50, 68, 0.85);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  left: 12px;
+  margin: 0;
+  padding: 10px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+}
+
+body.browser-focus .browser-tabs {
+  display: none;
 }
 
 body.browser-focus .browser-shell {
+  border: 0;
+  border-radius: 0;
+  bottom: 0;
+  left: 0;
   min-height: 0;
+  position: absolute;
+  right: 0;
+  top: 74px;
 }
