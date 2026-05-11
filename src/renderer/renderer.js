@@ -27,8 +27,11 @@ import {
   normalizeComposeUrl,
   normalizeHost,
   normalizeLoginUrl,
+  platformLabel,
   resolveComposeUrl,
   resolveLoginUrl,
+  isMonitoringOnlyPlatform,
+  PLATFORMS,
   summarizePostMetrics,
   classifySocialReply,
   migrateWorkspaceState,
@@ -299,6 +302,12 @@ function ensureWorkspaceData(workspace) {
       changed = true;
     }
   });
+  seed.socialAccounts.forEach((account) => {
+    if (!next.socialAccounts.some((row) => row.companyId === account.companyId && row.brandId === account.brandId && row.platform === account.platform && row.id === account.id)) {
+      next.socialAccounts.push(account);
+      changed = true;
+    }
+  });
   seed.claimLibraries.forEach((library) => {
     if (!next.claimLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.claimLibraries.push(library);
@@ -342,7 +351,8 @@ function hydrate() {
   fillSelect(els.company, state.companies);
   fillSelect(els.brand, state.brands);
   fillSelect(els.campaign, state.campaigns);
-  fillSelect(els.account, state.socialAccounts, (account) => `${account.platform.toUpperCase()} / ${account.id}`);
+  fillSelect(els.account, state.socialAccounts, (account) => `${platformLabel(account.platform)} / ${account.id}`);
+  fillPlatformSelect(els.assetPlatform);
   els.draftText.value = "Join the free World Cup league, make your picks, and see where your country lands on the board.";
   syncModeButtons();
 }
@@ -353,6 +363,16 @@ function fillSelect(select, rows, labeler = (row) => row.name || row.id) {
     const option = document.createElement("option");
     option.value = row.id;
     option.textContent = labeler(row);
+    select.append(option);
+  });
+}
+
+function fillPlatformSelect(select) {
+  select.innerHTML = "";
+  PLATFORMS.forEach((platform) => {
+    const option = document.createElement("option");
+    option.value = platform;
+    option.textContent = platformLabel(platform);
     select.append(option);
   });
 }
@@ -387,7 +407,7 @@ function getContext() {
 function render() {
   const { company, brand, campaign, account } = getActiveRows();
   const context = getContext();
-  els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${account.platform.toUpperCase()}`;
+  els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${platformLabel(account.platform)}`;
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderAccountSettings(account);
   renderCadencePolicy();
@@ -903,7 +923,7 @@ function renderBrowserTabs() {
   accounts.forEach((account) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = account.platform.toUpperCase();
+    button.textContent = platformLabel(account.platform);
     button.className = account.id === els.account.value ? "active" : "";
     button.addEventListener("click", () => {
       els.account.value = account.id;
@@ -1087,6 +1107,12 @@ async function stageDraft() {
   }
 
   const { account } = getActiveRows();
+  if (isMonitoringOnlyPlatform(account.platform)) {
+    lastStageMessage = `${platformLabel(account.platform)} is configured as monitoring-only. Draft and capture replies, but do not stage posts there yet.`;
+    log(`Staging refused: ${lastStageMessage}`);
+    renderRiskCard();
+    return;
+  }
   const composeUrl = resolveComposeUrl(account);
   lastStageMessage = null;
   await window.diamond.writeClipboard(activeDraft.text);
@@ -1109,8 +1135,8 @@ async function stageDraft() {
     note: buildStageNote(fillResult, mediaResult),
   });
   log(fillResult.ok
-    ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file path(s) copied for upload. ` : ""}Review it, attach media if needed, then publish manually.`
-    : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
+    ? `Draft copied to clipboard, ${platformLabel(account.platform)} compose opened, and text inserted. ${media.length ? `${media.length} media file path(s) copied for upload. ` : ""}Review it, attach media if needed, then publish manually.`
+    : `Draft copied to clipboard and ${platformLabel(account.platform)} compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();

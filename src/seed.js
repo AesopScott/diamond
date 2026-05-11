@@ -1,4 +1,15 @@
 import { createTenantContext } from "./tenant-context.js";
+import { defaultComposeUrlForPlatform, defaultExpectedHostForPlatform, defaultLoginUrlForPlatform, normalizeAccountUrl } from "./social-account.js";
+
+const EXPANSION_PLATFORMS = Object.freeze([
+  "x",
+  "instagram",
+  "tiktok",
+  "linkedin",
+  "youtube-shorts",
+  "facebook",
+  "reddit",
+]);
 
 export function createSeedWorkspace() {
   const context = createTenantContext({
@@ -28,20 +39,7 @@ export function createSeedWorkspace() {
         languages: ["en", "es"],
       },
     ],
-    socialAccounts: [
-      {
-        id: context.socialAccountId,
-        companyId: context.companyId,
-        brandId: context.brandId,
-        platform: context.platform,
-        accountUrl: "https://x.com/",
-        loginUrl: "https://x.com/i/flow/login",
-        composeUrl: "https://x.com/compose/post",
-        expectedHost: "x.com",
-        sessionStatus: "unknown",
-        browserProfileId: context.browserProfileId,
-      },
-    ],
+    socialAccounts: EXPANSION_PLATFORMS.map((platform) => createSeedSocialAccount(context, platform)),
     campaigns: [
       {
         id: context.campaignId,
@@ -84,23 +82,7 @@ export function createSeedWorkspace() {
         ],
       },
     ],
-    editorialSlots: [
-      {
-        id: "slot-world-cup-launch",
-        companyId: context.companyId,
-        brandId: context.brandId,
-        campaignId: context.campaignId,
-        platform: context.platform,
-        socialAccountId: context.socialAccountId,
-        topic: "World Cup free league launch",
-        language: "en",
-        assetNeed: "country leaderboard image",
-        status: "planned",
-        plannedAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        approvalDeadline: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
-        createdAt: new Date().toISOString(),
-      },
-    ],
+    editorialSlots: EXPANSION_PLATFORMS.map((platform, index) => createSeedEditorialSlot(context, platform, index)),
     assetLibrary: [
       {
         id: "world-cup-leaderboard-placeholder",
@@ -118,44 +100,7 @@ export function createSeedWorkspace() {
         createdAt: new Date().toISOString(),
       },
     ],
-    socialTemplates: [
-      {
-        id: "world-cup-leaderboard-template",
-        companyId: context.companyId,
-        brandId: context.brandId,
-        campaignId: context.campaignId,
-        platform: context.platform,
-        type: "leaderboard",
-        language: "en",
-        safeZone: "Center 80%; avoid text at top/bottom edges.",
-        notes: "Template record for later image renderer build.",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "world-cup-prize-template",
-        companyId: context.companyId,
-        brandId: context.brandId,
-        campaignId: context.campaignId,
-        platform: context.platform,
-        type: "prize",
-        language: "en",
-        safeZone: "Center 80%; keep payout numbers away from all crop edges.",
-        notes: "World Cup payout card template.",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "world-cup-country-template",
-        companyId: context.companyId,
-        brandId: context.brandId,
-        campaignId: context.campaignId,
-        platform: context.platform,
-        type: "country",
-        language: "en",
-        safeZone: "Flag/icon left; headline and CTA stay inside center-right safe area.",
-        notes: "World Cup country leaderboard campaign card template.",
-        createdAt: new Date().toISOString(),
-      },
-    ],
+    socialTemplates: EXPANSION_PLATFORMS.flatMap((platform) => createSeedTemplates(context, platform)),
     brandLibraries: [
       {
         id: "the-card-brand-library",
@@ -269,4 +214,74 @@ export function createSeedWorkspace() {
     ],
     context,
   };
+}
+
+export function createSeedSocialAccount(context, platform) {
+  const id = platform === "x" ? context.socialAccountId : `the-card-${platform}`;
+  return {
+    id,
+    companyId: context.companyId,
+    brandId: context.brandId,
+    platform,
+    accountUrl: platform === "x" ? "https://x.com/" : normalizeAccountUrl("", platform),
+    loginUrl: defaultLoginUrlForPlatform(platform),
+    composeUrl: defaultComposeUrlForPlatform(platform),
+    expectedHost: defaultExpectedHostForPlatform(platform),
+    sessionStatus: "unknown",
+    browserProfileId: platform === "x" ? context.browserProfileId : `${context.companyId}-${platform}-${id}`,
+    monitoringOnly: platform === "reddit",
+  };
+}
+
+function createSeedEditorialSlot(context, platform, index) {
+  const account = createSeedSocialAccount(context, platform);
+  return {
+    id: `slot-world-cup-launch-${platform}`,
+    companyId: context.companyId,
+    brandId: context.brandId,
+    campaignId: context.campaignId,
+    platform,
+    socialAccountId: account.id,
+    topic: platform === "reddit" ? "World Cup community monitoring" : "World Cup free league launch",
+    language: "en",
+    assetNeed: platform === "reddit" ? "monitoring brief" : "country leaderboard image",
+    status: "planned",
+    plannedAt: new Date(Date.now() + (index + 2) * 60 * 60 * 1000).toISOString(),
+    approvalDeadline: new Date(Date.now() + (index + 1) * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function createSeedTemplates(context, platform) {
+  const base = {
+    companyId: context.companyId,
+    brandId: context.brandId,
+    campaignId: context.campaignId,
+    platform,
+    language: "en",
+    createdAt: new Date().toISOString(),
+  };
+  return [
+    {
+      ...base,
+      id: `world-cup-leaderboard-template-${platform}`,
+      type: "leaderboard",
+      safeZone: "Center 80%; avoid text at top/bottom edges.",
+      notes: `${platform} leaderboard card template.`,
+    },
+    {
+      ...base,
+      id: `world-cup-prize-template-${platform}`,
+      type: "prize",
+      safeZone: "Center 80%; keep payout numbers away from all crop edges.",
+      notes: `${platform} World Cup payout card template.`,
+    },
+    {
+      ...base,
+      id: `world-cup-country-template-${platform}`,
+      type: "country",
+      safeZone: "Flag/icon left; headline and CTA stay inside center-right safe area.",
+      notes: `${platform} country leaderboard campaign card template.`,
+    },
+  ];
 }
