@@ -14,8 +14,12 @@ import {
   createReplyRoute,
   createResponseDraftForReply,
   createSocialReply,
+  buildTourVoiceoverScript,
+  createElevenLabsSpeechRequest,
   evaluateDraftQuality,
   evaluateDiamondAccess,
+  getDiamondGuideSections,
+  getDiamondTourSteps,
   getSessionForContext,
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
@@ -54,6 +58,12 @@ let selectedSlotId = null;
 let lastStageMessage = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
+let activeTourIndex = 0;
+let activeTourTarget = null;
+let voiceoverStatus = { configured: false, files: [] };
+let tourAudio = null;
+const guideSections = getDiamondGuideSections();
+const tourSteps = getDiamondTourSteps();
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -131,6 +141,13 @@ const els = {
   scheduleStatusFilter: document.querySelector("#schedule-status-filter"),
   scheduleDetail: document.querySelector("#schedule-detail"),
   scheduleCalendar: document.querySelector("#schedule-calendar"),
+  guideContent: document.querySelector("#guide-content"),
+  tourLayer: document.querySelector("#tour-layer"),
+  tourPopover: document.querySelector("#tour-popover"),
+  tourProgress: document.querySelector("#tour-progress"),
+  tourTitle: document.querySelector("#tour-title"),
+  tourBody: document.querySelector("#tour-body"),
+  tourVoice: document.querySelector("#tour-voice"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
   sessionNote: document.querySelector("#session-note"),
@@ -141,6 +158,7 @@ const els = {
 };
 
 hydrate();
+await refreshVoiceoverStatus();
 render();
 window.addEventListener("resize", () => requestAnimationFrame(sizeWebviewToShell));
 const browserResizeObserver = new ResizeObserver(() => requestAnimationFrame(sizeWebviewToShell));
@@ -177,6 +195,16 @@ document.querySelector("#generate-next-slot").addEventListener("click", generate
 document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
 document.querySelector("#add-asset").addEventListener("click", addAsset);
 document.querySelector("#generate-asset").addEventListener("click", generateAssetFromTemplate);
+document.querySelector("#jump-user-guide").addEventListener("click", () => scrollPanelIntoView("#user-guide-panel"));
+document.querySelector("#start-tour").addEventListener("click", startGuideTour);
+document.querySelector("#guide-start-tour").addEventListener("click", startGuideTour);
+document.querySelector("#generate-tour-voiceovers").addEventListener("click", generateTourVoiceovers);
+document.querySelector("#copy-tour-script").addEventListener("click", copyTourVoiceoverScript);
+document.querySelector("#copy-elevenlabs-request").addEventListener("click", copyElevenLabsRequest);
+document.querySelector("#tour-play-voiceover").addEventListener("click", playTourVoiceover);
+document.querySelector("#tour-prev").addEventListener("click", () => moveTour(-1));
+document.querySelector("#tour-next").addEventListener("click", () => moveTour(1));
+document.querySelector("#tour-close").addEventListener("click", closeGuideTour);
 document.querySelector("#jump-editorial-calendar").addEventListener("click", () => scrollPanelIntoView("#editorial-calendar-panel"));
 document.querySelector("#jump-schedule-calendar").addEventListener("click", () => scrollPanelIntoView("#schedule-calendar-panel"));
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
@@ -380,8 +408,164 @@ function render() {
   renderDraftHistory();
   renderPackageFilters();
   renderScheduleCalendar();
+  renderUserGuide();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
+}
+
+function renderUserGuide() {
+  els.guideContent.innerHTML = `
+    <div class="guide-grid">
+      ${guideSections.map((section) => `
+        <article class="guide-card" id="guide-${escapeHtml(section.id)}">
+          <h3>${escapeHtml(section.title)}</h3>
+          <p>${escapeHtml(section.summary)}</p>
+          <ol>
+            ${section.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+          </ol>
+        </article>
+      `).join("")}
+    </div>
+    <div class="tour-step-list">
+      ${tourSteps.map((step) => `
+        <button type="button" data-tour-step="${step.order - 1}">
+          <span>${step.order}</span>
+          ${escapeHtml(step.title)}
+        </button>
+      `).join("")}
+    </div>
+  `;
+  els.guideContent.querySelectorAll("[data-tour-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeTourIndex = Number(button.dataset.tourStep || 0);
+      showTourStep();
+    });
+  });
+}
+
+function startGuideTour() {
+  activeTourIndex = 0;
+  showTourStep();
+}
+
+function showTourStep() {
+  const step = tourSteps[activeTourIndex];
+  if (!step) return closeGuideTour();
+  clearTourHighlight();
+  els.tourLayer.classList.remove("hidden");
+  els.tourProgress.textContent = `Step ${activeTourIndex + 1} of ${tourSteps.length}`;
+  els.tourTitle.textContent = step.title;
+  els.tourBody.textContent = step.voiceoverText;
+  els.tourVoice.textContent = "Voiceover: " + step.voiceoverText;
+  document.querySelector("#tour-prev").disabled = activeTourIndex === 0;
+  document.querySelector("#tour-next").textContent = activeTourIndex === tourSteps.length - 1 ? "Done" : "Next";
+  const audio = audioForTourStep(step);
+  document.querySelector("#tour-play-voiceover").disabled = !audio;
+  document.querySelector("#tour-play-voiceover").textContent = audio ? "Play voiceover" : "No audio yet";
+
+  const target = document.querySelector(step.targetSelector);
+  activeTourTarget = target;
+  if (target) {
+    target.classList.add("tour-highlight");
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  }
+  requestAnimationFrame(() => placeTourPopover(target));
+}
+
+function placeTourPopover(target) {
+  if (!target) {
+    els.tourPopover.style.left = "24px";
+    els.tourPopover.style.top = "24px";
+    return;
+  }
+  const rect = target.getBoundingClientRect();
+  const popoverRect = els.tourPopover.getBoundingClientRect();
+  const gap = 14;
+  const left = Math.min(
+    window.innerWidth - popoverRect.width - gap,
+    Math.max(gap, rect.left + Math.min(40, rect.width / 4)),
+  );
+  const belowTop = rect.bottom + gap;
+  const aboveTop = rect.top - popoverRect.height - gap;
+  const top = belowTop + popoverRect.height < window.innerHeight
+    ? belowTop
+    : Math.max(gap, aboveTop);
+  els.tourPopover.style.left = `${left}px`;
+  els.tourPopover.style.top = `${top}px`;
+}
+
+function moveTour(delta) {
+  if (activeTourIndex === tourSteps.length - 1 && delta > 0) {
+    closeGuideTour();
+    return;
+  }
+  activeTourIndex = Math.min(tourSteps.length - 1, Math.max(0, activeTourIndex + delta));
+  showTourStep();
+}
+
+function closeGuideTour() {
+  clearTourHighlight();
+  els.tourLayer.classList.add("hidden");
+}
+
+function clearTourHighlight() {
+  if (activeTourTarget) activeTourTarget.classList.remove("tour-highlight");
+  activeTourTarget = null;
+}
+
+async function copyTourVoiceoverScript() {
+  await window.diamond.writeClipboard(buildTourVoiceoverScript(tourSteps));
+  log("Copied tour voiceover script.");
+}
+
+async function copyElevenLabsRequest() {
+  const request = createElevenLabsSpeechRequest({
+    voiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    text: buildTourVoiceoverScript(tourSteps),
+  });
+  await window.diamond.writeClipboard(JSON.stringify(request, null, 2));
+  log("Copied ElevenLabs request template. Add a real voice ID and keep the API key outside the renderer.");
+}
+
+async function refreshVoiceoverStatus() {
+  if (!window.diamond.getVoiceoverStatus) return;
+  voiceoverStatus = await window.diamond.getVoiceoverStatus();
+}
+
+async function generateTourVoiceovers() {
+  if (!window.diamond.generateTourVoiceovers) {
+    log("Voiceover generation is not available in this build.");
+    return;
+  }
+  log("Generating tour voiceovers with ElevenLabs.");
+  const result = await window.diamond.generateTourVoiceovers({ steps: tourSteps });
+  voiceoverStatus = { ...(voiceoverStatus || {}), files: result.files || [] };
+  if (!result.ok) {
+    log(`Voiceover generation failed: ${result.reason}`);
+    return;
+  }
+  log(`Generated ${result.written?.length || 0} tour voiceover file(s).`);
+  if (!els.tourLayer.classList.contains("hidden")) showTourStep();
+}
+
+function audioForTourStep(step) {
+  const prefix = `${String(step.order).padStart(2, "0")}-${step.id}`;
+  return (voiceoverStatus.files || []).find((file) => file.name?.startsWith(prefix));
+}
+
+async function playTourVoiceover() {
+  const step = tourSteps[activeTourIndex];
+  const audioFile = audioForTourStep(step);
+  if (!audioFile?.url) {
+    log(`No generated voiceover found for step ${activeTourIndex + 1}.`);
+    return;
+  }
+  if (tourAudio) {
+    tourAudio.pause();
+    tourAudio = null;
+  }
+  tourAudio = new Audio(audioFile.url);
+  await tourAudio.play();
 }
 
 function getBrandLibrary(companyId, brandId) {

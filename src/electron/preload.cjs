@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld("diamond", {
   saveState: (state) => ipcRenderer.invoke("diamond:save-state", state),
   getPaths: () => ipcRenderer.invoke("diamond:get-paths"),
   getFirebaseAdminStatus: () => ipcRenderer.invoke("diamond:get-firebase-admin-status"),
+  getVoiceoverStatus: () => ipcRenderer.invoke("diamond:get-voiceover-status"),
+  generateTourVoiceovers: (input) => ipcRenderer.invoke("diamond:generate-tour-voiceovers", input),
   exportSyncBundle: (input) => ipcRenderer.invoke("diamond:export-sync-bundle", input),
   openExternal: (url) => ipcRenderer.invoke("diamond:open-external", url),
   writeClipboard: (text) => ipcRenderer.invoke("diamond:write-clipboard", text),

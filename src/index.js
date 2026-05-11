@@ -16,5 +16,6 @@ export * from "./session.js";
 export * from "./social-account.js";
 export * from "./tenant-context.js";
 export * from "./template-renderer.js";
+export * from "./user-guide.js";
 export * from "./workspace-migrations.js";
 export * from "./x-browser-adapter.js";

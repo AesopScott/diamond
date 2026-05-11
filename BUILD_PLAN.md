@@ -210,6 +210,14 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [ ] Scott workflow signoff
   - [ ] Repeated staging proof
   - [ ] Decision on whether `auto_publish` ever becomes available
+- [ ] User onboarding and guided help
+  - [x] In-app user guide
+  - [x] Screen-highlight tour scaffold
+  - [x] Tour voiceover script
+  - [x] ElevenLabs request template
+  - [x] ElevenLabs audio generation worker
+  - [x] Voiceover playback synced to tour steps
+  - [ ] User guide review after first full operator session
 
 ## Current Phase
 Build Diamond as a standalone multitenant social media operating system. Diamond will generate campaign content, render post assets, operate platform web UIs through visible browser surfaces, and manage replies through an approval-aware response queue for multiple companies.
@@ -441,6 +449,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add lead/support routing | Built | Replies now route into support tickets, bug reports, investor leads, influencer leads, product feedback, ignored items, or escalation records with owner and route status. |
 | P1 | Add Terms of Service and privacy policy | Queued | Draft and surface public-facing legal terms before broader distribution, social campaigns, licensing, or paid usage. |
 | P1 | Add accessibility baseline | Queued | Audit keyboard navigation, focus states, labels, color contrast, reduced motion, and screen reader semantics across the Diamond app. |
+| P1 | Add user guide and narrated tour | Partial | In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. First operator-session review remains queued. |
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |

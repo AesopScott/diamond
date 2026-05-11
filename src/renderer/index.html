@@ -250,6 +250,8 @@
             <h2 id="active-target">No target selected</h2>
           </div>
           <div class="topbar-actions">
+            <button id="jump-user-guide" type="button">User Guide</button>
+            <button id="start-tour" type="button">Start Tour</button>
             <button id="jump-editorial-calendar" type="button">Editorial Calendar</button>
             <button id="jump-schedule-calendar" type="button">Schedule Calendar</button>
             <div class="status-pill" id="target-status">Fail closed</div>
@@ -309,6 +311,22 @@
             <button id="clear-log" type="button">Clear</button>
           </div>
           <div id="run-log" class="run-log"></div>
+        </section>
+
+        <section id="user-guide-panel" class="panel guide-panel">
+          <div class="panel-heading">
+            <span>User Guide</span>
+            <div class="panel-actions">
+              <button id="generate-tour-voiceovers" type="button">Generate voiceovers</button>
+              <button id="copy-tour-script" type="button">Copy voiceover script</button>
+              <button id="copy-elevenlabs-request" type="button">Copy ElevenLabs request</button>
+              <button id="guide-start-tour" type="button">Start tour</button>
+            </div>
+          </div>
+          <div id="guide-content" class="guide-content"></div>
+          <div class="voiceover-note">
+            Voiceover generation is designed for ElevenLabs and stays key-free in the renderer. Add an ElevenLabs voice ID when the API generation worker is built.
+          </div>
         </section>
 
         <section class="panel run-history-panel">
@@ -489,6 +507,20 @@
           <div id="schedule-calendar" class="schedule-calendar"></div>
         </section>
       </main>
+    </div>
+    <div id="tour-layer" class="tour-layer hidden" aria-live="polite">
+      <div id="tour-popover" class="tour-popover" role="dialog" aria-modal="false" aria-labelledby="tour-title">
+        <div class="tour-progress" id="tour-progress"></div>
+        <h3 id="tour-title"></h3>
+        <p id="tour-body"></p>
+        <div class="tour-voice" id="tour-voice"></div>
+        <div class="tour-actions">
+          <button id="tour-play-voiceover" type="button">Play voiceover</button>
+          <button id="tour-prev" type="button">Back</button>
+          <button id="tour-next" type="button">Next</button>
+          <button id="tour-close" type="button">Close</button>
+        </div>
+      </div>
     </div>
     <script type="module" src="./renderer.js"></script>
   </body>
