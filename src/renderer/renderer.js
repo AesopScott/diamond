@@ -34,6 +34,7 @@ const els = {
   riskCard: document.querySelector("#risk-card"),
   validationList: document.querySelector("#validation-list"),
   webview: document.querySelector("#social-webview"),
+  browserShell: document.querySelector(".browser-shell"),
   browserTabs: document.querySelector("#browser-tabs"),
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
@@ -44,6 +45,7 @@ const els = {
 
 hydrate();
 render();
+window.addEventListener("resize", () => requestAnimationFrame(sizeWebviewToShell));
 
 document.querySelector("#save-state").addEventListener("click", async () => {
   await window.diamond.saveState(state);
@@ -145,6 +147,7 @@ function render() {
   renderBrowserTabs();
   renderMedia();
   renderRiskCard();
+  requestAnimationFrame(sizeWebviewToShell);
 }
 
 function renderAccountSettings(account) {
@@ -258,6 +261,7 @@ function replaceWebview(partition, src) {
   next.setAttribute("allowpopups", "");
   els.webview.replaceWith(next);
   els.webview = next;
+  requestAnimationFrame(sizeWebviewToShell);
 }
 
 function openActiveAccount() {
@@ -372,5 +376,17 @@ function setBrowserFocus(focused) {
   document.body.classList.toggle("browser-focus", focused);
   document.querySelector("#focus-browser").classList.toggle("hidden", focused);
   document.querySelector("#exit-focus").classList.toggle("hidden", !focused);
+  requestAnimationFrame(sizeWebviewToShell);
+  setTimeout(sizeWebviewToShell, 120);
   log(focused ? "Browser focus mode enabled." : "Browser focus mode closed.");
+}
+
+function sizeWebviewToShell() {
+  const rect = els.browserShell.getBoundingClientRect();
+  const width = Math.max(320, Math.floor(rect.width));
+  const height = Math.max(320, Math.floor(rect.height));
+  els.webview.style.width = `${width}px`;
+  els.webview.style.height = `${height}px`;
+  els.webview.setAttribute("width", String(width));
+  els.webview.setAttribute("height", String(height));
 }

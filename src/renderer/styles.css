@@ -272,11 +272,14 @@ textarea {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 webview {
   display: block;
   height: 100%;
+  inset: 0;
+  position: absolute;
   width: 100%;
 }
 
