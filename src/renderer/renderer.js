@@ -500,6 +500,10 @@ async function scheduleActiveDraft() {
     id: `scheduled-${Date.now()}`,
     draftId: activeDraft.id,
     context: getContext(),
+    companyName: getActiveRows().company.name,
+    brandName: getActiveRows().brand.name,
+    campaignName: getActiveRows().campaign.name,
+    accountLabel: `${getActiveRows().account.platform.toUpperCase()} / ${getActiveRows().account.id}`,
     status: "scheduled",
     scheduledAt: scheduledAt.toISOString(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "local",
@@ -748,7 +752,8 @@ function renderScheduleCalendar() {
           <span class="session-label">${item.status}</span>
         </header>
         <p>${preview}</p>
-        <p>${item.context.platform.toUpperCase()} / ${item.context.socialAccountId} / ${item.timezone}</p>
+        <p>${item.companyName || item.context.companyId} / ${item.brandName || item.context.brandId} / ${item.campaignName || item.context.campaignId}</p>
+        <p>${item.accountLabel || `${item.context.platform.toUpperCase()} / ${item.context.socialAccountId}`} / ${item.timezone}</p>
         <div class="draft-history-actions">
           <button type="button" data-schedule-action="load" data-schedule-id="${item.id}">Load draft</button>
           <button type="button" data-schedule-action="cancel" data-schedule-id="${item.id}">Cancel</button>
