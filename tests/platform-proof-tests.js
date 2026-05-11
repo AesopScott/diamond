@@ -6,6 +6,7 @@ import {
   evaluatePlatformProof,
   getPlatformBrowserAdapter,
   markPlatformProof,
+  markPlatformProofFromStage,
   platformProofId,
 } from "../src/index.js";
 
@@ -51,5 +52,22 @@ const redditProof = createPlatformProofRecord({
 });
 assert.equal(evaluatePlatformProof(redditProof, getPlatformBrowserAdapter("reddit")).status, "monitoring_only");
 
-console.log("All Diamond platform proof tests passed.");
+const stageProof = markPlatformProofFromStage(xProof, {
+  fillResult: { ok: true },
+  mediaResult: { ok: true },
+  hasMedia: true,
+});
+assert.equal(stageProof.changed, true);
+assert.equal(stageProof.proof.textProofCount, 1);
+assert.equal(stageProof.proof.mediaProofCount, 1);
 
+const manualStageProof = markPlatformProofFromStage(instagramProof, {
+  fillResult: { ok: false, manual: true },
+  mediaResult: { ok: false, manual: true },
+  hasMedia: true,
+});
+assert.equal(manualStageProof.changed, true);
+assert.equal(manualStageProof.proof.manualProofCount, 1);
+assert.equal(manualStageProof.proof.mediaProofCount, 0);
+
+console.log("All Diamond platform proof tests passed.");

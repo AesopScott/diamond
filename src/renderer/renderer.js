@@ -35,6 +35,7 @@ import {
   normalizeLoginUrl,
   platformLabel,
   markPlatformProof,
+  markPlatformProofFromStage,
   resolveComposeUrl,
   resolveLoginUrl,
   isMonitoringOnlyPlatform,
@@ -1242,6 +1243,7 @@ async function stageDraft() {
   els.webview.src = composeUrl;
   const fillResult = await fillComposerText(activeDraft.text);
   const mediaResult = media.length ? await prepareMediaUpload() : { ok: true, reason: "No media selected." };
+  await recordStageProof(account, fillResult, mediaResult);
   await capturePostRun({
     status: fillResult.ok && mediaResult.ok ? "staged" : "needs_manual_finish",
     note: buildStageNote(fillResult, mediaResult),
@@ -1254,6 +1256,7 @@ async function stageDraft() {
   renderDraftHistory();
   renderScheduleCalendar();
   renderEditorialSlots();
+  renderPlatformProofs();
 }
 
 async function assistMediaUpload() {
@@ -1275,6 +1278,19 @@ function buildStageNote(fillResult, mediaResult) {
   const textNote = fillResult.ok ? "Composer text inserted." : `Composer text not inserted: ${fillResult.reason}.`;
   const mediaNote = media.length ? mediaResult.reason : "No media selected.";
   return `${textNote} ${mediaNote}`;
+}
+
+async function recordStageProof(account, fillResult, mediaResult) {
+  const proof = getPlatformProof(account);
+  const result = markPlatformProofFromStage(proof, {
+    fillResult,
+    mediaResult,
+    hasMedia: media.length > 0,
+  });
+  if (!result.changed) return;
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === result.proof.id ? result.proof : item);
+  await window.diamond.saveState(state);
+  log(`Platform proof updated for ${platformLabel(account.platform)}: ${result.notes.join(" ")}`);
 }
 
 async function captureCurrentRun() {

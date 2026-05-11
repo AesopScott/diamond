@@ -53,6 +53,34 @@ export function markPlatformProof(proof, type = "manual", notes = "") {
   return next;
 }
 
+export function markPlatformProofFromStage(proof, input = {}) {
+  let next = createPlatformProofRecord(proof);
+  const fillResult = input.fillResult || {};
+  const mediaResult = input.mediaResult || {};
+  const hasMedia = Boolean(input.hasMedia);
+  const notes = [];
+  if (fillResult.ok) {
+    next = markPlatformProof(next, "text");
+    notes.push("Text insertion proof recorded from staging.");
+  } else if (fillResult.manual) {
+    next = markPlatformProof(next, "manual");
+    notes.push("Manual staging proof recorded from staging.");
+  }
+  if (hasMedia && mediaResult.ok) {
+    next = markPlatformProof(next, "media");
+    notes.push("Media picker proof recorded from staging.");
+  }
+  if (notes.length) {
+    next.notes = notes.join(" ");
+    next.updatedAt = next.lastProofAt || new Date().toISOString();
+  }
+  return {
+    proof: next,
+    changed: notes.length > 0,
+    notes,
+  };
+}
+
 export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAdapter(proof.platform)) {
   const record = createPlatformProofRecord({ ...proof, adapter });
   if (adapter.stageMode === "monitoring_only") {

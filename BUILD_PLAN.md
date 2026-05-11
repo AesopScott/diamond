@@ -189,6 +189,7 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Manual staging mode for non-X writable platforms
   - [x] Platform adapter proof panel
   - [x] Manual/text/media proof counters
+  - [x] Automatic proof updates from staging results
   - [ ] Assisted composer adapters beyond X
   - [ ] Platform-specific media upload proof
   - [ ] Repeated staging proof for each writable platform
