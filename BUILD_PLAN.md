@@ -1,5 +1,192 @@
 # Diamond Build Plan
 
+## Build Checklist
+
+This is the live top-level checklist for the three-build plan. Checked items are implemented in the current Diamond app; unchecked items remain to be built or formally verified.
+
+### Build 1: Standalone X Posting Loop
+
+- [x] Standalone Electron app shell
+  - [x] Local state persistence
+  - [x] Thecard.bet default tenant
+  - [x] Visible embedded social browser
+  - [x] Browser focus mode
+  - [x] Browser sizing/fit controls
+- [x] Active tenant/account context
+  - [x] Company selector
+  - [x] Brand selector
+  - [x] Campaign selector
+  - [x] Social account selector
+  - [x] Visible active target banner
+  - [x] Company/account guard before staging
+- [x] X account/session workflow
+  - [x] Account URL, login URL, compose URL, host, and browser profile fields
+  - [x] Isolated browser profile path per company/platform/account
+  - [x] Session check
+  - [x] Manual mark-ready
+  - [x] Preserve login through Electron browser profile
+  - [ ] Formal repeated X staging proof across three separate app sessions
+- [x] Post package workflow
+  - [x] Draft text area
+  - [x] Numbered action buttons
+  - [x] Equal-size action button grid
+  - [x] Evaluate draft
+  - [x] Approve draft
+  - [x] Stage in browser
+  - [x] Upload media helper
+  - [x] Capture run
+  - [x] Mark posted
+  - [x] Mark abandoned
+- [x] Browser staging path
+  - [x] Open composer
+  - [x] Copy draft to clipboard
+  - [x] Insert draft text into X composer when possible
+  - [x] Stop before publish
+  - [x] Screenshot run capture
+  - [ ] Full media attachment automation
+  - [ ] Playwright worker outside the embedded browser
+- [x] Post package queue
+  - [x] Queue list
+  - [x] Status filters
+  - [x] Load package
+  - [x] Approve package
+  - [x] Stage package
+  - [x] Schedule package
+  - [x] Copy package text
+  - [x] Remove package
+- [ ] Formal failure tests
+  - [ ] Wrong account
+  - [ ] Expired login
+  - [ ] Missing media
+  - [ ] Selector miss
+  - [ ] Risky copy
+  - [ ] Duplicate post
+  - [ ] Missing approval
+
+### Build 2: Strategy, Calendar, And Routine Handoff
+
+- [x] Brand library
+  - [x] Brand voice
+  - [x] Approved phrases
+  - [x] Banned phrases
+  - [x] Brand links/default identity data
+  - [x] Per-company/per-brand storage
+- [x] Claim library
+  - [x] Prize language
+  - [x] Free-to-play language
+  - [x] Review-required claims
+  - [x] Blocked claims
+  - [x] Evaluation details shown in live precheck and draft queue
+- [x] Campaign strategy
+  - [x] Goals
+  - [x] Audience
+  - [x] Content pillars
+  - [x] Primary CTA
+  - [x] Offer
+  - [x] Reference accounts
+- [x] Editorial calendar
+  - [x] Calendar jump button in top bar
+  - [x] Add slot
+  - [x] Slot topic
+  - [x] Planned date/time
+  - [x] Language
+  - [x] Asset need
+  - [x] Approval deadline
+  - [x] Slot status filters
+  - [x] Ready/skipped visual states
+  - [x] Slot-to-draft generation
+  - [x] Slot-to-schedule handoff
+- [x] Schedule calendar
+  - [x] Calendar jump button in top bar
+  - [x] Target/company/all scopes
+  - [x] Status filter
+  - [x] Overdue group
+  - [x] Ready today group
+  - [x] Upcoming group
+  - [x] Completed group
+  - [x] Schedule detail card
+  - [x] Load scheduled draft
+  - [x] Stage scheduled draft
+  - [x] Mark scheduled draft posted
+  - [x] Cancel scheduled draft
+- [x] Routine generation path
+  - [x] Generate from next slot
+  - [x] Run due slots
+  - [x] Due-window detection
+  - [x] Per-slot routine run records
+  - [x] Skipped slot reasons
+  - [x] Draft-to-slot linking
+  - [ ] Configurable routine due window
+  - [ ] Routine trigger callable from Polaris
+- [ ] Content quality loop
+  - [ ] Draft scoring beyond risk/claims
+  - [ ] Novelty/repetition check
+  - [ ] Spanish quality check
+  - [ ] Visual-fit check
+  - [ ] Audience-value score
+
+### Build 3: Scale, Assets, Replies, Metrics, And Integrations
+
+- [ ] Asset library
+  - [ ] Media library
+  - [ ] Generated asset history
+  - [ ] Do-not-use assets
+  - [ ] Safe-zone metadata
+  - [ ] Alt text
+- [ ] Image rendering templates
+  - [ ] Leaderboard card
+  - [ ] Prize card
+  - [ ] Country/flag card
+  - [ ] Founder/investor card
+  - [ ] Campaign card
+- [ ] Spanish generation path
+  - [ ] EN/ES campaign variants
+  - [ ] Spanish slot generation
+  - [ ] Spanish brand/claim checks
+  - [ ] Spanish UI labels where needed for operator review
+- [ ] Reply capture and classification
+  - [ ] Capture replies/comments
+  - [ ] Classify support, bug, investor, influencer, product, hostile, spam, legal, money, regulatory
+  - [ ] Response draft queue
+  - [ ] Human approval gate
+  - [ ] Escalation rules
+- [ ] Cadence and do-not-engage controls
+  - [ ] Max posts/day
+  - [ ] Max replies/hour
+  - [ ] Quiet hours
+  - [ ] Cooldowns
+  - [ ] Duplicate prevention
+  - [ ] Silence/escalation rules
+- [ ] Metrics logging
+  - [ ] Post URL capture
+  - [ ] Screenshot association
+  - [ ] Impression/click/signup fields
+  - [ ] League join attribution
+  - [ ] Performance notes
+- [ ] Firebase/admin sync
+  - [ ] Confirm Firebase admin JSON loading path
+  - [ ] Keep service account out of renderer
+  - [ ] Optional backend sync for drafts
+  - [ ] Optional backend sync for schedules
+  - [ ] Optional backend sync for runs and metrics
+- [ ] Platform expansion
+  - [ ] Instagram routine
+  - [ ] TikTok routine
+  - [ ] LinkedIn routine
+  - [ ] YouTube Shorts routine
+  - [ ] Facebook routine
+  - [ ] Reddit monitoring-only routine
+- [ ] Polaris integration
+  - [ ] Routine trigger from Polaris
+  - [ ] Firebase shared state mapping
+  - [ ] Launch/bridge path from Polaris to Diamond
+  - [ ] Standalone fallback remains intact
+- [ ] Expert review and workflow signoff
+  - [ ] Formal expert checklist pass
+  - [ ] Scott workflow signoff
+  - [ ] Repeated staging proof
+  - [ ] Decision on whether `auto_publish` ever becomes available
+
 ## Current Phase
 Build Diamond as a standalone multitenant social media operating system. Diamond will generate campaign content, render post assets, operate platform web UIs through visible browser surfaces, and manage replies through an approval-aware response queue for multiple companies.
 
