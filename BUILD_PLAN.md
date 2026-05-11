@@ -124,12 +124,12 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Missing strategy pillars
   - [x] Slot not due yet
   - [x] Wrong slot status
-- [ ] Content quality loop
-  - [ ] Draft scoring beyond risk/claims
-  - [ ] Novelty/repetition check
-  - [ ] Spanish quality check
-  - [ ] Visual-fit check
-  - [ ] Audience-value score
+- [x] Content quality loop
+  - [x] Draft scoring beyond risk/claims
+  - [x] Novelty/repetition check
+  - [x] Spanish quality check
+  - [x] Visual-fit check
+  - [x] Audience-value score
 
 ### Build 3: Scale, Assets, Replies, Metrics, And Integrations
 
@@ -417,11 +417,11 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
 | P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
 | P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
-| P1 | Add content quality feedback loop | Queued | Voice examples, banned phrases, post review notes, performance notes. |
+| P1 | Add content quality feedback loop | Built | Scores drafts for CTA, novelty, risk, language, visual fit, and audience value before approval or staging. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
 | P1 | Add inbox triage before reply drafting | Queued | Priority, owner, action, and escalation before writing responses. |
 | P1 | Add cadence and do-not-engage policies | Queued | Rate limits, quiet hours, cooldowns, silence rules. |
-| P1 | Add post memory and draft evaluation | Queued | Prevent repetition/contradiction and score drafts before staging. |
+| P1 | Add post memory and draft evaluation | Built | Drafts and captured post runs now create post memory records, and repetitive drafts are held. |
 | P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |

@@ -6,6 +6,8 @@ import {
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
+  createPostMemoryRecord,
+  evaluateDraftQuality,
   getSessionForContext,
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
@@ -197,6 +199,7 @@ async function loadInitialState() {
     ...seed,
     drafts: [],
     postRuns: [],
+    postMemory: [],
     scheduledPosts: [],
     editorialSlots: seed.editorialSlots || [],
     contentStrategies: seed.contentStrategies || [],
@@ -216,6 +219,7 @@ function ensureWorkspaceData(workspace) {
   next.editorialSlots ||= [];
   next.assetLibrary ||= [];
   next.socialTemplates ||= [];
+  next.postMemory ||= [];
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
@@ -660,7 +664,7 @@ function renderMedia() {
 }
 
 function evaluateDraft() {
-  const { policy, brandLibrary, claimLibrary } = getActiveRows();
+  const { policy, brandLibrary, claimLibrary, strategy } = getActiveRows();
   const selectedSlot = (state.editorialSlots || []).find((slot) => slot.id === selectedSlotId);
   lastStageMessage = null;
   activeDraft = createPostDraft({
@@ -672,12 +676,22 @@ function evaluateDraft() {
     brandLibrary,
     claimLibrary,
   });
+  const quality = evaluateDraftQuality({
+    draft: activeDraft,
+    strategy,
+    memory: state.postMemory || [],
+    assets: media.map((file) => findAssetByPath(file)).filter(Boolean),
+    slot: selectedSlot,
+  });
+  applyDraftQuality(activeDraft, quality);
   if (selectedSlotId) {
     activeDraft.editorialSlotId = selectedSlotId;
     syncSlotForDraft(activeDraft, { status: "drafted", draftedAt: activeDraft.createdAt });
   }
   state.drafts.unshift(activeDraft);
-  log(`Draft evaluated: ${activeDraft.approvalLevel}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
+  rememberDraft(activeDraft, "draft");
+  void window.diamond.saveState(state);
+  log(`Draft evaluated: ${activeDraft.approvalLevel}; quality ${activeDraft.qualityScore}/${activeDraft.qualityGate}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
@@ -689,10 +703,16 @@ function approveDraft() {
     log("Cannot approve blocked draft.");
     return;
   }
+  if (activeDraft.qualityGate === "hold") {
+    log("Cannot approve draft on quality hold. Revise the copy or asset package first.");
+    return;
+  }
   lastStageMessage = null;
   activeDraft.status = "approved";
   activeDraft.updatedAt = new Date().toISOString();
   syncSlotForDraft(activeDraft, { status: "approved", approvedAt: activeDraft.updatedAt });
+  rememberDraft(activeDraft, "approved");
+  void window.diamond.saveState(state);
   log("Draft approved for staging.");
   renderRiskCard();
   renderPackageFilters();
@@ -880,6 +900,7 @@ async function markActiveRunPosted() {
       postedAt: run.postedAt,
       postUrl: currentUrl,
     });
+    rememberDraft(activeDraft, "posted", run);
   }
   await window.diamond.saveState(state);
   renderRunHistory();
@@ -945,6 +966,7 @@ async function capturePostRun({ status, note }) {
   state.postRuns.unshift(run);
   activeDraft.lastRunId = run.id;
   activeDraft.screenshotPath = screenshotPath;
+  rememberDraft(activeDraft, status, run);
   await window.diamond.saveState(state);
   renderRunHistory();
   return run;
@@ -966,14 +988,29 @@ async function captureBrowserScreenshot(runId) {
 
 function renderRiskCard() {
   if (!activeDraft) {
-    const { policy, brandLibrary, claimLibrary } = getActiveRows();
+    const { policy, brandLibrary, claimLibrary, strategy } = getActiveRows();
+    const selectedSlot = (state.editorialSlots || []).find((slot) => slot.id === selectedSlotId);
     const evaluation = approvalLevelForText(els.draftText.value, {
       ...policy,
       brandLibrary,
       claimLibrary,
     });
+    const quality = evaluateDraftQuality({
+      draft: {
+        text: els.draftText.value,
+        language: selectedSlot?.language || "en",
+        context: getContext(),
+        media,
+        approvalLevel: evaluation.level,
+        riskFlags: evaluation.flags,
+      },
+      strategy,
+      memory: state.postMemory || [],
+      assets: media.map((file) => findAssetByPath(file)).filter(Boolean),
+      slot: selectedSlot,
+    });
     els.riskCard.className = `risk-card ${evaluation.level === "auto_allowed" ? "good" : "warn"}`;
-    els.riskCard.innerHTML = riskSummaryHtml(`Live precheck: ${evaluation.level}.`, evaluation.flags, evaluation.details);
+    els.riskCard.innerHTML = riskSummaryHtml(`Live precheck: ${evaluation.level}. Quality: ${quality.score}/${quality.level}.`, evaluation.flags, [...evaluation.details, ...quality.details]);
     return;
   }
 
@@ -984,25 +1021,25 @@ function renderRiskCard() {
 
   if (lastStageMessage) {
     els.riskCard.className = "risk-card bad";
-    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Staging blocked: ${lastStageMessage}.`, activeDraft.riskFlags, activeDraft.riskDetails);
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Staging blocked: ${lastStageMessage}.`, activeDraft.riskFlags, draftDetailLines(activeDraft));
     return;
   }
 
   if (activeDraft.status === "staged") {
     els.riskCard.className = stageCheck.ok ? "risk-card good" : "risk-card warn";
-    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Copied to clipboard and opened in the browser.`, activeDraft.riskFlags, activeDraft.riskDetails);
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Copied to clipboard and opened in the browser.`, activeDraft.riskFlags, draftDetailLines(activeDraft));
     return;
   }
 
   if (activeDraft.status === "posted") {
     els.riskCard.className = "risk-card good";
-    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Posted URL: ${activeDraft.postUrl || "captured in run history"}.`, activeDraft.riskFlags, activeDraft.riskDetails);
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Posted URL: ${activeDraft.postUrl || "captured in run history"}.`, activeDraft.riskFlags, draftDetailLines(activeDraft));
     return;
   }
 
   if (activeDraft.status === "scheduled") {
     els.riskCard.className = "risk-card good";
-    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Scheduled for ${formatScheduleTime(activeDraft.scheduledAt)}.`, activeDraft.riskFlags, activeDraft.riskDetails);
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Scheduled for ${formatScheduleTime(activeDraft.scheduledAt)}.`, activeDraft.riskFlags, draftDetailLines(activeDraft));
     return;
   }
 
@@ -1010,8 +1047,49 @@ function renderRiskCard() {
   els.riskCard.innerHTML = riskSummaryHtml(
     `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`,
     activeDraft.riskFlags,
-    activeDraft.riskDetails,
+    draftDetailLines(activeDraft),
   );
+}
+
+function applyDraftQuality(draft, quality) {
+  draft.qualityScore = quality.score;
+  draft.qualityGate = quality.level;
+  draft.qualityDetails = quality.details || [];
+  draft.repeatedMemoryId = quality.repeatedMemoryId || null;
+  if (quality.level === "hold") draft.status = "blocked";
+}
+
+function draftDetailLines(draft) {
+  const lines = [...(draft.riskDetails || [])];
+  if (draft.qualityScore !== null && draft.qualityScore !== undefined) {
+    lines.push(`Quality score: ${draft.qualityScore}/${draft.qualityGate || "unscored"}.`);
+  }
+  if (draft.qualityDetails?.length) lines.push(...draft.qualityDetails);
+  return lines;
+}
+
+function rememberDraft(draft, status, run = null) {
+  if (!draft) return null;
+  state.postMemory ||= [];
+  const existing = state.postMemory.find((item) => item.sourceId === draft.id);
+  if (existing) {
+    Object.assign(existing, {
+      context: draft.context,
+      text: draft.text,
+      normalizedText: String(draft.text || "").trim().replace(/\s+/g, " ").toLowerCase(),
+      language: draft.language || "en",
+      status,
+      runId: run?.id || existing.runId || null,
+      qualityScore: draft.qualityScore ?? existing.qualityScore ?? null,
+      qualityGate: draft.qualityGate || existing.qualityGate || null,
+      updatedAt: new Date().toISOString(),
+    });
+    return existing;
+  }
+  const record = createPostMemoryRecord({ draft, status, sourceType: run ? "run" : "draft" });
+  if (run) record.runId = run.id;
+  state.postMemory.unshift(record);
+  return record;
 }
 
 function riskSummaryHtml(summary, flags = [], details = []) {
@@ -1667,7 +1745,9 @@ function renderDraftHistory() {
       </header>
       <p>${preview}</p>
       <p>${draft.approvalLevel}${draft.riskFlags?.length ? ` - ${draft.riskFlags.join(", ")}` : ""}</p>
+      <p>Quality ${draft.qualityScore ?? "n/a"} / ${draft.qualityGate || "unscored"}</p>
       ${draft.riskDetails?.length ? `<p>${draft.riskDetails.slice(0, 3).map(escapeHtml).join(" / ")}</p>` : ""}
+      ${draft.qualityDetails?.length ? `<p>${draft.qualityDetails.slice(0, 2).map(escapeHtml).join(" / ")}</p>` : ""}
       <div class="draft-history-actions">
         <button type="button" data-draft-action="load" data-draft-id="${draft.id}">Load</button>
         <button type="button" data-draft-action="approve" data-draft-id="${draft.id}">Approve</button>

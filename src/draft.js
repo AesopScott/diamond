@@ -26,6 +26,10 @@ export function createPostDraft(input) {
     approvalLevel: evaluation.level,
     riskFlags: evaluation.flags,
     riskDetails: evaluation.details || [],
+    qualityScore: input.quality?.score ?? null,
+    qualityGate: input.quality?.level || input.quality?.gate || null,
+    qualityDetails: input.quality?.details || [],
+    repeatedMemoryId: input.quality?.repeatedMemoryId || null,
     firestorePath: companyPath(context, "postDrafts", draftId).join("/"),
     createdAt: now,
     updatedAt: now,
@@ -35,6 +39,7 @@ export function createPostDraft(input) {
 export function canStageDraft(draft, options = {}) {
   if (!draft) return { ok: false, reason: "Missing draft" };
   if (draft.status === "blocked") return { ok: false, reason: "Draft is blocked" };
+  if (draft.qualityGate === "hold") return { ok: false, reason: "Draft quality hold" };
   if (draft.approvalLevel === "review_required" && !["approved", "staged"].includes(draft.status)) {
     return { ok: false, reason: "Review required before staging" };
   }

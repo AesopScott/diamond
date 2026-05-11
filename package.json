@@ -7,7 +7,7 @@
   "main": "src/electron/main.cjs",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/run-tests.js && node tests/failure-tests.js && node tests/x-browser-adapter-tests.js && node tests/template-renderer-tests.js && node tests/content-generation-tests.js",
+    "test": "node tests/run-tests.js && node tests/failure-tests.js && node tests/x-browser-adapter-tests.js && node tests/template-renderer-tests.js && node tests/content-generation-tests.js && node tests/quality-tests.js",
     "validate": "node scripts/validate-build.js"
   },
   "engines": {
