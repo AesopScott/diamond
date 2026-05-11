@@ -23,9 +23,11 @@ const state = await loadInitialState();
 let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
 let packageFilter = "active";
+let slotFilter = "active";
 let scheduleScope = "target";
 let scheduleStatusFilter = "open";
 let selectedScheduleId = null;
+let selectedSlotId = null;
 let lastStageMessage = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
@@ -48,6 +50,12 @@ const els = {
   blockedClaims: document.querySelector("#blocked-claims"),
   prizeLanguage: document.querySelector("#prize-language"),
   freePlayLanguage: document.querySelector("#free-play-language"),
+  strategyGoals: document.querySelector("#strategy-goals"),
+  strategyAudience: document.querySelector("#strategy-audience"),
+  strategyPillars: document.querySelector("#strategy-pillars"),
+  strategyCta: document.querySelector("#strategy-cta"),
+  strategyOffer: document.querySelector("#strategy-offer"),
+  strategyReferences: document.querySelector("#strategy-references"),
   activeTarget: document.querySelector("#active-target"),
   targetStatus: document.querySelector("#target-status"),
   draftText: document.querySelector("#draft-text"),
@@ -59,6 +67,13 @@ const els = {
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
+  slotTopic: document.querySelector("#slot-topic"),
+  slotTime: document.querySelector("#slot-time"),
+  slotLanguage: document.querySelector("#slot-language"),
+  slotAsset: document.querySelector("#slot-asset"),
+  slotDeadline: document.querySelector("#slot-deadline"),
+  slotFilters: document.querySelector("#slot-filters"),
+  editorialSlots: document.querySelector("#editorial-slots"),
   draftHistory: document.querySelector("#draft-history"),
   packageFilters: document.querySelector("#package-filters"),
   scheduleScope: document.querySelector("#schedule-scope"),
@@ -99,6 +114,8 @@ document.querySelector("#mark-posted").addEventListener("click", markActiveRunPo
 document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#save-brand-rules").addEventListener("click", saveBrandRules);
+document.querySelector("#save-strategy").addEventListener("click", saveStrategy);
+document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
@@ -111,6 +128,8 @@ document.querySelector("#mark-ready").addEventListener("click", markSessionReady
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 els.runHistory.addEventListener("click", handleRunHistoryClick);
+els.editorialSlots.addEventListener("click", handleSlotClick);
+els.slotFilters.addEventListener("click", handleSlotFilterClick);
 els.draftHistory.addEventListener("click", handleDraftHistoryClick);
 els.packageFilters.addEventListener("click", handlePackageFilterClick);
 els.scheduleScope.addEventListener("click", handleScheduleScopeClick);
@@ -140,7 +159,7 @@ async function loadInitialState() {
   const saved = await window.diamond.getState();
   if (saved) {
     const migrated = migrateWorkspaceState(saved);
-    const hydrated = ensureWorkspaceLibraries(migrated);
+    const hydrated = ensureWorkspaceData(migrated);
     if (hydrated !== saved) await window.diamond.saveState(hydrated);
     return hydrated;
   }
@@ -150,27 +169,46 @@ async function loadInitialState() {
     drafts: [],
     postRuns: [],
     scheduledPosts: [],
+    editorialSlots: seed.editorialSlots || [],
+    contentStrategies: seed.contentStrategies || [],
     sessions: {},
     runLog: [],
   };
 }
 
-function ensureWorkspaceLibraries(workspace) {
+function ensureWorkspaceData(workspace) {
   const seed = createSeedWorkspace();
   const next = structuredClone(workspace);
+  let changed = false;
   next.brandLibraries ||= [];
   next.claimLibraries ||= [];
+  next.contentStrategies ||= [];
+  next.editorialSlots ||= [];
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
+      changed = true;
     }
   });
   seed.claimLibraries.forEach((library) => {
     if (!next.claimLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.claimLibraries.push(library);
+      changed = true;
     }
   });
-  return next;
+  seed.contentStrategies.forEach((strategy) => {
+    if (!next.contentStrategies.some((row) => row.companyId === strategy.companyId && row.brandId === strategy.brandId && row.campaignId === strategy.campaignId)) {
+      next.contentStrategies.push(strategy);
+      changed = true;
+    }
+  });
+  seed.editorialSlots.forEach((slot) => {
+    if (!next.editorialSlots.some((row) => row.id === slot.id)) {
+      next.editorialSlots.push(slot);
+      changed = true;
+    }
+  });
+  return changed ? next : workspace;
 }
 
 function hydrate() {
@@ -200,7 +238,8 @@ function getActiveRows() {
   const policy = state.approvalPolicies.find((row) => row.id === company.defaultApprovalPolicyId) || state.approvalPolicies[0];
   const brandLibrary = getBrandLibrary(company.id, brand.id);
   const claimLibrary = getClaimLibrary(company.id, brand.id);
-  return { company, brand, campaign, account, policy, brandLibrary, claimLibrary };
+  const strategy = getContentStrategy(company.id, brand.id, campaign.id);
+  return { company, brand, campaign, account, policy, brandLibrary, claimLibrary, strategy };
 }
 
 function getContext() {
@@ -224,12 +263,15 @@ function render() {
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderAccountSettings(account);
   renderBrandRules();
+  renderStrategy();
   renderValidation(context);
   renderSession(context);
   renderBrowserTabs();
   renderMedia();
   renderRiskCard();
   renderRunHistory();
+  renderSlotFilters();
+  renderEditorialSlots();
   renderDraftHistory();
   renderPackageFilters();
   renderScheduleCalendar();
@@ -274,6 +316,27 @@ function getClaimLibrary(companyId, brandId) {
   return library;
 }
 
+function getContentStrategy(companyId, brandId, campaignId) {
+  state.contentStrategies ||= [];
+  let strategy = state.contentStrategies.find((row) => row.companyId === companyId && row.brandId === brandId && row.campaignId === campaignId);
+  if (!strategy) {
+    strategy = {
+      id: `${companyId}-${brandId}-${campaignId}-strategy`,
+      companyId,
+      brandId,
+      campaignId,
+      goals: [],
+      audience: [],
+      pillars: [],
+      cta: "",
+      offer: "",
+      referenceAccounts: [],
+    };
+    state.contentStrategies.push(strategy);
+  }
+  return strategy;
+}
+
 function renderBrandRules() {
   if (document.activeElement && [
     "brand-voice",
@@ -294,6 +357,26 @@ function renderBrandRules() {
   els.blockedClaims.value = linesFor(claimLibrary.blockedClaims);
   els.prizeLanguage.value = linesFor(claimLibrary.prizeLanguage);
   els.freePlayLanguage.value = linesFor(claimLibrary.freeToPlayLanguage);
+}
+
+function renderStrategy() {
+  if (document.activeElement && [
+    "strategy-goals",
+    "strategy-audience",
+    "strategy-pillars",
+    "strategy-cta",
+    "strategy-offer",
+    "strategy-references",
+  ].includes(document.activeElement.id)) {
+    return;
+  }
+  const { strategy } = getActiveRows();
+  els.strategyGoals.value = linesFor(strategy.goals);
+  els.strategyAudience.value = linesFor(strategy.audience);
+  els.strategyPillars.value = linesFor(strategy.pillars);
+  els.strategyCta.value = strategy.cta || "";
+  els.strategyOffer.value = strategy.offer || "";
+  els.strategyReferences.value = linesFor(strategy.referenceAccounts);
 }
 
 function renderAccountSettings(account) {
@@ -375,6 +458,20 @@ async function saveBrandRules() {
   renderDraftHistory();
   renderPackageFilters();
   log("Brand and claim rules saved for the active brand.");
+}
+
+async function saveStrategy() {
+  const { strategy } = getActiveRows();
+  strategy.goals = linesFrom(els.strategyGoals.value);
+  strategy.audience = linesFrom(els.strategyAudience.value);
+  strategy.pillars = linesFrom(els.strategyPillars.value);
+  strategy.cta = els.strategyCta.value.trim();
+  strategy.offer = els.strategyOffer.value.trim();
+  strategy.referenceAccounts = linesFrom(els.strategyReferences.value);
+  strategy.updatedAt = new Date().toISOString();
+  await window.diamond.saveState(state);
+  renderEditorialSlots();
+  log("Campaign strategy saved.");
 }
 
 function getActiveSession() {
@@ -517,6 +614,10 @@ function evaluateDraft() {
     brandLibrary,
     claimLibrary,
   });
+  if (selectedSlotId) {
+    activeDraft.editorialSlotId = selectedSlotId;
+    syncSlotForDraft(activeDraft, { status: "drafted", draftedAt: activeDraft.createdAt });
+  }
   state.drafts.unshift(activeDraft);
   log(`Draft evaluated: ${activeDraft.approvalLevel}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
   renderRiskCard();
@@ -533,10 +634,12 @@ function approveDraft() {
   lastStageMessage = null;
   activeDraft.status = "approved";
   activeDraft.updatedAt = new Date().toISOString();
+  syncSlotForDraft(activeDraft, { status: "approved", approvedAt: activeDraft.updatedAt });
   log("Draft approved for staging.");
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
+  renderEditorialSlots();
 }
 
 async function stageDraft() {
@@ -564,6 +667,7 @@ async function stageDraft() {
     status: "staged",
     stagedAt: activeDraft.stagedAt,
   });
+  syncSlotForDraft(activeDraft, { status: "staged", stagedAt: activeDraft.stagedAt });
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
   const fillResult = await fillComposerText(activeDraft.text);
@@ -579,6 +683,7 @@ async function stageDraft() {
   renderPackageFilters();
   renderDraftHistory();
   renderScheduleCalendar();
+  renderEditorialSlots();
 }
 
 async function assistMediaUpload() {
@@ -653,11 +758,17 @@ async function scheduleActiveDraft() {
   activeDraft.scheduledAt = schedule.scheduledAt;
   activeDraft.updatedAt = schedule.createdAt;
   selectedScheduleId = schedule.id;
+  syncSlotForDraft(activeDraft, {
+    status: "scheduled",
+    scheduledAt: schedule.scheduledAt,
+    scheduledPostId: schedule.id,
+  });
   await window.diamond.saveState(state);
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
   renderScheduleCalendar();
+  renderEditorialSlots();
   log(`Scheduled draft ${activeDraft.id} for ${formatScheduleTime(schedule.scheduledAt)}.`);
 }
 
@@ -671,6 +782,17 @@ function syncScheduleForDraft(draft, patch) {
   });
   selectedScheduleId = schedule.id;
   return schedule;
+}
+
+function syncSlotForDraft(draft, patch) {
+  const slot = (state.editorialSlots || []).find((item) => item.id === draft.editorialSlotId);
+  if (!slot) return null;
+  Object.assign(slot, patch, {
+    draftId: draft.id,
+    updatedAt: new Date().toISOString(),
+  });
+  selectedSlotId = slot.id;
+  return slot;
 }
 
 async function markActiveRunPosted() {
@@ -695,6 +817,11 @@ async function markActiveRunPosted() {
       postedAt: run.postedAt,
       postUrl: currentUrl,
     });
+    syncSlotForDraft(activeDraft, {
+      status: "posted",
+      postedAt: run.postedAt,
+      postUrl: currentUrl,
+    });
   }
   await window.diamond.saveState(state);
   renderRunHistory();
@@ -702,6 +829,7 @@ async function markActiveRunPosted() {
   renderPackageFilters();
   renderDraftHistory();
   renderScheduleCalendar();
+  renderEditorialSlots();
   log(`Run marked posted: ${run.id}.`);
 }
 
@@ -866,6 +994,201 @@ function renderRunHistory() {
     `;
     els.runHistory.append(item);
   });
+}
+
+async function addEditorialSlot() {
+  const topic = els.slotTopic.value.trim();
+  if (!topic) {
+    log("Slot refused: add a topic first.");
+    return;
+  }
+  const plannedAt = els.slotTime.value ? new Date(els.slotTime.value) : new Date(Date.now() + 60 * 60 * 1000);
+  const approvalDeadline = els.slotDeadline.value ? new Date(els.slotDeadline.value) : new Date(plannedAt.getTime() - 30 * 60 * 1000);
+  if (Number.isNaN(plannedAt.getTime()) || Number.isNaN(approvalDeadline.getTime())) {
+    log("Slot refused: invalid slot time or approval deadline.");
+    return;
+  }
+  const { company, brand, campaign, account } = getActiveRows();
+  const slot = {
+    id: `slot-${Date.now()}`,
+    companyId: company.id,
+    brandId: brand.id,
+    campaignId: campaign.id,
+    platform: account.platform,
+    socialAccountId: account.id,
+    topic,
+    language: els.slotLanguage.value,
+    assetNeed: els.slotAsset.value.trim(),
+    status: "planned",
+    plannedAt: plannedAt.toISOString(),
+    approvalDeadline: approvalDeadline.toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+  state.editorialSlots ||= [];
+  state.editorialSlots.unshift(slot);
+  selectedSlotId = slot.id;
+  els.slotTopic.value = "";
+  els.slotAsset.value = "";
+  await window.diamond.saveState(state);
+  renderSlotFilters();
+  renderEditorialSlots();
+  log(`Editorial slot added: ${slot.topic}.`);
+}
+
+function renderSlotFilters() {
+  const filters = [
+    ["active", "Active"],
+    ["planned", "Planned"],
+    ["drafted", "Drafted"],
+    ["approved", "Approved"],
+    ["scheduled", "Scheduled"],
+    ["posted", "Posted"],
+    ["all", "All"],
+  ];
+  els.slotFilters.innerHTML = "";
+  filters.forEach(([value, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.slotFilter = value;
+    button.className = slotFilter === value ? "active" : "";
+    button.textContent = `${label} ${countSlotsForFilter(value)}`;
+    els.slotFilters.append(button);
+  });
+}
+
+function renderEditorialSlots() {
+  const slots = filteredSlots()
+    .sort((a, b) => new Date(a.plannedAt).getTime() - new Date(b.plannedAt).getTime());
+  els.editorialSlots.innerHTML = "";
+  if (!slots.length) {
+    const empty = document.createElement("div");
+    empty.className = "draft-history-empty";
+    empty.textContent = "No editorial slots match this filter.";
+    els.editorialSlots.append(empty);
+    return;
+  }
+  slots.slice(0, 12).forEach((slot) => {
+    const item = document.createElement("article");
+    item.className = `slot-item ${selectedSlotId === slot.id ? "active" : ""} ${slot.status}`;
+    const plannedAt = slot.plannedAt ? new Date(slot.plannedAt).toLocaleString() : "No time";
+    const deadline = slot.approvalDeadline ? new Date(slot.approvalDeadline).toLocaleString() : "No deadline";
+    item.innerHTML = `
+      <header>
+        <strong>${escapeHtml(slot.topic)}</strong>
+        <span class="session-label">${slot.status}</span>
+      </header>
+      <p>${plannedAt} / ${slot.platform?.toUpperCase() || "X"} / ${slot.language || "en"}</p>
+      <p>Approval: ${deadline}${slot.assetNeed ? ` / Asset: ${escapeHtml(slot.assetNeed)}` : ""}</p>
+      <div class="draft-history-actions">
+        <button type="button" data-slot-action="select" data-slot-id="${slot.id}">Select</button>
+        <button type="button" data-slot-action="draft" data-slot-id="${slot.id}">Draft from slot</button>
+        <button type="button" data-slot-action="schedule" data-slot-id="${slot.id}">Schedule</button>
+        <button type="button" data-slot-action="posted" data-slot-id="${slot.id}">Mark posted</button>
+        <button type="button" data-slot-action="remove" data-slot-id="${slot.id}">Remove</button>
+      </div>
+    `;
+    els.editorialSlots.append(item);
+  });
+}
+
+function filteredSlots() {
+  const context = getContext();
+  const slots = (state.editorialSlots || []).filter((slot) => slot.companyId === context.companyId
+    && slot.brandId === context.brandId
+    && slot.campaignId === context.campaignId
+    && slot.socialAccountId === context.socialAccountId);
+  if (slotFilter === "all") return slots;
+  if (slotFilter === "active") return slots.filter((slot) => !["posted", "removed"].includes(slot.status));
+  return slots.filter((slot) => slot.status === slotFilter);
+}
+
+function countSlotsForFilter(filter) {
+  const previous = slotFilter;
+  slotFilter = filter;
+  const count = filteredSlots().length;
+  slotFilter = previous;
+  return count;
+}
+
+async function handleSlotClick(event) {
+  const button = event.target.closest("button[data-slot-action]");
+  if (!button) return;
+  const slot = (state.editorialSlots || []).find((item) => item.id === button.dataset.slotId);
+  if (!slot) return;
+  selectedSlotId = slot.id;
+  activateSlotContext(slot);
+
+  if (button.dataset.slotAction === "select") {
+    draftSlotText(slot);
+    renderEditorialSlots();
+    return;
+  }
+  if (button.dataset.slotAction === "draft") {
+    draftSlotText(slot);
+    evaluateDraft();
+    slot.status = "drafted";
+    slot.draftId = activeDraft.id;
+    slot.draftedAt = activeDraft.createdAt;
+    await window.diamond.saveState(state);
+    renderEditorialSlots();
+  }
+  if (button.dataset.slotAction === "schedule") {
+    const draft = (state.drafts || []).find((item) => item.id === slot.draftId);
+    if (draft) {
+      loadDraft(draft);
+      if (!["approved", "staged", "posted"].includes(activeDraft.status)) approveDraft();
+    } else {
+      draftSlotText(slot);
+      evaluateDraft();
+      approveDraft();
+    }
+    await scheduleActiveDraft();
+  }
+  if (button.dataset.slotAction === "posted") {
+    slot.status = "posted";
+    slot.postedAt = new Date().toISOString();
+    const draft = (state.drafts || []).find((item) => item.id === slot.draftId);
+    if (draft) draft.status = "posted";
+    await window.diamond.saveState(state);
+    renderEditorialSlots();
+    renderDraftHistory();
+    renderPackageFilters();
+    log(`Editorial slot marked posted: ${slot.topic}.`);
+  }
+  if (button.dataset.slotAction === "remove") {
+    slot.status = "removed";
+    slot.removedAt = new Date().toISOString();
+    await window.diamond.saveState(state);
+    renderSlotFilters();
+    renderEditorialSlots();
+    log(`Editorial slot removed: ${slot.topic}.`);
+  }
+}
+
+function handleSlotFilterClick(event) {
+  const button = event.target.closest("button[data-slot-filter]");
+  if (!button) return;
+  slotFilter = button.dataset.slotFilter;
+  renderSlotFilters();
+  renderEditorialSlots();
+}
+
+function draftSlotText(slot) {
+  const { strategy } = getActiveRows();
+  const pillars = Array.isArray(strategy.pillars) ? strategy.pillars.slice(0, 2).join(" / ") : "";
+  const audience = Array.isArray(strategy.audience) ? strategy.audience[0] : "";
+  const text = [
+    slot.topic,
+    strategy.offer ? strategy.offer : "",
+    audience ? `Built for ${audience.toLowerCase()}` : "",
+    pillars ? `Angle: ${pillars}.` : "",
+    strategy.cta || "",
+  ].filter(Boolean).join(" ");
+  els.draftText.value = text;
+  activeDraft = null;
+  lastStageMessage = null;
+  renderRiskCard();
+  log(`Draft text filled from editorial slot: ${slot.topic}.`);
 }
 
 function renderDraftHistory() {
@@ -1188,6 +1511,14 @@ function activateScheduleContext(schedule) {
   setSelectIfPresent(els.campaign, context.campaignId);
   setSelectIfPresent(els.account, context.socialAccountId);
   activeMode = context.postingMode || activeMode;
+  syncModeButtons();
+}
+
+function activateSlotContext(slot) {
+  setSelectIfPresent(els.company, slot.companyId);
+  setSelectIfPresent(els.brand, slot.brandId);
+  setSelectIfPresent(els.campaign, slot.campaignId);
+  setSelectIfPresent(els.account, slot.socialAccountId);
   syncModeButtons();
 }
 

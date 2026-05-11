@@ -51,6 +51,54 @@ export function createSeedWorkspace() {
         status: "planning",
       },
     ],
+    contentStrategies: [
+      {
+        id: "world-cup-2026-strategy",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        goals: [
+          "Drive free World Cup league signups.",
+          "Make the leaderboard feel active before launch.",
+          "Position thecard.bet as a sports prediction game, not a sportsbook.",
+        ],
+        audience: [
+          "World Cup fans who like picks, brackets, and friendly competition.",
+          "Sports fans who want a free contest with visible standings.",
+        ],
+        pillars: [
+          "Country pride",
+          "Leaderboard movement",
+          "Prize clarity",
+          "Matchday urgency",
+          "Free-to-play onboarding",
+        ],
+        cta: "Join the free World Cup league at thecard.bet.",
+        offer: "$1,000 total payouts for the World Cup campaign.",
+        referenceAccounts: [
+          "@FIFAWorldCup",
+          "@FOXSoccer",
+          "@MenInBlazers",
+        ],
+      },
+    ],
+    editorialSlots: [
+      {
+        id: "slot-world-cup-launch",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        platform: context.platform,
+        socialAccountId: context.socialAccountId,
+        topic: "World Cup free league launch",
+        language: "en",
+        assetNeed: "country leaderboard image",
+        status: "planned",
+        plannedAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        approvalDeadline: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      },
+    ],
     brandLibraries: [
       {
         id: "the-card-brand-library",

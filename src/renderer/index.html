@@ -116,6 +116,37 @@
 
         <section class="panel">
           <div class="panel-heading">
+            <span>Campaign Strategy</span>
+            <button id="save-strategy" type="button">Save</button>
+          </div>
+          <label>
+            Goals
+            <textarea id="strategy-goals" rows="4" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Audience
+            <textarea id="strategy-audience" rows="3" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Content pillars
+            <textarea id="strategy-pillars" rows="4" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Primary CTA
+            <textarea id="strategy-cta" rows="3" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Offer
+            <textarea id="strategy-offer" rows="3" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Reference accounts
+            <textarea id="strategy-references" rows="3" spellcheck="true"></textarea>
+          </label>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
             <span>Mode</span>
           </div>
           <div class="segmented" role="group" aria-label="Posting mode">
@@ -203,6 +234,40 @@
             <span>Post Runs</span>
           </div>
           <div id="run-history" class="run-history"></div>
+        </section>
+
+        <section class="panel editorial-panel">
+          <div class="panel-heading">
+            <span>Editorial Calendar Slots</span>
+            <button id="add-editorial-slot" type="button">Add slot</button>
+          </div>
+          <div class="slot-form">
+            <label>
+              Topic
+              <input id="slot-topic" type="text" placeholder="World Cup country leaderboard push">
+            </label>
+            <label>
+              Date/time
+              <input id="slot-time" type="datetime-local">
+            </label>
+            <label>
+              Language
+              <select id="slot-language">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+              </select>
+            </label>
+            <label>
+              Asset need
+              <input id="slot-asset" type="text" placeholder="leaderboard card, country flags, no asset">
+            </label>
+            <label>
+              Approval deadline
+              <input id="slot-deadline" type="datetime-local">
+            </label>
+          </div>
+          <div class="queue-filters" id="slot-filters"></div>
+          <div id="editorial-slots" class="editorial-slots"></div>
         </section>
 
         <section class="panel package-queue-panel">

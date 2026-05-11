@@ -19,6 +19,8 @@ function migrateCardCompany(workspace) {
   replaceCompanyScopedRows(next.approvalPolicies);
   replaceCompanyScopedRows(next.brandLibraries);
   replaceCompanyScopedRows(next.claimLibraries);
+  replaceCompanyScopedRows(next.contentStrategies);
+  replaceCompanyScopedRows(next.editorialSlots);
   replaceSocialAccounts(next.socialAccounts);
   replaceContext(next.context);
   replaceDrafts(next.drafts);

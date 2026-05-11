@@ -206,8 +206,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
 | P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
 | P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
-| P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
-| P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
+| P0 | Add content strategy model | Built | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
+| P0 | Add editorial calendar model | Built | Routines generate from planned slots instead of blank-page prompting. |
 | P0 | Add Schedule Post button and scheduled-post records | Built | Operators can schedule an approved draft for a specific date/time/account without publishing immediately; records are tenant scoped. |
 | P0 | Add scheduled-post calendar view | Built | Calendar shows upcoming scheduled posts by company, brand, campaign, platform, account, status, timezone, readiness, and queue actions. |
 | P0 | Add brand and claim libraries | Built | Voice rules, approved language, banned claims, identity rules, and evaluation rule hits. |
