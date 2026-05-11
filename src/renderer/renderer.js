@@ -14,6 +14,9 @@ import {
   createReplyRoute,
   createResponseDraftForReply,
   createSocialReply,
+  createBrandRecord,
+  createCampaignRecord,
+  createCompanyRecord,
   buildTourVoiceoverScript,
   createElevenLabsSpeechRequest,
   evaluateDraftQuality,
@@ -171,6 +174,8 @@ document.querySelector("#save-state").addEventListener("click", async () => {
   await window.diamond.saveState(state);
   log("State saved.");
 });
+document.querySelector("#add-company").addEventListener("click", addCompany);
+document.querySelector("#add-brand").addEventListener("click", addBrand);
 
 document.querySelectorAll(".mode").forEach((button) => {
   button.addEventListener("click", () => {
@@ -251,6 +256,7 @@ document.querySelector("#pick-media").addEventListener("click", async () => {
 [els.company, els.brand, els.campaign, els.account].forEach((select) => {
   select.addEventListener("change", () => {
     activeDraft = null;
+    if (select === els.company || select === els.brand) hydrateDependentSelectors();
     render();
   });
 });
@@ -348,13 +354,30 @@ function ensureWorkspaceData(workspace) {
 }
 
 function hydrate() {
+  const selectedCompany = state.context?.companyId;
   fillSelect(els.company, state.companies);
-  fillSelect(els.brand, state.brands);
-  fillSelect(els.campaign, state.campaigns);
-  fillSelect(els.account, state.socialAccounts, (account) => `${platformLabel(account.platform)} / ${account.id}`);
+  setSelectIfPresent(els.company, selectedCompany);
+  hydrateDependentSelectors();
   fillPlatformSelect(els.assetPlatform);
   els.draftText.value = "Join the free World Cup league, make your picks, and see where your country lands on the board.";
   syncModeButtons();
+}
+
+function hydrateDependentSelectors() {
+  const companyId = els.company.value || state.context?.companyId || state.companies[0]?.id;
+  const selectedBrand = state.context?.companyId === companyId ? state.context?.brandId : els.brand.value;
+  const brands = state.brands.filter((brand) => !companyId || brand.companyId === companyId);
+  fillSelect(els.brand, brands.length ? brands : state.brands);
+  setSelectIfPresent(els.brand, selectedBrand);
+  const brandId = els.brand.value || brands[0]?.id;
+  const selectedCampaign = state.context?.companyId === companyId && state.context?.brandId === brandId ? state.context?.campaignId : els.campaign.value;
+  const campaigns = state.campaigns.filter((campaign) => (!companyId || campaign.companyId === companyId) && (!brandId || campaign.brandId === brandId));
+  fillSelect(els.campaign, campaigns.length ? campaigns : state.campaigns);
+  setSelectIfPresent(els.campaign, selectedCampaign);
+  const selectedAccount = state.context?.companyId === companyId && state.context?.brandId === brandId ? state.context?.socialAccountId : els.account.value;
+  const accounts = state.socialAccounts.filter((account) => (!companyId || account.companyId === companyId) && (!brandId || account.brandId === brandId));
+  fillSelect(els.account, accounts.length ? accounts : state.socialAccounts, (account) => `${platformLabel(account.platform)} / ${account.id}`);
+  setSelectIfPresent(els.account, selectedAccount);
 }
 
 function fillSelect(select, rows, labeler = (row) => row.name || row.id) {
@@ -375,6 +398,79 @@ function fillPlatformSelect(select) {
     option.textContent = platformLabel(platform);
     select.append(option);
   });
+}
+
+async function addCompany() {
+  const name = prompt("Company name", "");
+  if (name === null) return;
+  const company = createCompanyRecord({
+    name,
+    defaultApprovalPolicyId: `${normalizeBrowserProfileId(name)}-default-risk-review`,
+  });
+  if (state.companies.some((row) => row.id === company.id)) {
+    log(`Company already exists: ${company.name}.`);
+    setSelectIfPresent(els.company, company.id);
+    hydrateDependentSelectors();
+    render();
+    return;
+  }
+  state.companies.push(company);
+  state.approvalPolicies ||= [];
+  state.approvalPolicies.push({
+    id: company.defaultApprovalPolicyId,
+    companyId: company.id,
+    reviewRequiredFlags: ["money", "prize", "gambling", "regulatory", "legal", "equity", "investment", "support_sensitive", "hostile"],
+    blockedFlags: [],
+  });
+  await window.diamond.saveState(state);
+  fillSelect(els.company, state.companies);
+  els.company.value = company.id;
+  hydrateDependentSelectors();
+  log(`Company created: ${company.name}. Add a brand next.`);
+  render();
+}
+
+async function addBrand() {
+  const company = state.companies.find((row) => row.id === els.company.value) || state.companies[0];
+  if (!company) {
+    log("Add brand refused: create a company first.");
+    return;
+  }
+  const name = prompt("Brand name", "");
+  if (name === null) return;
+  const brand = createBrandRecord({ name, companyId: company.id, languages: ["en", "es"] });
+  if (state.brands.some((row) => row.companyId === company.id && row.id === brand.id)) {
+    log(`Brand already exists: ${brand.name}.`);
+    setSelectIfPresent(els.brand, brand.id);
+    hydrateDependentSelectors();
+    render();
+    return;
+  }
+  const campaign = createCampaignRecord({ name: "General", companyId: company.id, brandId: brand.id });
+  const account = {
+    id: `${brand.id}-x-main`,
+    companyId: company.id,
+    brandId: brand.id,
+    platform: "x",
+    accountUrl: normalizeAccountUrl("", "x"),
+    loginUrl: normalizeLoginUrl("", "x"),
+    composeUrl: normalizeComposeUrl("", "x"),
+    expectedHost: normalizeHost("https://x.com/"),
+    sessionStatus: "unknown",
+    browserProfileId: normalizeBrowserProfileId(`${company.id}-${brand.id}-x-main`),
+  };
+  state.brands.push(brand);
+  state.campaigns.push(campaign);
+  state.socialAccounts.push(account);
+  await window.diamond.saveState(state);
+  setSelectIfPresent(els.company, company.id);
+  hydrateDependentSelectors();
+  setSelectIfPresent(els.brand, brand.id);
+  hydrateDependentSelectors();
+  setSelectIfPresent(els.campaign, campaign.id);
+  setSelectIfPresent(els.account, account.id);
+  log(`Brand created: ${brand.name}. A General campaign and X account shell were added.`);
+  render();
 }
 
 function getActiveRows() {
@@ -1152,7 +1248,7 @@ async function assistMediaUpload() {
 async function prepareMediaUpload() {
   if (!media.length) return { ok: false, reason: "No media selected." };
   await window.diamond.writeClipboard(media.join("\n"));
-  const picker = await openPlatformMediaPicker();
+  const picker = await openActivePlatformMediaPicker();
   const reason = picker.ok
     ? `Copied ${media.length} media path(s) and opened the platform file picker.`
     : `Copied ${media.length} media path(s). ${picker.reason}`;
@@ -2935,7 +3031,7 @@ async function fillComposerText(text) {
   return { ok: false, reason: lastReason };
 }
 
-async function openPlatformMediaPicker() {
+async function openActivePlatformMediaPicker() {
   const { account } = getActiveRows();
   return openPlatformMediaPicker(els.webview, account.platform);
 }
