@@ -422,7 +422,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add inbox triage before reply drafting | Built | Captured replies now include priority, owner, next action, due time, triage notes, assignment, progress, escalation, ignore, and resolve states. |
 | P1 | Add cadence and do-not-engage policies | Built | Campaign guardrails now enforce daily caps, reply caps, quiet hours, cooldowns, duplicate lookback, do-not-engage terms, and escalation terms. |
 | P1 | Add post memory and draft evaluation | Built | Drafts and captured post runs now create post memory records, and repetitive drafts are held. |
-| P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
+| P1 | Add lead/support routing | Built | Replies now route into support tickets, bug reports, investor leads, influencer leads, product feedback, ignored items, or escalation records with owner and route status. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |

@@ -22,6 +22,7 @@ export function classifySocialReply(input = {}) {
 export function createSocialReply(input = {}) {
   const classification = input.classification || classifySocialReply(input);
   const triage = input.triage || createInboxTriage({ classification, ...input });
+  const route = input.route || createReplyRoute({ classification, triage, ...input });
   return {
     id: input.id || `reply-${Date.now()}`,
     context: input.context,
@@ -30,7 +31,26 @@ export function createSocialReply(input = {}) {
     text: clean(input.text),
     classification,
     triage,
+    route,
     status: classification.shouldEscalate ? "escalated" : "captured",
+    createdAt: input.createdAt || new Date().toISOString(),
+    updatedAt: input.updatedAt || new Date().toISOString(),
+  };
+}
+
+export function createReplyRoute(input = {}) {
+  const classification = input.classification || classifySocialReply(input);
+  const triage = input.triage || createInboxTriage({ classification, ...input });
+  const target = routeTargetForCategory(classification.category);
+  return {
+    id: input.id || `route-${Date.now()}`,
+    target,
+    owner: clean(input.owner) || triage.owner || ownerForCategory(classification.category),
+    status: routeStatusForTarget(target),
+    priority: triage.priority || classification.priority,
+    sourceCategory: classification.category,
+    replyId: input.replyId || null,
+    notes: clean(input.notes) || triage.notes || "",
     createdAt: input.createdAt || new Date().toISOString(),
     updatedAt: input.updatedAt || new Date().toISOString(),
   };
@@ -101,6 +121,28 @@ function ownerForCategory(category) {
   if (["investor"].includes(category)) return "Founder";
   if (["influencer"].includes(category)) return "Growth";
   return "Social";
+}
+
+function routeTargetForCategory(category) {
+  const targets = {
+    support: "support_ticket",
+    bug: "bug_report",
+    investor: "investor_lead",
+    influencer: "influencer_lead",
+    legal: "escalation_record",
+    regulatory: "escalation_record",
+    money: "escalation_record",
+    hostile: "escalation_record",
+    spam: "ignored_item",
+    product: "product_feedback",
+  };
+  return targets[category] || "product_feedback";
+}
+
+function routeStatusForTarget(target) {
+  if (target === "ignored_item") return "ignored";
+  if (target === "escalation_record") return "needs_escalation";
+  return "open";
 }
 
 function dueDateForPriority(priority, now) {

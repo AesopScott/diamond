@@ -10,6 +10,7 @@ import {
   createPostMemoryRecord,
   createPostMetrics,
   createInboxTriage,
+  createReplyRoute,
   createResponseDraftForReply,
   createSocialReply,
   evaluateDraftQuality,
@@ -1255,6 +1256,7 @@ function renderReplyInbox() {
   replies.slice(0, 10).forEach((reply) => {
     const draft = (state.socialResponseDrafts || []).find((item) => item.replyId === reply.id);
     const triage = reply.triage || createInboxTriage({ classification: reply.classification, text: reply.text });
+    const route = reply.route || createReplyRoute({ classification: reply.classification, triage, replyId: reply.id });
     const item = document.createElement("article");
     item.className = `reply-item ${reply.status || ""} ${triage.priority || ""}`;
     const created = reply.createdAt ? new Date(reply.createdAt).toLocaleString() : "Unknown time";
@@ -1266,6 +1268,7 @@ function renderReplyInbox() {
       <p>${escapeHtml(reply.author || "Unknown author")} - ${created}</p>
       <p>${escapeHtml(reply.text || "")}</p>
       <p>Owner: ${escapeHtml(triage.owner || "Social")} / Due: ${escapeHtml(formatScheduleTime(triage.dueAt))}</p>
+      <p>Route: ${escapeHtml(route.target || "product_feedback")} / ${escapeHtml(route.status || "open")} / ${escapeHtml(route.owner || triage.owner || "Social")}</p>
       <p>Action: ${escapeHtml(triage.nextAction || reply.classification?.suggestedAction || "draft_response")}${reply.sourceUrl ? ` / ${escapeHtml(reply.sourceUrl)}` : ""}</p>
       ${triage.notes ? `<p>Notes: ${escapeHtml(triage.notes)}</p>` : ""}
       ${triage.escalationReason ? `<p>${escapeHtml(triage.escalationReason)}</p>` : ""}
@@ -1273,6 +1276,7 @@ function renderReplyInbox() {
       <div class="reply-actions">
         <button type="button" data-reply-action="load" data-reply-id="${reply.id}">Load</button>
         <button type="button" data-reply-action="assign" data-reply-id="${reply.id}">Assign</button>
+        <button type="button" data-reply-action="route" data-reply-id="${reply.id}">Route</button>
         <button type="button" data-reply-action="progress" data-reply-id="${reply.id}">In progress</button>
         <button type="button" data-reply-action="approve" data-reply-id="${reply.id}">Approve response</button>
         <button type="button" data-reply-action="copy" data-reply-id="${reply.id}">Copy response</button>
@@ -1306,6 +1310,7 @@ async function captureReply() {
     classification,
     triage,
   });
+  reply.route.replyId = reply.id;
   const responseDraft = createResponseDraftForReply({
     reply,
     text: els.replyResponse.value,
@@ -2383,6 +2388,22 @@ async function handleReplyInboxClick(event) {
     renderReplyInbox();
     log(`Reply assigned: ${reply.id} -> ${reply.triage.owner}.`);
   }
+  if (button.dataset.replyAction === "route") {
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.route ||= createReplyRoute({ classification: reply.classification, triage: reply.triage, replyId: reply.id });
+    const target = prompt("Route target", reply.route.target || "product_feedback");
+    if (target === null) return;
+    const owner = prompt("Route owner", reply.route.owner || reply.triage.owner || "Social");
+    if (owner === null) return;
+    reply.route.target = target.trim() || reply.route.target;
+    reply.route.owner = owner.trim() || reply.route.owner;
+    reply.route.status = reply.route.target === "ignored_item" ? "ignored" : reply.route.target === "escalation_record" ? "needs_escalation" : "open";
+    reply.route.updatedAt = new Date().toISOString();
+    reply.updatedAt = reply.route.updatedAt;
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply routed: ${reply.id} -> ${reply.route.target}.`);
+  }
   if (button.dataset.replyAction === "progress") {
     reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
     reply.triage.status = "in_progress";
@@ -2425,6 +2446,10 @@ async function handleReplyInboxClick(event) {
     reply.triage.status = "escalation_required";
     reply.triage.nextAction = "escalate";
     reply.triage.escalationReason ||= "Operator escalated this reply.";
+    reply.route ||= createReplyRoute({ classification: reply.classification, triage: reply.triage, replyId: reply.id });
+    reply.route.target = "escalation_record";
+    reply.route.status = "needs_escalation";
+    reply.route.updatedAt = reply.updatedAt;
     reply.updatedAt = new Date().toISOString();
     if (draft) {
       draft.status = "escalation_required";
@@ -2438,6 +2463,9 @@ async function handleReplyInboxClick(event) {
     reply.status = "resolved";
     reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
     reply.triage.status = "resolved";
+    reply.route ||= createReplyRoute({ classification: reply.classification, triage: reply.triage, replyId: reply.id });
+    reply.route.status = "resolved";
+    reply.route.updatedAt = reply.updatedAt;
     reply.updatedAt = new Date().toISOString();
     if (draft && draft.status !== "ignored") {
       draft.status = draft.status === "approved" ? "sent_or_handled" : draft.status;
@@ -2452,6 +2480,10 @@ async function handleReplyInboxClick(event) {
     reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
     reply.triage.status = "ignored";
     reply.triage.nextAction = "ignore";
+    reply.route ||= createReplyRoute({ classification: reply.classification, triage: reply.triage, replyId: reply.id });
+    reply.route.target = "ignored_item";
+    reply.route.status = "ignored";
+    reply.route.updatedAt = reply.updatedAt;
     reply.updatedAt = new Date().toISOString();
     if (draft) {
       draft.status = "ignored";

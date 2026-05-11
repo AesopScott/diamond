@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   classifySocialReply,
   createInboxTriage,
+  createReplyRoute,
   createResponseDraftForReply,
   createSocialReply,
   createSeedWorkspace,
@@ -30,6 +31,10 @@ const legalTriage = createInboxTriage({ classification: legal, createdAt: "2026-
 assert.equal(legalTriage.owner, "Founder");
 assert.equal(legalTriage.status, "escalation_required");
 assert.equal(legalTriage.nextAction, "escalate");
+const legalRoute = createReplyRoute({ classification: legal, triage: legalTriage, replyId: "reply-legal" });
+assert.equal(legalRoute.target, "escalation_record");
+assert.equal(legalRoute.status, "needs_escalation");
+assert.equal(legalRoute.owner, "Founder");
 
 const reply = createSocialReply({
   context,
@@ -41,6 +46,8 @@ assert.equal(reply.classification.category, "bug");
 assert.equal(reply.status, "captured");
 assert.equal(reply.triage.owner, "Support");
 assert.equal(reply.triage.nextAction, "draft_response");
+assert.equal(reply.route.target, "bug_report");
+assert.equal(reply.route.status, "open");
 
 const response = createResponseDraftForReply({ reply });
 assert.equal(response.replyId, reply.id);
@@ -55,5 +62,13 @@ const escalatedReply = createSocialReply({
 const escalatedResponse = createResponseDraftForReply({ reply: escalatedReply });
 assert.equal(escalatedReply.status, "escalated");
 assert.equal(escalatedResponse.status, "escalation_required");
+
+const influencerRoute = createReplyRoute({ classification: classifySocialReply({ text: "Can we collab as an influencer?" }) });
+assert.equal(influencerRoute.target, "influencer_lead");
+assert.equal(influencerRoute.owner, "Growth");
+
+const spamRoute = createReplyRoute({ classification: classifySocialReply({ text: "crypto giveaway airdrop telegram" }) });
+assert.equal(spamRoute.target, "ignored_item");
+assert.equal(spamRoute.status, "ignored");
 
 console.log("All Diamond reply classifier tests passed.");
