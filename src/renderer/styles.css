@@ -352,23 +352,27 @@ webview {
   padding-bottom: 6px;
 }
 
-.run-history-panel.panel {
+.run-history-panel.panel,
+.draft-history-panel.panel {
   margin: 0;
 }
 
-.run-history {
+.run-history,
+.draft-history {
   display: grid;
   gap: 8px;
   max-height: 170px;
   overflow: auto;
 }
 
-.run-history-empty {
+.run-history-empty,
+.draft-history-empty {
   color: var(--muted);
   font-size: 13px;
 }
 
-.run-item {
+.run-item,
+.draft-item {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -377,30 +381,35 @@ webview {
   padding: 10px;
 }
 
-.run-item header {
+.run-item header,
+.draft-item header {
   align-items: center;
   display: flex;
   gap: 8px;
   justify-content: space-between;
 }
 
-.run-item strong {
+.run-item strong,
+.draft-item strong {
   font-size: 13px;
 }
 
-.run-item p {
+.run-item p,
+.draft-item p {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
 }
 
-.run-actions {
+.run-actions,
+.draft-history-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.run-actions button {
+.run-actions button,
+.draft-history-actions button {
   font-size: 12px;
   padding: 7px 9px;
 }
@@ -412,6 +421,10 @@ webview {
 .run-item.abandoned,
 .run-item.needs_manual_finish {
   border-color: rgba(241, 189, 69, 0.45);
+}
+
+.draft-item.active {
+  border-color: rgba(233, 75, 75, 0.6);
 }
 
 body.browser-focus #app {

@@ -48,6 +48,7 @@ const els = {
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
+  draftHistory: document.querySelector("#draft-history"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
   sessionNote: document.querySelector("#session-note"),
@@ -92,6 +93,7 @@ document.querySelector("#mark-ready").addEventListener("click", markSessionReady
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 els.runHistory.addEventListener("click", handleRunHistoryClick);
+els.draftHistory.addEventListener("click", handleDraftHistoryClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
   if (activeDraft) {
@@ -179,6 +181,7 @@ function render() {
   renderMedia();
   renderRiskCard();
   renderRunHistory();
+  renderDraftHistory();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
@@ -385,6 +388,7 @@ function evaluateDraft() {
   state.drafts.unshift(activeDraft);
   log(`Draft evaluated: ${activeDraft.approvalLevel}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
   renderRiskCard();
+  renderDraftHistory();
 }
 
 function approveDraft() {
@@ -398,6 +402,7 @@ function approveDraft() {
   activeDraft.updatedAt = new Date().toISOString();
   log("Draft approved for staging.");
   renderRiskCard();
+  renderDraftHistory();
 }
 
 async function stageDraft() {
@@ -433,6 +438,7 @@ async function stageDraft() {
     ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file path(s) copied for upload. ` : ""}Review it, attach media if needed, then publish manually.`
     : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
+  renderDraftHistory();
 }
 
 async function assistMediaUpload() {
@@ -487,6 +493,7 @@ async function markActiveRunPosted() {
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
+  renderDraftHistory();
   log(`Run marked posted: ${run.id}.`);
 }
 
@@ -506,6 +513,7 @@ async function markActiveRunAbandoned() {
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
+  renderDraftHistory();
   log(`Run marked abandoned: ${run.id}.`);
 }
 
@@ -622,6 +630,93 @@ function renderRunHistory() {
     `;
     els.runHistory.append(item);
   });
+}
+
+function renderDraftHistory() {
+  const drafts = draftsForActiveContext();
+  els.draftHistory.innerHTML = "";
+  if (!drafts.length) {
+    const empty = document.createElement("div");
+    empty.className = "draft-history-empty";
+    empty.textContent = "No drafts in this queue yet.";
+    els.draftHistory.append(empty);
+    return;
+  }
+
+  drafts.slice(0, 10).forEach((draft) => {
+    const item = document.createElement("article");
+    item.className = `draft-item ${activeDraft?.id === draft.id ? "active" : ""}`;
+    const created = draft.createdAt ? new Date(draft.createdAt).toLocaleString() : "Unknown time";
+    const preview = draft.text.length > 140 ? `${draft.text.slice(0, 140)}...` : draft.text;
+    item.innerHTML = `
+      <header>
+        <strong>${draft.status}</strong>
+        <span class="session-label">${created}</span>
+      </header>
+      <p>${preview}</p>
+      <p>${draft.approvalLevel}${draft.riskFlags?.length ? ` - ${draft.riskFlags.join(", ")}` : ""}</p>
+      <div class="draft-history-actions">
+        <button type="button" data-draft-action="load" data-draft-id="${draft.id}">Load</button>
+        <button type="button" data-draft-action="copy" data-draft-id="${draft.id}">Copy text</button>
+        <button type="button" data-draft-action="remove" data-draft-id="${draft.id}">Remove</button>
+      </div>
+    `;
+    els.draftHistory.append(item);
+  });
+}
+
+function draftsForActiveContext() {
+  const context = getContext();
+  return (state.drafts || []).filter((draft) => contextsEqual(draft.context, context));
+}
+
+function contextsEqual(left, right) {
+  return left?.companyId === right.companyId
+    && left?.brandId === right.brandId
+    && left?.platform === right.platform
+    && left?.socialAccountId === right.socialAccountId
+    && left?.campaignId === right.campaignId;
+}
+
+async function handleDraftHistoryClick(event) {
+  const button = event.target.closest("button[data-draft-action]");
+  if (!button) return;
+  const draft = (state.drafts || []).find((item) => item.id === button.dataset.draftId);
+  if (!draft) return;
+
+  if (button.dataset.draftAction === "load") {
+    loadDraft(draft);
+  }
+  if (button.dataset.draftAction === "copy") {
+    await window.diamond.writeClipboard(draft.text || "");
+    log(`Copied draft text for ${draft.id}.`);
+  }
+  if (button.dataset.draftAction === "remove") {
+    removeDraft(draft.id);
+  }
+}
+
+function loadDraft(draft) {
+  activeDraft = draft;
+  lastStageMessage = null;
+  media = Array.isArray(draft.media) ? [...draft.media] : [];
+  els.draftText.value = draft.text || "";
+  renderMedia();
+  renderRiskCard();
+  renderDraftHistory();
+  log(`Loaded draft ${draft.id}.`);
+}
+
+async function removeDraft(draftId) {
+  state.drafts = (state.drafts || []).filter((draft) => draft.id !== draftId);
+  if (activeDraft?.id === draftId) {
+    activeDraft = null;
+    lastStageMessage = null;
+  }
+  await window.diamond.saveState(state);
+  renderRiskCard();
+  renderDraftHistory();
+  log(`Removed draft ${draftId}.`);
 }
 
 async function handleRunHistoryClick(event) {
