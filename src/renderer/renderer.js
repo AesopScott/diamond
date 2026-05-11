@@ -18,7 +18,7 @@ import {
   insertComposerText,
   openMediaPicker,
   buildGeneratedAssetRecord,
-  renderWorldCupLeaderboardSvg,
+  renderWorldCupAssetSvg,
   upsertSessionForContext,
   validateAssetForUse,
   validateSessionForStaging,
@@ -1104,23 +1104,25 @@ async function addAsset() {
 
 async function generateAssetFromTemplate() {
   const { company, brand, campaign, account, strategy } = getActiveRows();
+  const type = els.assetType.value || "leaderboard";
   const template = (state.socialTemplates || []).find((item) => item.companyId === company.id
     && item.brandId === brand.id
     && item.campaignId === campaign.id
     && item.platform === account.platform
-    && item.type === "leaderboard");
+    && item.type === type);
   const check = validateTemplateForRender(template);
   if (!check.ok) {
     log(`Asset generation refused: ${check.reason}.`);
     return;
   }
-  const svg = renderWorldCupLeaderboardSvg({
-    title: `${campaign.name || "World Cup"} Leaderboard`,
+  const svg = renderWorldCupAssetSvg(type, {
+    title: assetTitleForType(type, campaign.name || "World Cup"),
     subtitle: strategy.offer || "Free picks. Country pride. Real leaderboard heat.",
     cta: strategy.cta || "Join at thecard.bet",
+    country: "Your country",
   });
   const filePath = await window.diamond.saveGeneratedAsset({
-    name: `${campaign.id || "campaign"}-${Date.now()}-leaderboard`,
+    name: `${campaign.id || "campaign"}-${Date.now()}-${type}`,
     extension: "svg",
     contents: svg,
   });
@@ -1128,7 +1130,7 @@ async function generateAssetFromTemplate() {
     template,
     filePath,
     language: els.assetLanguage.value || "en",
-    type: "leaderboard",
+    type,
   });
   state.assetLibrary ||= [];
   state.assetLibrary.unshift(asset);
@@ -1142,7 +1144,13 @@ async function generateAssetFromTemplate() {
   renderMedia();
   renderAssetFilters();
   renderAssetLibrary();
-  log(`Generated leaderboard asset: ${asset.filePath}.`);
+  log(`Generated ${type} asset: ${asset.filePath}.`);
+}
+
+function assetTitleForType(type, campaignName) {
+  if (type === "prize") return "$1,000 World Cup Payouts";
+  if (type === "country") return "Your country needs you on the board";
+  return `${campaignName} Leaderboard`;
 }
 
 function renderAssetFilters() {

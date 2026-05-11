@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import {
   buildGeneratedAssetRecord,
   createSeedWorkspace,
+  renderWorldCupAssetSvg,
   renderWorldCupLeaderboardSvg,
+  renderWorldCupPrizeSvg,
+  renderWorldCupCountrySvg,
   validateTemplateForRender,
 } from "../src/index.js";
 
@@ -24,6 +27,16 @@ assert.match(svg, /World Cup Leaderboard/);
 assert.match(svg, /Scott/);
 assert.match(svg, /thecard\.bet/);
 
+const prizeSvg = renderWorldCupPrizeSvg({ title: "$1,000 World Cup Payouts" });
+assert.match(prizeSvg, /\$500/);
+assert.match(prizeSvg, /Runner-up/);
+assert.match(renderWorldCupAssetSvg("prize"), /\$1,000 World Cup Payouts/);
+
+const countrySvg = renderWorldCupCountrySvg({ country: "USA", flag: "US" });
+assert.match(countrySvg, /USA needs you on the board/);
+assert.match(countrySvg, /Free league leaderboard/);
+assert.match(renderWorldCupAssetSvg("country", { country: "Mexico", flag: "MX" }), /Mexico needs you on the board/);
+
 const asset = buildGeneratedAssetRecord({
   template,
   filePath: "C:/Diamond/generated-assets/world-cup.svg",
@@ -36,5 +49,19 @@ assert.equal(asset.type, "leaderboard");
 assert.equal(asset.doNotUse, false);
 assert.ok(asset.altText);
 assert.ok(asset.safeZone);
+
+const prizeAsset = buildGeneratedAssetRecord({
+  template: { ...template, id: "world-cup-prize-template", type: "prize" },
+  filePath: "C:/Diamond/generated-assets/prize.svg",
+  type: "prize",
+});
+assert.match(prizeAsset.altText, /prize payout/);
+
+const countryAsset = buildGeneratedAssetRecord({
+  template: { ...template, id: "world-cup-country-template", type: "country" },
+  filePath: "C:/Diamond/generated-assets/country.svg",
+  type: "country",
+});
+assert.match(countryAsset.altText, /country leaderboard/);
 
 console.log("All Diamond template renderer tests passed.");
