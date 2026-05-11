@@ -7,6 +7,9 @@ import {
   createTenantContext,
   getSessionForContext,
   inferSessionStatusFromUrl,
+  normalizeAccountUrl,
+  normalizeBrowserProfileId,
+  normalizeHost,
   upsertSessionForContext,
   validateSessionForStaging,
 } from "../index.js";
@@ -21,6 +24,10 @@ const els = {
   brand: document.querySelector("#brand-select"),
   campaign: document.querySelector("#campaign-select"),
   account: document.querySelector("#account-select"),
+  accountHandle: document.querySelector("#account-handle"),
+  accountUrl: document.querySelector("#account-url"),
+  accountHost: document.querySelector("#account-host"),
+  accountProfile: document.querySelector("#account-profile"),
   activeTarget: document.querySelector("#active-target"),
   targetStatus: document.querySelector("#target-status"),
   draftText: document.querySelector("#draft-text"),
@@ -54,6 +61,7 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelector("#evaluate-draft").addEventListener("click", evaluateDraft);
 document.querySelector("#approve-draft").addEventListener("click", approveDraft);
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
+document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#check-session").addEventListener("click", checkSession);
 document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
@@ -129,6 +137,7 @@ function render() {
   const context = getContext();
   els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${account.platform.toUpperCase()}`;
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
+  renderAccountSettings(account);
   renderValidation(context);
   renderSession(context);
   renderBrowserTabs();
@@ -136,13 +145,26 @@ function render() {
   renderRiskCard();
 }
 
+function renderAccountSettings(account) {
+  if (document.activeElement && ["account-handle", "account-url", "account-host", "account-profile"].includes(document.activeElement.id)) {
+    return;
+  }
+  els.accountHandle.value = account.handle || "";
+  els.accountUrl.value = account.accountUrl || "";
+  els.accountHost.value = account.expectedHost || "";
+  els.accountProfile.value = account.browserProfileId || "";
+}
+
 function renderValidation(context) {
   const session = getActiveSession();
   const sessionCheck = validateSessionForStaging(session, context);
+  const { account } = getActiveRows();
   const items = [
     ["Company selected", Boolean(context.companyId)],
     ["Brand selected", Boolean(context.brandId)],
     ["Social account selected", Boolean(context.socialAccountId)],
+    ["Account URL configured", Boolean(account.accountUrl)],
+    ["Expected host configured", Boolean(account.expectedHost)],
     ["Browser profile isolated", browserProfilePath(context).includes(context.companyId)],
     ["Auto-publish locked until signoff", activeMode !== "auto_publish"],
     ["Browser session ready", sessionCheck.ok],
@@ -155,6 +177,29 @@ function renderValidation(context) {
     li.textContent = `${ok ? "OK" : "Review"} - ${label}`;
     els.validationList.append(li);
   });
+}
+
+async function saveAccountSettings() {
+  const { account } = getActiveRows();
+  const previousProfile = account.browserProfileId;
+  account.handle = els.accountHandle.value.trim();
+  account.accountUrl = normalizeAccountUrl(els.accountUrl.value.trim(), account.platform);
+  account.expectedHost = normalizeHost(els.accountHost.value.trim() || account.accountUrl);
+  account.browserProfileId = normalizeBrowserProfileId(els.accountProfile.value.trim() || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
+
+  if (previousProfile !== account.browserProfileId) {
+    activeDraft = null;
+    saveActiveSession({
+      status: "unknown",
+      currentUrl: null,
+      lastReadyAt: null,
+      note: "Browser profile changed. Please log in or check the session again.",
+    });
+  }
+
+  await window.diamond.saveState(state);
+  log(`Account settings saved for ${account.platform}/${account.id}.`);
+  render();
 }
 
 function getActiveSession() {
@@ -215,6 +260,10 @@ function replaceWebview(partition, src) {
 
 function openActiveAccount() {
   const { account } = getActiveRows();
+  if (!account.accountUrl) {
+    log("Open refused: account URL is not configured.");
+    return;
+  }
   els.webview.src = account.accountUrl || "about:blank";
   log(`Opened ${account.platform.toUpperCase()} account target.`);
 }

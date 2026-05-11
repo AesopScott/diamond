@@ -49,6 +49,30 @@
 
         <section class="panel">
           <div class="panel-heading">
+            <span>Account Settings</span>
+            <button id="save-account" type="button">Update</button>
+          </div>
+          <label>
+            Handle / page
+            <input id="account-handle" type="text" placeholder="@youraccount">
+          </label>
+          <label>
+            Account URL
+            <input id="account-url" type="url" placeholder="https://x.com/youraccount">
+          </label>
+          <label>
+            Expected host
+            <input id="account-host" type="text" placeholder="x.com">
+          </label>
+          <label>
+            Browser profile ID
+            <input id="account-profile" type="text" placeholder="company-brand-platform-account">
+          </label>
+          <p class="hint">Diamond stores the browser session for this profile, not your password.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
             <span>Mode</span>
           </div>
           <div class="segmented" role="group" aria-label="Posting mode">

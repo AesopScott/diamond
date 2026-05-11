@@ -9,6 +9,9 @@ import {
   createTenantContext,
   getSessionForContext,
   inferSessionStatusFromUrl,
+  normalizeAccountUrl,
+  normalizeBrowserProfileId,
+  normalizeHost,
   updateAccountSession,
   validateSessionForStaging,
 } from "../src/index.js";
@@ -65,5 +68,9 @@ assert.equal(validateSessionForStaging(readySession, otherContext).ok, false);
 
 assert.equal(inferSessionStatusFromUrl("https://x.com/login", workspace.socialAccounts[0]).status, "login_required");
 assert.equal(inferSessionStatusFromUrl("https://x.com/home", workspace.socialAccounts[0]).status, "ready");
+assert.equal(normalizeAccountUrl("@TheCard", "x"), "https://x.com/TheCard");
+assert.equal(normalizeAccountUrl("thecard", "x"), "https://x.com/thecard");
+assert.equal(normalizeHost("https://www.x.com/thecard"), "x.com");
+assert.equal(normalizeBrowserProfileId("Aesop / The Card / X"), "aesop-the-card-x");
 
 console.log("All Diamond tests passed.");
