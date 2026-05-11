@@ -10,6 +10,7 @@ function ensureAppDir() {
   fs.mkdirSync(APP_DIR, { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "browser-profiles"), { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "screenshots"), { recursive: true });
+  fs.mkdirSync(path.join(APP_DIR, "generated-assets"), { recursive: true });
 }
 
 function readState() {
@@ -67,6 +68,7 @@ ipcMain.handle("diamond:get-paths", () => ({
   statePath: STATE_PATH,
   browserProfilesDir: path.join(APP_DIR, "browser-profiles"),
   screenshotsDir: path.join(APP_DIR, "screenshots"),
+  generatedAssetsDir: path.join(APP_DIR, "generated-assets"),
 }));
 ipcMain.handle("diamond:open-external", (_event, url) => shell.openExternal(url));
 ipcMain.handle("diamond:write-clipboard", (_event, text) => {
@@ -81,6 +83,15 @@ ipcMain.handle("diamond:save-screenshot", (_event, input = {}) => {
   const dataUrl = String(input.dataUrl || "");
   const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
   fs.writeFileSync(target, Buffer.from(base64, "base64"));
+  return target;
+});
+ipcMain.handle("diamond:save-generated-asset", (_event, input = {}) => {
+  ensureAppDir();
+  const extension = String(input.extension || "svg").replace(/[^a-z0-9]/gi, "") || "svg";
+  const name = String(input.name || `generated-${Date.now()}`).replace(/[^a-z0-9_.-]+/gi, "-");
+  const fileName = name.endsWith(`.${extension}`) ? name : `${name}.${extension}`;
+  const target = path.join(APP_DIR, "generated-assets", fileName);
+  fs.writeFileSync(target, String(input.contents || ""), "utf8");
   return target;
 });
 ipcMain.handle("diamond:pick-media", async () => {

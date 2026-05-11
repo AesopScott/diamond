@@ -17,9 +17,12 @@ import {
   migrateWorkspaceState,
   insertComposerText,
   openMediaPicker,
+  buildGeneratedAssetRecord,
+  renderWorldCupLeaderboardSvg,
   upsertSessionForContext,
   validateAssetForUse,
   validateSessionForStaging,
+  validateTemplateForRender,
 } from "../index.js";
 
 const state = await loadInitialState();
@@ -134,6 +137,7 @@ document.querySelector("#add-editorial-slot").addEventListener("click", addEdito
 document.querySelector("#generate-next-slot").addEventListener("click", generateFromNextSlot);
 document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
 document.querySelector("#add-asset").addEventListener("click", addAsset);
+document.querySelector("#generate-asset").addEventListener("click", generateAssetFromTemplate);
 document.querySelector("#jump-editorial-calendar").addEventListener("click", () => scrollPanelIntoView("#editorial-calendar-panel"));
 document.querySelector("#jump-schedule-calendar").addEventListener("click", () => scrollPanelIntoView("#schedule-calendar-panel"));
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
@@ -1096,6 +1100,49 @@ async function addAsset() {
   renderAssetFilters();
   renderAssetLibrary();
   log(`Asset added: ${asset.filePath}.`);
+}
+
+async function generateAssetFromTemplate() {
+  const { company, brand, campaign, account, strategy } = getActiveRows();
+  const template = (state.socialTemplates || []).find((item) => item.companyId === company.id
+    && item.brandId === brand.id
+    && item.campaignId === campaign.id
+    && item.platform === account.platform
+    && item.type === "leaderboard");
+  const check = validateTemplateForRender(template);
+  if (!check.ok) {
+    log(`Asset generation refused: ${check.reason}.`);
+    return;
+  }
+  const svg = renderWorldCupLeaderboardSvg({
+    title: `${campaign.name || "World Cup"} Leaderboard`,
+    subtitle: strategy.offer || "Free picks. Country pride. Real leaderboard heat.",
+    cta: strategy.cta || "Join at thecard.bet",
+  });
+  const filePath = await window.diamond.saveGeneratedAsset({
+    name: `${campaign.id || "campaign"}-${Date.now()}-leaderboard`,
+    extension: "svg",
+    contents: svg,
+  });
+  const asset = buildGeneratedAssetRecord({
+    template,
+    filePath,
+    language: els.assetLanguage.value || "en",
+    type: "leaderboard",
+  });
+  state.assetLibrary ||= [];
+  state.assetLibrary.unshift(asset);
+  media = [...new Set([...media, asset.filePath])];
+  if (activeDraft) {
+    activeDraft.media = media;
+    activeDraft.assetIds = [...new Set([...(activeDraft.assetIds || []), asset.id])];
+    activeDraft.updatedAt = new Date().toISOString();
+  }
+  await window.diamond.saveState(state);
+  renderMedia();
+  renderAssetFilters();
+  renderAssetLibrary();
+  log(`Generated leaderboard asset: ${asset.filePath}.`);
 }
 
 function renderAssetFilters() {

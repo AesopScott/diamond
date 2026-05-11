@@ -135,13 +135,13 @@ This is the live top-level checklist for the three-build plan. Checked items are
 
 - [x] Asset library
   - [x] Media library records
-  - [ ] Generated asset history
+  - [x] Generated asset history
   - [x] Do-not-use assets
   - [x] Safe-zone metadata
   - [x] Alt text
 - [ ] Image rendering templates
   - [x] Leaderboard template record
-  - [ ] Leaderboard card renderer
+  - [x] Leaderboard card renderer
   - [ ] Prize card
   - [ ] Country/flag card
   - [ ] Founder/investor card
@@ -414,7 +414,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build draft/approval queue | Queued | Required before any auto-publish mode. |
 | P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |
 | P1 | Add Spanish generation path | Queued | Every campaign post can produce EN/ES variants. |
-| P1 | Add image rendering templates | Queued | Leaderboard, prize, country, founder, campaign cards. |
+| P1 | Add image rendering templates | Built | First World Cup leaderboard SVG renderer, generated asset records, and template validation. Prize, country, founder, and campaign cards remain queued. |
 | P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
 | P1 | Add content quality feedback loop | Queued | Voice examples, banned phrases, post review notes, performance notes. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
