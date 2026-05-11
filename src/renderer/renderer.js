@@ -309,15 +309,19 @@ function openLogin() {
   log(`Opened ${account.platform.toUpperCase()} login flow.`);
 }
 
-function checkSession() {
+function inferAndSaveSession() {
   const { account } = getActiveRows();
   const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
   const inferred = inferSessionStatusFromUrl(currentUrl, account);
-  const session = saveActiveSession({
+  return saveActiveSession({
     status: inferred.status,
     currentUrl,
     note: inferred.note,
   });
+}
+
+function checkSession() {
+  const session = inferAndSaveSession();
   log(`Session check: ${session.status} - ${session.note}`);
   render();
 }
@@ -375,7 +379,8 @@ function approveDraft() {
 
 async function stageDraft() {
   if (!activeDraft) evaluateDraft();
-  const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
+  const session = inferAndSaveSession();
+  const sessionCheck = validateSessionForStaging(session, getContext());
   const check = canStageDraft(activeDraft, { sessionCheck });
   if (!check.ok) {
     lastStageMessage = check.reason;
