@@ -167,6 +167,45 @@
 
         <section class="panel">
           <div class="panel-heading">
+            <span>Cadence Guardrails</span>
+            <button id="save-cadence" type="button">Save</button>
+          </div>
+          <label>
+            Max posts per day
+            <input id="cadence-max-posts" type="number" min="0" step="1">
+          </label>
+          <label>
+            Max replies per hour
+            <input id="cadence-max-replies" type="number" min="0" step="1">
+          </label>
+          <label>
+            Quiet start hour
+            <input id="cadence-quiet-start" type="number" min="0" max="23" step="1">
+          </label>
+          <label>
+            Quiet end hour
+            <input id="cadence-quiet-end" type="number" min="0" max="23" step="1">
+          </label>
+          <label>
+            Cooldown minutes
+            <input id="cadence-cooldown" type="number" min="0" step="1">
+          </label>
+          <label>
+            Duplicate lookback days
+            <input id="cadence-duplicate-days" type="number" min="0" step="1">
+          </label>
+          <label>
+            Do-not-engage terms
+            <textarea id="cadence-do-not-engage" rows="3" spellcheck="true"></textarea>
+          </label>
+          <label>
+            Escalation terms
+            <textarea id="cadence-escalation" rows="3" spellcheck="true"></textarea>
+          </label>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
             <span>Validation</span>
           </div>
           <ul id="validation-list" class="validation-list"></ul>

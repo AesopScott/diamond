@@ -239,6 +239,34 @@ export function createSeedWorkspace() {
         blockedFlags: [],
       },
     ],
+    cadencePolicies: [
+      {
+        id: "world-cup-2026-cadence",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        maxPostsPerDay: 3,
+        maxRepliesPerHour: 8,
+        quietHoursStart: 22,
+        quietHoursEnd: 7,
+        cooldownMinutes: 45,
+        duplicateLookbackDays: 14,
+        doNotEngageTerms: [
+          "lawsuit",
+          "subpoena",
+          "chargeback",
+          "scam",
+          "fraud",
+        ],
+        escalationTerms: [
+          "regulator",
+          "attorney",
+          "press",
+          "investor",
+          "threat",
+        ],
+      },
+    ],
     context,
   };
 }

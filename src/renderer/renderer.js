@@ -3,6 +3,7 @@ import {
   buildSlotDraftText,
   browserProfilePath,
   canStageDraft,
+  createDefaultCadencePolicy,
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
@@ -25,6 +26,7 @@ import {
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
   upsertSessionForContext,
+  validateCadenceForStaging,
   validateAssetForUse,
   validateSessionForStaging,
   validateTemplateForRender,
@@ -55,6 +57,14 @@ const els = {
   accountComposeUrl: document.querySelector("#account-compose-url"),
   accountHost: document.querySelector("#account-host"),
   accountProfile: document.querySelector("#account-profile"),
+  cadenceMaxPosts: document.querySelector("#cadence-max-posts"),
+  cadenceMaxReplies: document.querySelector("#cadence-max-replies"),
+  cadenceQuietStart: document.querySelector("#cadence-quiet-start"),
+  cadenceQuietEnd: document.querySelector("#cadence-quiet-end"),
+  cadenceCooldown: document.querySelector("#cadence-cooldown"),
+  cadenceDuplicateDays: document.querySelector("#cadence-duplicate-days"),
+  cadenceDoNotEngage: document.querySelector("#cadence-do-not-engage"),
+  cadenceEscalation: document.querySelector("#cadence-escalation"),
   brandVoice: document.querySelector("#brand-voice"),
   approvedPhrases: document.querySelector("#approved-phrases"),
   bannedPhrases: document.querySelector("#banned-phrases"),
@@ -138,6 +148,7 @@ document.querySelector("#schedule-draft").addEventListener("click", scheduleActi
 document.querySelector("#mark-posted").addEventListener("click", markActiveRunPosted);
 document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
+document.querySelector("#save-cadence").addEventListener("click", saveCadencePolicy);
 document.querySelector("#save-brand-rules").addEventListener("click", saveBrandRules);
 document.querySelector("#save-strategy").addEventListener("click", saveStrategy);
 document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
@@ -218,6 +229,7 @@ function ensureWorkspaceData(workspace) {
   next.brandLibraries ||= [];
   next.claimLibraries ||= [];
   next.contentStrategies ||= [];
+  next.cadencePolicies ||= [];
   next.editorialSlots ||= [];
   next.assetLibrary ||= [];
   next.socialTemplates ||= [];
@@ -237,6 +249,12 @@ function ensureWorkspaceData(workspace) {
   seed.contentStrategies.forEach((strategy) => {
     if (!next.contentStrategies.some((row) => row.companyId === strategy.companyId && row.brandId === strategy.brandId && row.campaignId === strategy.campaignId)) {
       next.contentStrategies.push(strategy);
+      changed = true;
+    }
+  });
+  seed.cadencePolicies.forEach((policy) => {
+    if (!next.cadencePolicies.some((row) => row.companyId === policy.companyId && row.brandId === policy.brandId && row.campaignId === policy.campaignId)) {
+      next.cadencePolicies.push(policy);
       changed = true;
     }
   });
@@ -289,7 +307,8 @@ function getActiveRows() {
   const brandLibrary = getBrandLibrary(company.id, brand.id);
   const claimLibrary = getClaimLibrary(company.id, brand.id);
   const strategy = getContentStrategy(company.id, brand.id, campaign.id);
-  return { company, brand, campaign, account, policy, brandLibrary, claimLibrary, strategy };
+  const cadencePolicy = getCadencePolicy(company.id, brand.id, campaign.id);
+  return { company, brand, campaign, account, policy, brandLibrary, claimLibrary, strategy, cadencePolicy };
 }
 
 function getContext() {
@@ -312,6 +331,7 @@ function render() {
   els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${account.platform.toUpperCase()}`;
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderAccountSettings(account);
+  renderCadencePolicy();
   renderBrandRules();
   renderStrategy();
   renderValidation(context);
@@ -392,6 +412,16 @@ function getContentStrategy(companyId, brandId, campaignId) {
   return strategy;
 }
 
+function getCadencePolicy(companyId, brandId, campaignId) {
+  state.cadencePolicies ||= [];
+  let policy = state.cadencePolicies.find((row) => row.companyId === companyId && row.brandId === brandId && row.campaignId === campaignId);
+  if (!policy) {
+    policy = createDefaultCadencePolicy({ companyId, brandId, campaignId });
+    state.cadencePolicies.push(policy);
+  }
+  return policy;
+}
+
 function renderBrandRules() {
   if (document.activeElement && [
     "brand-voice",
@@ -450,10 +480,30 @@ function renderAccountSettings(account) {
   els.accountProfile.value = account.browserProfileId || "";
 }
 
+function renderCadencePolicy() {
+  if (document.activeElement && document.activeElement.id?.startsWith("cadence-")) return;
+  const { cadencePolicy } = getActiveRows();
+  els.cadenceMaxPosts.value = cadencePolicy.maxPostsPerDay ?? 3;
+  els.cadenceMaxReplies.value = cadencePolicy.maxRepliesPerHour ?? 8;
+  els.cadenceQuietStart.value = cadencePolicy.quietHoursStart ?? 22;
+  els.cadenceQuietEnd.value = cadencePolicy.quietHoursEnd ?? 7;
+  els.cadenceCooldown.value = cadencePolicy.cooldownMinutes ?? 45;
+  els.cadenceDuplicateDays.value = cadencePolicy.duplicateLookbackDays ?? 14;
+  els.cadenceDoNotEngage.value = (cadencePolicy.doNotEngageTerms || []).join("\n");
+  els.cadenceEscalation.value = (cadencePolicy.escalationTerms || []).join("\n");
+}
+
 function renderValidation(context) {
   const session = getActiveSession();
   const sessionCheck = validateSessionForStaging(session, context);
-  const { account } = getActiveRows();
+  const { account, cadencePolicy } = getActiveRows();
+  const cadenceCheck = validateCadenceForStaging({
+    policy: cadencePolicy,
+    context,
+    draft: activeDraft || { text: els.draftText.value },
+    runs: state.postRuns || [],
+    memory: state.postMemory || [],
+  });
   const items = [
     ["Company selected", Boolean(context.companyId)],
     ["Brand selected", Boolean(context.brandId)],
@@ -463,6 +513,7 @@ function renderValidation(context) {
     ["Browser profile isolated", browserProfilePath(context).includes(context.companyId)],
     ["Auto-publish locked until signoff", activeMode !== "auto_publish"],
     ["Browser session ready", sessionCheck.ok],
+    ["Cadence guardrails clear", cadenceCheck.ok],
   ];
 
   els.validationList.innerHTML = "";
@@ -497,6 +548,23 @@ async function saveAccountSettings() {
   await window.diamond.saveState(state);
   log(`Account settings saved for ${account.platform}/${account.id}.`);
   render();
+}
+
+async function saveCadencePolicy() {
+  const { cadencePolicy } = getActiveRows();
+  cadencePolicy.maxPostsPerDay = numberFromInput(els.cadenceMaxPosts.value, 3);
+  cadencePolicy.maxRepliesPerHour = numberFromInput(els.cadenceMaxReplies.value, 8);
+  cadencePolicy.quietHoursStart = numberFromInput(els.cadenceQuietStart.value, 22);
+  cadencePolicy.quietHoursEnd = numberFromInput(els.cadenceQuietEnd.value, 7);
+  cadencePolicy.cooldownMinutes = numberFromInput(els.cadenceCooldown.value, 45);
+  cadencePolicy.duplicateLookbackDays = numberFromInput(els.cadenceDuplicateDays.value, 14);
+  cadencePolicy.doNotEngageTerms = linesFrom(els.cadenceDoNotEngage.value);
+  cadencePolicy.escalationTerms = linesFrom(els.cadenceEscalation.value);
+  cadencePolicy.updatedAt = new Date().toISOString();
+  await window.diamond.saveState(state);
+  renderValidation(getContext());
+  renderRiskCard();
+  log("Cadence guardrails saved for the active campaign.");
 }
 
 async function saveBrandRules() {
@@ -725,8 +793,16 @@ function approveDraft() {
 async function stageDraft() {
   if (!activeDraft) evaluateDraft();
   const session = inferAndSaveSession();
-  const sessionCheck = validateSessionForStaging(session, getContext());
-  const check = canStageDraft(activeDraft, { sessionCheck });
+  const context = getContext();
+  const sessionCheck = validateSessionForStaging(session, context);
+  const cadenceCheck = validateCadenceForStaging({
+    policy: getActiveRows().cadencePolicy,
+    context,
+    draft: activeDraft,
+    runs: state.postRuns || [],
+    memory: state.postMemory || [],
+  });
+  const check = canStageDraft(activeDraft, { sessionCheck, cadenceCheck });
   if (!check.ok) {
     lastStageMessage = check.reason;
     log(`Staging refused: ${check.reason}.`);
@@ -1018,7 +1094,14 @@ function renderRiskCard() {
   }
 
   const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
-  const stageCheck = canStageDraft(activeDraft, { sessionCheck });
+  const cadenceCheck = validateCadenceForStaging({
+    policy: getActiveRows().cadencePolicy,
+    context: getContext(),
+    draft: activeDraft,
+    runs: state.postRuns || [],
+    memory: state.postMemory || [],
+  });
+  const stageCheck = canStageDraft(activeDraft, { sessionCheck, cadenceCheck });
   const flags = activeDraft.riskFlags.length ? ` Flags: ${activeDraft.riskFlags.join(", ")}.` : "";
   const summary = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}.${flags}`;
 
@@ -2326,6 +2409,11 @@ function linesFrom(value) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function numberFromInput(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
 function linesFor(value) {

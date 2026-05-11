@@ -49,5 +49,8 @@ export function canStageDraft(draft, options = {}) {
   if (options.sessionCheck && !options.sessionCheck.ok) {
     return { ok: false, reason: options.sessionCheck.reason };
   }
+  if (options.cadenceCheck && !options.cadenceCheck.ok) {
+    return { ok: false, reason: options.cadenceCheck.summary || options.cadenceCheck.reasons?.[0] || "Cadence blocked" };
+  }
   return { ok: true, reason: "Draft can be staged" };
 }

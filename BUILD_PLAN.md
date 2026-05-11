@@ -158,13 +158,13 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [ ] Response draft queue
   - [ ] Human approval gate
   - [ ] Escalation rules
-- [ ] Cadence and do-not-engage controls
-  - [ ] Max posts/day
-  - [ ] Max replies/hour
-  - [ ] Quiet hours
-  - [ ] Cooldowns
-  - [ ] Duplicate prevention
-  - [ ] Silence/escalation rules
+- [x] Cadence and do-not-engage controls
+  - [x] Max posts/day
+  - [x] Max replies/hour
+  - [x] Quiet hours
+  - [x] Cooldowns
+  - [x] Duplicate prevention
+  - [x] Silence/escalation rules
 - [x] Metrics logging
   - [x] Post URL capture
   - [x] Screenshot association
@@ -420,7 +420,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add content quality feedback loop | Built | Scores drafts for CTA, novelty, risk, language, visual fit, and audience value before approval or staging. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
 | P1 | Add inbox triage before reply drafting | Queued | Priority, owner, action, and escalation before writing responses. |
-| P1 | Add cadence and do-not-engage policies | Queued | Rate limits, quiet hours, cooldowns, silence rules. |
+| P1 | Add cadence and do-not-engage policies | Built | Campaign guardrails now enforce daily caps, reply caps, quiet hours, cooldowns, duplicate lookback, do-not-engage terms, and escalation terms. |
 | P1 | Add post memory and draft evaluation | Built | Drafts and captured post runs now create post memory records, and repetitive drafts are held. |
 | P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
