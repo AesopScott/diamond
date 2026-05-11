@@ -242,26 +242,32 @@ textarea {
 }
 
 .composer.panel {
+  container-type: inline-size;
   overflow-y: auto;
 }
 
 .draft-actions {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
   margin-top: 12px;
 }
 
 .draft-actions button {
   align-items: center;
   display: grid;
-  gap: 8px;
-  grid-template-columns: 24px 1fr;
+  gap: clamp(5px, 1.8cqi, 8px);
+  grid-template-columns: clamp(20px, 7cqi, 24px) minmax(0, 1fr);
   justify-items: start;
   min-height: 62px;
-  padding: 10px 12px;
+  overflow: hidden;
+  padding: clamp(8px, 2.4cqi, 10px) clamp(8px, 3cqi, 12px);
   text-align: left;
   width: 100%;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  font-size: clamp(13px, 5cqi, 18px);
+  line-height: 1.15;
 }
 
 .draft-actions button span {
@@ -271,12 +277,29 @@ textarea {
   border-radius: 999px;
   color: var(--text);
   display: inline-flex;
-  font-size: 12px;
+  font-size: clamp(10px, 3.2cqi, 12px);
   font-weight: 900;
-  height: 24px;
+  height: clamp(20px, 7cqi, 24px);
   justify-content: center;
   line-height: 1;
-  width: 24px;
+  min-width: clamp(20px, 7cqi, 24px);
+  width: clamp(20px, 7cqi, 24px);
+}
+
+@container (max-width: 430px) {
+  .draft-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .draft-actions button {
+    min-height: 56px;
+  }
+}
+
+@container (max-width: 300px) {
+  .draft-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .risk-card {
