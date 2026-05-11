@@ -400,7 +400,10 @@ async function stageDraft() {
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
   setBrowserFocus(true);
-  log("Draft copied to clipboard and X compose opened. Paste the text, attach media if needed, then publish manually.");
+  const fillResult = await fillComposerText(activeDraft.text);
+  log(fillResult.ok
+    ? "Draft copied to clipboard, X compose opened, and text inserted. Review it, attach media if needed, then publish manually."
+    : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
 }
 
@@ -506,4 +509,49 @@ function refreshGuestBounds() {
   const partition = els.webview.getAttribute("partition");
   replaceWebview(partition, currentUrl || "about:blank");
   log("Browser surface refreshed at full size.");
+}
+
+async function fillComposerText(text) {
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    await wait(500);
+    const result = await insertTextIntoComposer(text);
+    if (result.ok) return result;
+  }
+  return { ok: false, reason: "composer textbox was not ready" };
+}
+
+async function insertTextIntoComposer(text) {
+  if (typeof els.webview.executeJavaScript !== "function") {
+    return { ok: false, reason: "embedded browser does not support script execution" };
+  }
+
+  const script = `
+    (() => {
+      const text = ${JSON.stringify(text)};
+      const editor = document.querySelector('[data-testid="tweetTextarea_0"], div[role="textbox"][contenteditable="true"]');
+      if (!editor) return { ok: false, reason: "composer textbox was not found" };
+      editor.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand("selectAll", false, null);
+      document.execCommand("insertText", false, text);
+      editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+      const value = editor.innerText || editor.textContent || "";
+      return { ok: value.includes(text.slice(0, Math.min(24, text.length))), reason: "composer text inserted" };
+    })();
+  `;
+
+  try {
+    return await els.webview.executeJavaScript(script);
+  } catch (error) {
+    return { ok: false, reason: error.message || "script execution failed" };
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
