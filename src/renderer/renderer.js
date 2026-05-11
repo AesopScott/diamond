@@ -41,6 +41,13 @@ const els = {
   accountComposeUrl: document.querySelector("#account-compose-url"),
   accountHost: document.querySelector("#account-host"),
   accountProfile: document.querySelector("#account-profile"),
+  brandVoice: document.querySelector("#brand-voice"),
+  approvedPhrases: document.querySelector("#approved-phrases"),
+  bannedPhrases: document.querySelector("#banned-phrases"),
+  reviewClaims: document.querySelector("#review-claims"),
+  blockedClaims: document.querySelector("#blocked-claims"),
+  prizeLanguage: document.querySelector("#prize-language"),
+  freePlayLanguage: document.querySelector("#free-play-language"),
   activeTarget: document.querySelector("#active-target"),
   targetStatus: document.querySelector("#target-status"),
   draftText: document.querySelector("#draft-text"),
@@ -91,6 +98,7 @@ document.querySelector("#schedule-draft").addEventListener("click", scheduleActi
 document.querySelector("#mark-posted").addEventListener("click", markActiveRunPosted);
 document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
+document.querySelector("#save-brand-rules").addEventListener("click", saveBrandRules);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
@@ -132,8 +140,9 @@ async function loadInitialState() {
   const saved = await window.diamond.getState();
   if (saved) {
     const migrated = migrateWorkspaceState(saved);
-    if (migrated !== saved) await window.diamond.saveState(migrated);
-    return migrated;
+    const hydrated = ensureWorkspaceLibraries(migrated);
+    if (hydrated !== saved) await window.diamond.saveState(hydrated);
+    return hydrated;
   }
   const seed = createSeedWorkspace();
   return {
@@ -144,6 +153,24 @@ async function loadInitialState() {
     sessions: {},
     runLog: [],
   };
+}
+
+function ensureWorkspaceLibraries(workspace) {
+  const seed = createSeedWorkspace();
+  const next = structuredClone(workspace);
+  next.brandLibraries ||= [];
+  next.claimLibraries ||= [];
+  seed.brandLibraries.forEach((library) => {
+    if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
+      next.brandLibraries.push(library);
+    }
+  });
+  seed.claimLibraries.forEach((library) => {
+    if (!next.claimLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
+      next.claimLibraries.push(library);
+    }
+  });
+  return next;
 }
 
 function hydrate() {
@@ -171,7 +198,9 @@ function getActiveRows() {
   const campaign = state.campaigns.find((row) => row.id === els.campaign.value) || state.campaigns[0];
   const account = state.socialAccounts.find((row) => row.id === els.account.value) || state.socialAccounts[0];
   const policy = state.approvalPolicies.find((row) => row.id === company.defaultApprovalPolicyId) || state.approvalPolicies[0];
-  return { company, brand, campaign, account, policy };
+  const brandLibrary = getBrandLibrary(company.id, brand.id);
+  const claimLibrary = getClaimLibrary(company.id, brand.id);
+  return { company, brand, campaign, account, policy, brandLibrary, claimLibrary };
 }
 
 function getContext() {
@@ -194,6 +223,7 @@ function render() {
   els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${account.platform.toUpperCase()}`;
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderAccountSettings(account);
+  renderBrandRules();
   renderValidation(context);
   renderSession(context);
   renderBrowserTabs();
@@ -205,6 +235,65 @@ function render() {
   renderScheduleCalendar();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
+}
+
+function getBrandLibrary(companyId, brandId) {
+  state.brandLibraries ||= [];
+  let library = state.brandLibraries.find((row) => row.companyId === companyId && row.brandId === brandId);
+  if (!library) {
+    library = {
+      id: `${companyId}-${brandId}-brand-library`,
+      companyId,
+      brandId,
+      voice: "",
+      approvedPhrases: [],
+      bannedPhrases: [],
+      links: [],
+      identityRules: [],
+    };
+    state.brandLibraries.push(library);
+  }
+  return library;
+}
+
+function getClaimLibrary(companyId, brandId) {
+  state.claimLibraries ||= [];
+  let library = state.claimLibraries.find((row) => row.companyId === companyId && row.brandId === brandId);
+  if (!library) {
+    library = {
+      id: `${companyId}-${brandId}-claim-library`,
+      companyId,
+      brandId,
+      prizeLanguage: [],
+      freeToPlayLanguage: [],
+      requiresReviewClaims: [],
+      blockedClaims: [],
+    };
+    state.claimLibraries.push(library);
+  }
+  return library;
+}
+
+function renderBrandRules() {
+  if (document.activeElement && [
+    "brand-voice",
+    "approved-phrases",
+    "banned-phrases",
+    "review-claims",
+    "blocked-claims",
+    "prize-language",
+    "free-play-language",
+  ].includes(document.activeElement.id)) {
+    return;
+  }
+  const { brandLibrary, claimLibrary } = getActiveRows();
+  els.brandVoice.value = brandLibrary.voice || "";
+  els.approvedPhrases.value = linesFor(brandLibrary.approvedPhrases);
+  els.bannedPhrases.value = linesFor(brandLibrary.bannedPhrases);
+  els.reviewClaims.value = linesFor(claimLibrary.requiresReviewClaims);
+  els.blockedClaims.value = linesFor(claimLibrary.blockedClaims);
+  els.prizeLanguage.value = linesFor(claimLibrary.prizeLanguage);
+  els.freePlayLanguage.value = linesFor(claimLibrary.freeToPlayLanguage);
 }
 
 function renderAccountSettings(account) {
@@ -266,6 +355,26 @@ async function saveAccountSettings() {
   await window.diamond.saveState(state);
   log(`Account settings saved for ${account.platform}/${account.id}.`);
   render();
+}
+
+async function saveBrandRules() {
+  const { brandLibrary, claimLibrary } = getActiveRows();
+  brandLibrary.voice = els.brandVoice.value.trim();
+  brandLibrary.approvedPhrases = linesFrom(els.approvedPhrases.value);
+  brandLibrary.bannedPhrases = linesFrom(els.bannedPhrases.value);
+  claimLibrary.requiresReviewClaims = linesFrom(els.reviewClaims.value);
+  claimLibrary.blockedClaims = linesFrom(els.blockedClaims.value);
+  claimLibrary.prizeLanguage = linesFrom(els.prizeLanguage.value);
+  claimLibrary.freeToPlayLanguage = linesFrom(els.freePlayLanguage.value);
+  brandLibrary.updatedAt = new Date().toISOString();
+  claimLibrary.updatedAt = brandLibrary.updatedAt;
+  await window.diamond.saveState(state);
+  activeDraft = null;
+  lastStageMessage = null;
+  renderRiskCard();
+  renderDraftHistory();
+  renderPackageFilters();
+  log("Brand and claim rules saved for the active brand.");
 }
 
 function getActiveSession() {
@@ -398,13 +507,15 @@ function renderMedia() {
 }
 
 function evaluateDraft() {
-  const { policy } = getActiveRows();
+  const { policy, brandLibrary, claimLibrary } = getActiveRows();
   lastStageMessage = null;
   activeDraft = createPostDraft({
     context: getContext(),
     text: els.draftText.value,
     media,
     approvalPolicy: policy,
+    brandLibrary,
+    claimLibrary,
   });
   state.drafts.unshift(activeDraft);
   log(`Draft evaluated: ${activeDraft.approvalLevel}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
@@ -669,10 +780,14 @@ async function captureBrowserScreenshot(runId) {
 
 function renderRiskCard() {
   if (!activeDraft) {
-    const { policy } = getActiveRows();
-    const evaluation = approvalLevelForText(els.draftText.value, policy);
+    const { policy, brandLibrary, claimLibrary } = getActiveRows();
+    const evaluation = approvalLevelForText(els.draftText.value, {
+      ...policy,
+      brandLibrary,
+      claimLibrary,
+    });
     els.riskCard.className = `risk-card ${evaluation.level === "auto_allowed" ? "good" : "warn"}`;
-    els.riskCard.textContent = `Live precheck: ${evaluation.level}. ${evaluation.flags.length ? `Flags: ${evaluation.flags.join(", ")}.` : "No risk flags."}`;
+    els.riskCard.innerHTML = riskSummaryHtml(`Live precheck: ${evaluation.level}.`, evaluation.flags, evaluation.details);
     return;
   }
 
@@ -683,30 +798,42 @@ function renderRiskCard() {
 
   if (lastStageMessage) {
     els.riskCard.className = "risk-card bad";
-    els.riskCard.textContent = `${summary} Staging blocked: ${lastStageMessage}.`;
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Staging blocked: ${lastStageMessage}.`, activeDraft.riskFlags, activeDraft.riskDetails);
     return;
   }
 
   if (activeDraft.status === "staged") {
     els.riskCard.className = stageCheck.ok ? "risk-card good" : "risk-card warn";
-    els.riskCard.textContent = `${summary} Copied to clipboard and opened in the browser.`;
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Copied to clipboard and opened in the browser.`, activeDraft.riskFlags, activeDraft.riskDetails);
     return;
   }
 
   if (activeDraft.status === "posted") {
     els.riskCard.className = "risk-card good";
-    els.riskCard.textContent = `${summary} Posted URL: ${activeDraft.postUrl || "captured in run history"}.`;
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Posted URL: ${activeDraft.postUrl || "captured in run history"}.`, activeDraft.riskFlags, activeDraft.riskDetails);
     return;
   }
 
   if (activeDraft.status === "scheduled") {
     els.riskCard.className = "risk-card good";
-    els.riskCard.textContent = `${summary} Scheduled for ${formatScheduleTime(activeDraft.scheduledAt)}.`;
+    els.riskCard.innerHTML = riskSummaryHtml(`${summary} Scheduled for ${formatScheduleTime(activeDraft.scheduledAt)}.`, activeDraft.riskFlags, activeDraft.riskDetails);
     return;
   }
 
   els.riskCard.className = activeDraft.approvalLevel === "auto_allowed" ? "risk-card good" : "risk-card warn";
-  els.riskCard.textContent = `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`;
+  els.riskCard.innerHTML = riskSummaryHtml(
+    `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`,
+    activeDraft.riskFlags,
+    activeDraft.riskDetails,
+  );
+}
+
+function riskSummaryHtml(summary, flags = [], details = []) {
+  const lines = [];
+  if (flags?.length) lines.push(`Flags: ${flags.join(", ")}`);
+  if (details?.length) lines.push(...details);
+  if (!lines.length) lines.push("No brand or claim rule hits.");
+  return `<p>${escapeHtml(summary)}</p><ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 }
 
 function renderRunHistory() {
@@ -764,6 +891,7 @@ function renderDraftHistory() {
       </header>
       <p>${preview}</p>
       <p>${draft.approvalLevel}${draft.riskFlags?.length ? ` - ${draft.riskFlags.join(", ")}` : ""}</p>
+      ${draft.riskDetails?.length ? `<p>${draft.riskDetails.slice(0, 3).map(escapeHtml).join(" / ")}</p>` : ""}
       <div class="draft-history-actions">
         <button type="button" data-draft-action="load" data-draft-id="${draft.id}">Load</button>
         <button type="button" data-draft-action="approve" data-draft-id="${draft.id}">Approve</button>
@@ -1314,4 +1442,24 @@ function toDatetimeLocal(date) {
 
 function formatScheduleTime(value) {
   return value ? new Date(value).toLocaleString() : "unknown time";
+}
+
+function linesFrom(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function linesFor(value) {
+  return Array.isArray(value) ? value.join("\n") : String(value || "");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

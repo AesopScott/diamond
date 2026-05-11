@@ -7,7 +7,11 @@ export function createPostDraft(input) {
   const text = String(input.text || "").trim();
   if (!text) throw new Error("Draft text is required");
 
-  const evaluation = approvalLevelForText(text, input.approvalPolicy);
+  const evaluation = approvalLevelForText(text, {
+    ...input.approvalPolicy,
+    brandLibrary: input.brandLibrary,
+    claimLibrary: input.claimLibrary,
+  });
   const now = new Date().toISOString();
   const draftId = normalizeId(input.draftId || `${context.platform}-${Date.now()}`, "draftId");
 
@@ -21,6 +25,7 @@ export function createPostDraft(input) {
     status: evaluation.level === "blocked" ? "blocked" : "draft",
     approvalLevel: evaluation.level,
     riskFlags: evaluation.flags,
+    riskDetails: evaluation.details || [],
     firestorePath: companyPath(context, "postDrafts", draftId).join("/"),
     createdAt: now,
     updatedAt: now,

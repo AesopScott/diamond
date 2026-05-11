@@ -44,6 +44,25 @@ const prizeDraft = createPostDraft({
 assert.equal(prizeDraft.approvalLevel, "review_required");
 assert.equal(canStageDraft(prizeDraft).ok, false);
 
+const brandBlockedDraft = createPostDraft({
+  context: workspace.context,
+  text: "This is a guaranteed win for every fan.",
+  approvalPolicy: workspace.approvalPolicies[0],
+  brandLibrary: workspace.brandLibraries[0],
+  claimLibrary: workspace.claimLibraries[0],
+});
+assert.equal(brandBlockedDraft.approvalLevel, "blocked");
+assert.ok(brandBlockedDraft.riskFlags.includes("banned_phrase"));
+assert.ok(brandBlockedDraft.riskDetails.some((detail) => detail.includes("Banned phrase")));
+
+const libraryReview = approvalLevelForText("The winner gets the $1,000 total payouts.", {
+  ...workspace.approvalPolicies[0],
+  brandLibrary: workspace.brandLibraries[0],
+  claimLibrary: workspace.claimLibraries[0],
+});
+assert.equal(libraryReview.level, "review_required");
+assert.ok(libraryReview.details.some((detail) => detail.includes("Prize language")));
+
 const otherContext = createTenantContext({
   ...workspace.context,
   companyId: "Other Company",

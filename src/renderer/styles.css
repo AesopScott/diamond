@@ -276,6 +276,17 @@ textarea {
   padding: 12px;
 }
 
+.risk-card p {
+  margin-bottom: 8px;
+}
+
+.risk-card ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 .risk-card.good { border-color: rgba(56, 217, 138, 0.5); color: var(--good); }
 .risk-card.warn { border-color: rgba(241, 189, 69, 0.5); color: var(--warn); }
 .risk-card.bad { border-color: rgba(255, 100, 100, 0.5); color: var(--bad); }

@@ -51,6 +51,68 @@ export function createSeedWorkspace() {
         status: "planning",
       },
     ],
+    brandLibraries: [
+      {
+        id: "the-card-brand-library",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        voice: "Sharp, plainspoken, sports-smart, and useful. Speak as thecard.bet, not Aesop Academy.",
+        approvedPhrases: [
+          "free World Cup league",
+          "make your picks",
+          "leaderboard",
+          "thecard.bet",
+        ],
+        bannedPhrases: [
+          "guaranteed win",
+          "risk-free profit",
+          "Aesop Academy",
+        ],
+        links: [
+          "https://thecard.bet",
+        ],
+        identityRules: [
+          "Post as thecard.bet.",
+          "Do not pretend to be an individual fan.",
+          "Do not call The Card a sportsbook or gambling product.",
+        ],
+      },
+    ],
+    claimLibraries: [
+      {
+        id: "the-card-claim-library",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        prizeLanguage: [
+          "$1,000 total payouts",
+          "$500 to the winner",
+          "$250 to the runner-up",
+          "$100 to third place",
+          "$50 for fourth through sixth",
+        ],
+        freeToPlayLanguage: [
+          "free to play",
+          "free World Cup league",
+          "no purchase required",
+        ],
+        requiresReviewClaims: [
+          "prize",
+          "payout",
+          "winner",
+          "cash",
+          "paid league",
+          "membership",
+          "investment",
+          "equity",
+        ],
+        blockedClaims: [
+          "guaranteed profit",
+          "guaranteed payout",
+          "risk-free",
+          "licensed sportsbook",
+        ],
+      },
+    ],
     approvalPolicies: [
       {
         id: context.approvalPolicyId,
