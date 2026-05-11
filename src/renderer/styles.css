@@ -354,7 +354,7 @@ webview {
 }
 
 .run-history-panel.panel,
-.draft-history-panel.panel,
+.package-queue-panel.panel,
 .schedule-panel.panel {
   margin: 0;
 }
@@ -431,6 +431,23 @@ webview {
 
 .draft-item.active {
   border-color: rgba(233, 75, 75, 0.6);
+}
+
+.queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.queue-filters button {
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
+.queue-filters button.active {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .schedule-day {

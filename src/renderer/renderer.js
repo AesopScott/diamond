@@ -22,6 +22,7 @@ import {
 const state = await loadInitialState();
 let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
+let packageFilter = "active";
 let lastStageMessage = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
@@ -49,6 +50,7 @@ const els = {
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
   draftHistory: document.querySelector("#draft-history"),
+  packageFilters: document.querySelector("#package-filters"),
   scheduleCalendar: document.querySelector("#schedule-calendar"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
@@ -96,6 +98,7 @@ document.querySelector("#reload-webview").addEventListener("click", () => els.we
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.draftHistory.addEventListener("click", handleDraftHistoryClick);
+els.packageFilters.addEventListener("click", handlePackageFilterClick);
 els.scheduleCalendar.addEventListener("click", handleScheduleClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
@@ -186,6 +189,7 @@ function render() {
   renderRiskCard();
   renderRunHistory();
   renderDraftHistory();
+  renderPackageFilters();
   renderScheduleCalendar();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
@@ -393,6 +397,7 @@ function evaluateDraft() {
   state.drafts.unshift(activeDraft);
   log(`Draft evaluated: ${activeDraft.approvalLevel}${activeDraft.riskFlags.length ? ` (${activeDraft.riskFlags.join(", ")})` : ""}.`);
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
 }
 
@@ -407,6 +412,7 @@ function approveDraft() {
   activeDraft.updatedAt = new Date().toISOString();
   log("Draft approved for staging.");
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
 }
 
@@ -443,6 +449,7 @@ async function stageDraft() {
     ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file path(s) copied for upload. ` : ""}Review it, attach media if needed, then publish manually.`
     : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
 }
 
@@ -519,6 +526,7 @@ async function scheduleActiveDraft() {
   activeDraft.updatedAt = schedule.createdAt;
   await window.diamond.saveState(state);
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
   renderScheduleCalendar();
   log(`Scheduled draft ${activeDraft.id} for ${formatScheduleTime(schedule.scheduledAt)}.`);
@@ -545,6 +553,7 @@ async function markActiveRunPosted() {
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
   log(`Run marked posted: ${run.id}.`);
 }
@@ -565,6 +574,7 @@ async function markActiveRunAbandoned() {
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
+  renderPackageFilters();
   renderDraftHistory();
   log(`Run marked abandoned: ${run.id}.`);
 }
@@ -691,12 +701,12 @@ function renderRunHistory() {
 }
 
 function renderDraftHistory() {
-  const drafts = draftsForActiveContext();
+  const drafts = filteredPackages();
   els.draftHistory.innerHTML = "";
   if (!drafts.length) {
     const empty = document.createElement("div");
     empty.className = "draft-history-empty";
-    empty.textContent = "No drafts in this queue yet.";
+    empty.textContent = "No post packages match this filter.";
     els.draftHistory.append(empty);
     return;
   }
@@ -715,12 +725,53 @@ function renderDraftHistory() {
       <p>${draft.approvalLevel}${draft.riskFlags?.length ? ` - ${draft.riskFlags.join(", ")}` : ""}</p>
       <div class="draft-history-actions">
         <button type="button" data-draft-action="load" data-draft-id="${draft.id}">Load</button>
+        <button type="button" data-draft-action="approve" data-draft-id="${draft.id}">Approve</button>
+        <button type="button" data-draft-action="stage" data-draft-id="${draft.id}">Stage</button>
+        <button type="button" data-draft-action="schedule" data-draft-id="${draft.id}">Schedule</button>
         <button type="button" data-draft-action="copy" data-draft-id="${draft.id}">Copy text</button>
         <button type="button" data-draft-action="remove" data-draft-id="${draft.id}">Remove</button>
       </div>
     `;
     els.draftHistory.append(item);
   });
+}
+
+function renderPackageFilters() {
+  const filters = [
+    ["active", "Active"],
+    ["draft", "Draft"],
+    ["approved", "Approved"],
+    ["scheduled", "Scheduled"],
+    ["staged", "Staged"],
+    ["posted", "Posted"],
+    ["all", "All"],
+  ];
+  els.packageFilters.innerHTML = "";
+  filters.forEach(([value, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.packageFilter = value;
+    button.className = packageFilter === value ? "active" : "";
+    button.textContent = `${label} ${countPackagesForFilter(value)}`;
+    els.packageFilters.append(button);
+  });
+}
+
+function filteredPackages() {
+  const drafts = draftsForActiveContext();
+  if (packageFilter === "all") return drafts;
+  if (packageFilter === "active") {
+    return drafts.filter((draft) => !["posted", "abandoned"].includes(draft.status));
+  }
+  return drafts.filter((draft) => draft.status === packageFilter);
+}
+
+function countPackagesForFilter(filter) {
+  const previous = packageFilter;
+  packageFilter = filter;
+  const count = filteredPackages().length;
+  packageFilter = previous;
+  return count;
 }
 
 function renderScheduleCalendar() {
@@ -826,6 +877,19 @@ async function handleDraftHistoryClick(event) {
   if (button.dataset.draftAction === "load") {
     loadDraft(draft);
   }
+  if (button.dataset.draftAction === "approve") {
+    loadDraft(draft);
+    approveDraft();
+    await window.diamond.saveState(state);
+  }
+  if (button.dataset.draftAction === "stage") {
+    loadDraft(draft);
+    await stageDraft();
+  }
+  if (button.dataset.draftAction === "schedule") {
+    loadDraft(draft);
+    await scheduleActiveDraft();
+  }
   if (button.dataset.draftAction === "copy") {
     await window.diamond.writeClipboard(draft.text || "");
     log(`Copied draft text for ${draft.id}.`);
@@ -833,6 +897,14 @@ async function handleDraftHistoryClick(event) {
   if (button.dataset.draftAction === "remove") {
     removeDraft(draft.id);
   }
+}
+
+function handlePackageFilterClick(event) {
+  const button = event.target.closest("button[data-package-filter]");
+  if (!button) return;
+  packageFilter = button.dataset.packageFilter;
+  renderPackageFilters();
+  renderDraftHistory();
 }
 
 function loadDraft(draft) {
@@ -843,6 +915,7 @@ function loadDraft(draft) {
   renderMedia();
   renderRiskCard();
   renderDraftHistory();
+  renderPackageFilters();
   log(`Loaded draft ${draft.id}.`);
 }
 
@@ -855,6 +928,7 @@ async function removeDraft(draftId) {
   await window.diamond.saveState(state);
   renderRiskCard();
   renderDraftHistory();
+  renderPackageFilters();
   log(`Removed draft ${draftId}.`);
 }
 
