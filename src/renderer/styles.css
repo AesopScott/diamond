@@ -433,6 +433,7 @@ webview {
 .reply-panel.panel,
 .editorial-panel.panel,
 .routine-panel.panel,
+.platform-proof-panel.panel,
 .asset-panel.panel,
 .package-queue-panel.panel,
 .guide-panel.panel,
@@ -586,6 +587,7 @@ webview {
 
 .run-history,
 .routine-runs,
+.platform-proof-list,
 .asset-library,
 .editorial-slots,
 .draft-history,
@@ -610,6 +612,7 @@ webview {
 .run-item,
 .reply-item,
 .routine-item,
+.platform-proof-item,
 .asset-item,
 .slot-item,
 .draft-item,
@@ -626,6 +629,7 @@ webview {
 .run-item header,
 .reply-item header,
 .routine-item header,
+.platform-proof-item header,
 .asset-item header,
 .slot-item header,
 .draft-item header {
@@ -638,6 +642,7 @@ webview {
 .run-item strong,
 .reply-item strong,
 .routine-item strong,
+.platform-proof-item strong,
 .asset-item strong,
 .slot-item strong,
 .draft-item strong {
@@ -647,6 +652,7 @@ webview {
 .run-item p,
 .reply-item p,
 .routine-item p,
+.platform-proof-item p,
 .asset-item p,
 .slot-item p,
 .draft-item p {
@@ -657,7 +663,8 @@ webview {
 
 .run-actions,
 .reply-actions,
-.draft-history-actions {
+.draft-history-actions,
+.proof-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -665,9 +672,37 @@ webview {
 
 .run-actions button,
 .reply-actions button,
-.draft-history-actions button {
+.draft-history-actions button,
+.proof-actions button {
   font-size: 12px;
   padding: 7px 9px;
+}
+
+.proof-meters {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.proof-meters span {
+  background: #0b1018;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 8px;
+}
+
+.platform-proof-item.assisted_proven,
+.platform-proof-item.manual_proven,
+.platform-proof-item.monitoring_only {
+  border-color: rgba(56, 217, 138, 0.45);
+}
+
+.platform-proof-item.needs_proof,
+.platform-proof-item.manual_needs_proof {
+  border-color: rgba(241, 189, 69, 0.45);
 }
 
 .run-item.posted {

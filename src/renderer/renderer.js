@@ -21,8 +21,11 @@ import {
   createElevenLabsSpeechRequest,
   evaluateDraftQuality,
   evaluateDiamondAccess,
+  ensurePlatformProofRecords,
+  evaluatePlatformProof,
   getDiamondGuideSections,
   getDiamondTourSteps,
+  getPlatformBrowserAdapter,
   getSessionForContext,
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
@@ -31,6 +34,7 @@ import {
   normalizeHost,
   normalizeLoginUrl,
   platformLabel,
+  markPlatformProof,
   resolveComposeUrl,
   resolveLoginUrl,
   isMonitoringOnlyPlatform,
@@ -40,6 +44,7 @@ import {
   migrateWorkspaceState,
   insertPlatformComposerText,
   openPlatformMediaPicker,
+  platformProofId,
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
   buildFirestoreSyncBundle,
@@ -124,6 +129,7 @@ const els = {
   replyResponse: document.querySelector("#reply-response"),
   replyInbox: document.querySelector("#reply-inbox"),
   routineRuns: document.querySelector("#routine-runs"),
+  platformProofList: document.querySelector("#platform-proof-list"),
   assetPath: document.querySelector("#asset-path"),
   assetType: document.querySelector("#asset-type"),
   assetLanguage: document.querySelector("#asset-language"),
@@ -244,6 +250,7 @@ els.scheduleStatusFilter.addEventListener("change", () => {
 });
 els.scheduleCalendar.addEventListener("click", handleScheduleClick);
 els.scheduleDetail.addEventListener("click", handleScheduleClick);
+els.platformProofList.addEventListener("click", handlePlatformProofClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
   if (activeDraft) {
@@ -301,6 +308,7 @@ function ensureWorkspaceData(workspace) {
   next.postMemory ||= [];
   next.socialReplies ||= [];
   next.socialResponseDrafts ||= [];
+  next.platformProofs ||= [];
   next.licenseCache ||= createLocalDevLicense(next.context || seed.context);
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
@@ -350,6 +358,11 @@ function ensureWorkspaceData(workspace) {
       changed = true;
     }
   });
+  const withProofs = ensurePlatformProofRecords(next);
+  if ((withProofs.platformProofs || []).length !== (next.platformProofs || []).length) {
+    next.platformProofs = withProofs.platformProofs;
+    changed = true;
+  }
   return changed ? next : workspace;
 }
 
@@ -462,6 +475,8 @@ async function addBrand() {
   state.brands.push(brand);
   state.campaigns.push(campaign);
   state.socialAccounts.push(account);
+  state.platformProofs ||= [];
+  state.platformProofs.push(createPlatformProofForAccount(account));
   await window.diamond.saveState(state);
   setSelectIfPresent(els.company, company.id);
   hydrateDependentSelectors();
@@ -517,6 +532,7 @@ function render() {
   renderRunHistory();
   renderReplyInbox();
   renderRoutineRuns();
+  renderPlatformProofs();
   renderAssetFilters();
   renderAssetLibrary();
   renderSlotFilters();
@@ -1728,6 +1744,99 @@ function renderRoutineRuns() {
     `;
     els.routineRuns.append(item);
   });
+}
+
+function renderPlatformProofs() {
+  const accounts = state.socialAccounts.filter((account) => account.companyId === els.company.value && account.brandId === els.brand.value);
+  state.platformProofs ||= [];
+  els.platformProofList.innerHTML = "";
+  if (!accounts.length) {
+    const empty = document.createElement("div");
+    empty.className = "run-history-empty";
+    empty.textContent = "No platform accounts for this brand yet.";
+    els.platformProofList.append(empty);
+    return;
+  }
+  accounts.forEach((account) => {
+    let proof = getPlatformProof(account);
+    const adapter = getPlatformBrowserAdapter(account.platform);
+    const evaluation = evaluatePlatformProof(proof, adapter);
+    const item = document.createElement("article");
+    item.className = `platform-proof-item ${evaluation.status}`;
+    item.innerHTML = `
+      <header>
+        <strong>${escapeHtml(platformLabel(account.platform))}</strong>
+        <span class="session-label">${escapeHtml(evaluation.label)}</span>
+      </header>
+      <p>${escapeHtml(adapter.note)}</p>
+      <div class="proof-meters">
+        <span>Text ${proof.textProofCount}/3</span>
+        <span>Media ${proof.mediaProofCount}/1</span>
+        <span>Manual ${proof.manualProofCount}/3</span>
+      </div>
+      <p>${escapeHtml(evaluation.summary)}${proof.lastProofAt ? ` Last proof: ${escapeHtml(new Date(proof.lastProofAt).toLocaleString())}.` : ""}</p>
+      <div class="proof-actions">
+        <button type="button" data-proof-action="text" data-proof-id="${escapeHtml(proof.id)}">Mark text proof</button>
+        <button type="button" data-proof-action="media" data-proof-id="${escapeHtml(proof.id)}">Mark media proof</button>
+        <button type="button" data-proof-action="manual" data-proof-id="${escapeHtml(proof.id)}">Mark manual proof</button>
+      </div>
+    `;
+    if (adapter.stageMode === "monitoring_only") {
+      item.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    }
+    els.platformProofList.append(item);
+  });
+}
+
+async function handlePlatformProofClick(event) {
+  const button = event.target.closest("button[data-proof-action]");
+  if (!button) return;
+  const proof = (state.platformProofs || []).find((item) => item.id === button.dataset.proofId);
+  if (!proof) return;
+  const next = markPlatformProof(proof, button.dataset.proofAction);
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.id ? next : item);
+  await window.diamond.saveState(state);
+  renderPlatformProofs();
+  log(`Marked ${button.dataset.proofAction} proof for ${platformLabel(next.platform)}.`);
+}
+
+function getPlatformProof(account) {
+  state.platformProofs ||= [];
+  const id = platformProofId({
+    companyId: account.companyId,
+    brandId: account.brandId,
+    platform: account.platform,
+    socialAccountId: account.id,
+  });
+  let proof = state.platformProofs.find((item) => item.id === id);
+  if (!proof) {
+    proof = createPlatformProofForAccount(account);
+    state.platformProofs.push(proof);
+  }
+  return proof;
+}
+
+function createPlatformProofForAccount(account) {
+  return {
+    id: platformProofId({
+      companyId: account.companyId,
+      brandId: account.brandId,
+      platform: account.platform,
+      socialAccountId: account.id,
+    }),
+    companyId: account.companyId,
+    brandId: account.brandId,
+    platform: account.platform,
+    socialAccountId: account.id,
+    stageMode: getPlatformBrowserAdapter(account.platform).stageMode,
+    textProofCount: 0,
+    mediaProofCount: 0,
+    manualProofCount: 0,
+    lastProofAt: null,
+    notes: getPlatformBrowserAdapter(account.platform).note,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 async function addAsset() {
