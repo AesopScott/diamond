@@ -158,6 +158,49 @@ textarea {
   text-transform: uppercase;
 }
 
+.session-card {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.session-card.ready { border-color: rgba(56, 217, 138, 0.5); }
+.session-card.login_required,
+.session-card.challenge { border-color: rgba(241, 189, 69, 0.5); }
+.session-card.error { border-color: rgba(255, 100, 100, 0.5); }
+
+.session-card div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.session-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.session-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.browser-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .grid {
   display: grid;
   gap: 14px;

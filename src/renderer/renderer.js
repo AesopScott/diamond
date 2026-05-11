@@ -5,6 +5,10 @@ import {
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
+  getSessionForContext,
+  inferSessionStatusFromUrl,
+  upsertSessionForContext,
+  validateSessionForStaging,
 } from "../index.js";
 
 const state = await loadInitialState();
@@ -26,6 +30,9 @@ const els = {
   browserTabs: document.querySelector("#browser-tabs"),
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
+  sessionCard: document.querySelector("#session-card"),
+  sessionStatus: document.querySelector("#session-status"),
+  sessionNote: document.querySelector("#session-note"),
 };
 
 hydrate();
@@ -47,6 +54,9 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelector("#evaluate-draft").addEventListener("click", evaluateDraft);
 document.querySelector("#approve-draft").addEventListener("click", approveDraft);
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
+document.querySelector("#open-account").addEventListener("click", openActiveAccount);
+document.querySelector("#check-session").addEventListener("click", checkSession);
+document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 document.querySelector("#pick-media").addEventListener("click", async () => {
@@ -68,6 +78,7 @@ async function loadInitialState() {
   return {
     ...seed,
     drafts: [],
+    sessions: {},
     runLog: [],
   };
 }
@@ -119,18 +130,22 @@ function render() {
   els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${account.platform.toUpperCase()}`;
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderValidation(context);
+  renderSession(context);
   renderBrowserTabs();
   renderMedia();
   renderRiskCard();
 }
 
 function renderValidation(context) {
+  const session = getActiveSession();
+  const sessionCheck = validateSessionForStaging(session, context);
   const items = [
     ["Company selected", Boolean(context.companyId)],
     ["Brand selected", Boolean(context.brandId)],
     ["Social account selected", Boolean(context.socialAccountId)],
     ["Browser profile isolated", browserProfilePath(context).includes(context.companyId)],
     ["Auto-publish locked until signoff", activeMode !== "auto_publish"],
+    ["Browser session ready", sessionCheck.ok],
   ];
 
   els.validationList.innerHTML = "";
@@ -140,6 +155,25 @@ function renderValidation(context) {
     li.textContent = `${ok ? "OK" : "Review"} - ${label}`;
     els.validationList.append(li);
   });
+}
+
+function getActiveSession() {
+  state.sessions ||= {};
+  return getSessionForContext(state.sessions, getContext());
+}
+
+function saveActiveSession(patch) {
+  state.sessions ||= {};
+  const context = getContext();
+  state.sessions = upsertSessionForContext(state.sessions, context, patch);
+  return getSessionForContext(state.sessions, context);
+}
+
+function renderSession(context) {
+  const session = getActiveSession();
+  els.sessionCard.className = `session-card ${session.status}`;
+  els.sessionStatus.textContent = session.status.replace(/_/g, " ");
+  els.sessionNote.textContent = `${session.note} Profile: ${browserProfilePath(context)}`;
 }
 
 function renderBrowserTabs() {
@@ -159,10 +193,54 @@ function renderBrowserTabs() {
 
   const { account } = getActiveRows();
   const context = getContext();
-  els.webview.partition = `persist:${browserProfilePath(context).replace(/[^a-z0-9-]+/g, "-")}`;
+  const partition = `persist:${browserProfilePath(context).replace(/[^a-z0-9-]+/g, "-")}`;
+  if (els.webview.getAttribute("partition") !== partition) {
+    replaceWebview(partition, account.accountUrl || "about:blank");
+    return;
+  }
   if (els.webview.getURL?.() !== account.accountUrl) {
     els.webview.src = account.accountUrl || "about:blank";
   }
+}
+
+function replaceWebview(partition, src) {
+  const next = document.createElement("webview");
+  next.id = "social-webview";
+  next.setAttribute("partition", partition);
+  next.setAttribute("src", src);
+  next.setAttribute("allowpopups", "");
+  els.webview.replaceWith(next);
+  els.webview = next;
+}
+
+function openActiveAccount() {
+  const { account } = getActiveRows();
+  els.webview.src = account.accountUrl || "about:blank";
+  log(`Opened ${account.platform.toUpperCase()} account target.`);
+}
+
+function checkSession() {
+  const { account } = getActiveRows();
+  const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
+  const inferred = inferSessionStatusFromUrl(currentUrl, account);
+  const session = saveActiveSession({
+    status: inferred.status,
+    currentUrl,
+    note: inferred.note,
+  });
+  log(`Session check: ${session.status} - ${session.note}`);
+  render();
+}
+
+function markSessionReady() {
+  const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
+  const session = saveActiveSession({
+    status: "ready",
+    currentUrl,
+    note: "Manually marked ready after account/login review.",
+  });
+  log(`Session marked ready for ${session.context.platform}/${session.context.socialAccountId}.`);
+  render();
 }
 
 function renderMedia() {
@@ -205,7 +283,8 @@ function approveDraft() {
 
 function stageDraft() {
   if (!activeDraft) evaluateDraft();
-  const check = canStageDraft(activeDraft);
+  const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
+  const check = canStageDraft(activeDraft, { sessionCheck });
   if (!check.ok) {
     log(`Staging refused: ${check.reason}.`);
     renderRiskCard();
@@ -225,9 +304,10 @@ function renderRiskCard() {
     return;
   }
 
-  const check = canStageDraft(activeDraft);
-  els.riskCard.className = `risk-card ${activeDraft.approvalLevel === "auto_allowed" ? "good" : check.ok ? "warn" : "bad"}`;
-  els.riskCard.textContent = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}. ${activeDraft.riskFlags.length ? `Flags: ${activeDraft.riskFlags.join(", ")}. ` : ""}${check.reason}.`;
+  const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
+  const stageCheck = canStageDraft(activeDraft, { sessionCheck });
+  els.riskCard.className = `risk-card ${activeDraft.approvalLevel === "auto_allowed" && stageCheck.ok ? "good" : stageCheck.ok ? "warn" : "bad"}`;
+  els.riskCard.textContent = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}. ${activeDraft.riskFlags.length ? `Flags: ${activeDraft.riskFlags.join(", ")}. ` : ""}${stageCheck.reason}.`;
 }
 
 function log(message) {

@@ -35,6 +35,8 @@ export function createSeedWorkspace() {
         brandId: context.brandId,
         platform: context.platform,
         accountUrl: "https://x.com/",
+        expectedHost: "x.com",
+        sessionStatus: "unknown",
         browserProfileId: context.browserProfileId,
       },
     ],

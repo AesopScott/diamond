@@ -38,6 +38,13 @@
             Social account
             <select id="account-select"></select>
           </label>
+          <div class="session-card" id="session-card">
+            <div>
+              <span class="session-label">Session</span>
+              <strong id="session-status">Unknown</strong>
+            </div>
+            <p id="session-note">Session has not been checked yet.</p>
+          </div>
         </section>
 
         <section class="panel">
@@ -91,7 +98,12 @@
           <section class="browser panel">
             <div class="panel-heading">
               <span>Visible Social Browser</span>
-              <button id="reload-webview" type="button">Reload</button>
+              <div class="browser-actions">
+                <button id="open-account" type="button">Open account</button>
+                <button id="check-session" type="button">Check session</button>
+                <button id="mark-ready" type="button">Mark ready</button>
+                <button id="reload-webview" type="button">Reload</button>
+              </div>
             </div>
             <div class="browser-tabs" id="browser-tabs"></div>
             <div class="browser-shell">

@@ -27,7 +27,7 @@ export function createPostDraft(input) {
   };
 }
 
-export function canStageDraft(draft) {
+export function canStageDraft(draft, options = {}) {
   if (!draft) return { ok: false, reason: "Missing draft" };
   if (draft.status === "blocked") return { ok: false, reason: "Draft is blocked" };
   if (draft.approvalLevel === "review_required" && draft.status !== "approved") {
@@ -35,6 +35,9 @@ export function canStageDraft(draft) {
   }
   if (draft.context.postingMode === "draft_only") {
     return { ok: false, reason: "Posting mode is draft_only" };
+  }
+  if (options.sessionCheck && !options.sessionCheck.ok) {
+    return { ok: false, reason: options.sessionCheck.reason };
   }
   return { ok: true, reason: "Draft can be staged" };
 }

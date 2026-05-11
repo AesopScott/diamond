@@ -7,6 +7,10 @@ import {
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
+  getSessionForContext,
+  inferSessionStatusFromUrl,
+  updateAccountSession,
+  validateSessionForStaging,
 } from "../src/index.js";
 
 const workspace = createSeedWorkspace();
@@ -46,5 +50,20 @@ assert.equal(
 const risk = approvalLevelForText("Is this gambling or regulated by the CFTC?", workspace.approvalPolicies[0]);
 assert.equal(risk.level, "review_required");
 assert.deepEqual(risk.flags.sort(), ["gambling", "regulatory"].sort());
+
+const unknownSession = getSessionForContext({}, workspace.context);
+assert.equal(validateSessionForStaging(unknownSession, workspace.context).ok, false);
+
+const readySession = updateAccountSession(unknownSession, {
+  status: "ready",
+  currentUrl: "https://x.com/home",
+  note: "Ready for staging.",
+});
+assert.equal(validateSessionForStaging(readySession, workspace.context).ok, true);
+assert.equal(canStageDraft(safeDraft, { sessionCheck: validateSessionForStaging(readySession, workspace.context) }).ok, true);
+assert.equal(validateSessionForStaging(readySession, otherContext).ok, false);
+
+assert.equal(inferSessionStatusFromUrl("https://x.com/login", workspace.socialAccounts[0]).status, "login_required");
+assert.equal(inferSessionStatusFromUrl("https://x.com/home", workspace.socialAccounts[0]).status, "ready");
 
 console.log("All Diamond tests passed.");
