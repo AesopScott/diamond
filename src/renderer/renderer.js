@@ -118,6 +118,7 @@ document.querySelector("#save-brand-rules").addEventListener("click", saveBrandR
 document.querySelector("#save-strategy").addEventListener("click", saveStrategy);
 document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
 document.querySelector("#generate-next-slot").addEventListener("click", generateFromNextSlot);
+document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
 document.querySelector("#jump-editorial-calendar").addEventListener("click", () => scrollPanelIntoView("#editorial-calendar-panel"));
 document.querySelector("#jump-schedule-calendar").addEventListener("click", () => scrollPanelIntoView("#schedule-calendar-panel"));
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
@@ -1041,19 +1042,7 @@ async function generateFromNextSlot() {
     return;
   }
 
-  selectedSlotId = slot.id;
-  activateSlotContext(slot);
-  draftSlotText(slot);
-  evaluateDraft();
-  slot.status = "drafted";
-  slot.draftId = activeDraft.id;
-  slot.draftedAt = activeDraft.createdAt;
-  const run = recordRoutineRun({
-    status: activeDraft.status === "blocked" ? "blocked" : "drafted",
-    slotId: slot.id,
-    draftId: activeDraft.id,
-    note: `Generated ${activeDraft.id} from planned slot "${slot.topic}".`,
-  });
+  const { run } = generateDraftFromSlot(slot);
   await window.diamond.saveState(state);
   renderRoutineRuns();
   renderSlotFilters();
@@ -1063,10 +1052,107 @@ async function generateFromNextSlot() {
   log(`Routine run ${run.id}: generated draft from ${slot.topic}.`);
 }
 
+async function runDueSlots() {
+  const slots = dueRoutineSlots();
+  if (!slots.length) {
+    const skipped = recordRoutineRun({
+      status: "skipped",
+      note: "No due editorial slots are ready for the active target.",
+    });
+    await window.diamond.saveState(state);
+    renderRoutineRuns();
+    log(`Routine run ${skipped.id}: no due slots were ready.`);
+    return;
+  }
+
+  let generated = 0;
+  let skipped = 0;
+  slots.forEach((slot) => {
+    const readiness = routineReadiness(slot);
+    if (!readiness.ok) {
+      slot.status = "skipped";
+      slot.skipReason = readiness.reason;
+      slot.skippedAt = new Date().toISOString();
+      recordRoutineRun({
+        status: "skipped",
+        slotId: slot.id,
+        note: readiness.reason,
+      });
+      skipped += 1;
+      return;
+    }
+    generateDraftFromSlot(slot);
+    generated += 1;
+  });
+  await window.diamond.saveState(state);
+  renderRoutineRuns();
+  renderSlotFilters();
+  renderEditorialSlots();
+  renderDraftHistory();
+  renderPackageFilters();
+  log(`Due slot routine finished: ${generated} generated, ${skipped} skipped.`);
+}
+
+function generateDraftFromSlot(slot) {
+  selectedSlotId = slot.id;
+  activateSlotContext(slot);
+  draftSlotText(slot);
+  evaluateDraft();
+  slot.status = "drafted";
+  slot.draftId = activeDraft.id;
+  slot.draftedAt = activeDraft.createdAt;
+  delete slot.skipReason;
+  const run = recordRoutineRun({
+    status: activeDraft.status === "blocked" ? "blocked" : "drafted",
+    slotId: slot.id,
+    draftId: activeDraft.id,
+    note: `Generated ${activeDraft.id} from planned slot "${slot.topic}".`,
+  });
+  return { draft: activeDraft, run };
+}
+
 function nextPlannedSlot() {
   return (state.editorialSlots || [])
     .filter((slot) => slot.status === "planned" && slotMatchesActiveContext(slot))
     .sort((a, b) => new Date(a.plannedAt).getTime() - new Date(b.plannedAt).getTime())[0] || null;
+}
+
+function dueRoutineSlots() {
+  return (state.editorialSlots || [])
+    .filter((slot) => ["planned", "skipped"].includes(slot.status) && slotMatchesActiveContext(slot) && isSlotDue(slot))
+    .sort((a, b) => new Date(a.plannedAt).getTime() - new Date(b.plannedAt).getTime());
+}
+
+function isSlotDue(slot) {
+  const plannedAt = new Date(slot.plannedAt);
+  if (Number.isNaN(plannedAt.getTime())) return true;
+  return plannedAt.getTime() <= Date.now() + 15 * 60 * 1000;
+}
+
+function routineReadiness(slot) {
+  const required = [
+    ["company", slot.companyId],
+    ["brand", slot.brandId],
+    ["campaign", slot.campaignId],
+    ["platform", slot.platform],
+    ["social account", slot.socialAccountId],
+    ["topic", slot.topic],
+  ].filter(([, value]) => !value);
+  if (required.length) return { ok: false, reason: `Missing ${required.map(([label]) => label).join(", ")}.` };
+  const { strategy } = getActiveRows();
+  if (!strategy.cta) return { ok: false, reason: "Campaign strategy is missing a CTA." };
+  if (!Array.isArray(strategy.pillars) || !strategy.pillars.length) return { ok: false, reason: "Campaign strategy is missing content pillars." };
+  return { ok: true, reason: "Ready for routine." };
+}
+
+function routineReadinessForDisplay(slot) {
+  if (slot.status === "skipped") return { state: "skipped", label: "skipped" };
+  if (slot.status !== "planned") return { state: "not-ready", label: "not ready" };
+  if (!isSlotDue(slot)) return { state: "not-ready", label: "upcoming" };
+  const readiness = routineReadiness(slot);
+  return readiness.ok
+    ? { state: "ready", label: "ready" }
+    : { state: "not-ready", label: "not ready" };
 }
 
 function slotMatchesActiveContext(slot) {
@@ -1136,10 +1222,12 @@ async function addEditorialSlot() {
 function renderSlotFilters() {
   const filters = [
     ["active", "Active"],
+    ["ready", "Ready"],
     ["planned", "Planned"],
     ["drafted", "Drafted"],
     ["approved", "Approved"],
     ["scheduled", "Scheduled"],
+    ["skipped", "Skipped"],
     ["posted", "Posted"],
     ["all", "All"],
   ];
@@ -1167,16 +1255,18 @@ function renderEditorialSlots() {
   }
   slots.slice(0, 12).forEach((slot) => {
     const item = document.createElement("article");
-    item.className = `slot-item ${selectedSlotId === slot.id ? "active" : ""} ${slot.status}`;
+    const readiness = routineReadinessForDisplay(slot);
+    item.className = `slot-item ${selectedSlotId === slot.id ? "active" : ""} ${slot.status} ${readiness.state}`;
     const plannedAt = slot.plannedAt ? new Date(slot.plannedAt).toLocaleString() : "No time";
     const deadline = slot.approvalDeadline ? new Date(slot.approvalDeadline).toLocaleString() : "No deadline";
     item.innerHTML = `
       <header>
         <strong>${escapeHtml(slot.topic)}</strong>
-        <span class="session-label">${slot.status}</span>
+        <span class="session-label">${slot.status} / ${readiness.label}</span>
       </header>
       <p>${plannedAt} / ${slot.platform?.toUpperCase() || "X"} / ${slot.language || "en"}</p>
       <p>Approval: ${deadline}${slot.assetNeed ? ` / Asset: ${escapeHtml(slot.assetNeed)}` : ""}</p>
+      ${slot.skipReason ? `<p>Skipped: ${escapeHtml(slot.skipReason)}</p>` : ""}
       <div class="draft-history-actions">
         <button type="button" data-slot-action="select" data-slot-id="${slot.id}">Select</button>
         <button type="button" data-slot-action="draft" data-slot-id="${slot.id}">Draft from slot</button>
@@ -1197,6 +1287,8 @@ function filteredSlots() {
     && slot.socialAccountId === context.socialAccountId);
   if (slotFilter === "all") return slots;
   if (slotFilter === "active") return slots.filter((slot) => !["posted", "removed"].includes(slot.status));
+  if (slotFilter === "ready") return slots.filter((slot) => routineReadinessForDisplay(slot).state === "ready");
+  if (slotFilter === "skipped") return slots.filter((slot) => slot.status === "skipped");
   return slots.filter((slot) => slot.status === slotFilter);
 }
 

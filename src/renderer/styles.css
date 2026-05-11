@@ -521,6 +521,14 @@ webview {
   border-color: rgba(241, 189, 69, 0.45);
 }
 
+.slot-item.ready {
+  border-color: rgba(56, 217, 138, 0.55);
+}
+
+.slot-item.skipped {
+  border-color: rgba(255, 100, 100, 0.55);
+}
+
 .slot-item.posted {
   border-color: rgba(56, 217, 138, 0.45);
 }
