@@ -21,6 +21,7 @@ export function classifySocialReply(input = {}) {
 
 export function createSocialReply(input = {}) {
   const classification = input.classification || classifySocialReply(input);
+  const triage = input.triage || createInboxTriage({ classification, ...input });
   return {
     id: input.id || `reply-${Date.now()}`,
     context: input.context,
@@ -28,9 +29,25 @@ export function createSocialReply(input = {}) {
     sourceUrl: clean(input.sourceUrl),
     text: clean(input.text),
     classification,
+    triage,
     status: classification.shouldEscalate ? "escalated" : "captured",
     createdAt: input.createdAt || new Date().toISOString(),
     updatedAt: input.updatedAt || new Date().toISOString(),
+  };
+}
+
+export function createInboxTriage(input = {}) {
+  const classification = input.classification || classifySocialReply(input);
+  const now = input.createdAt ? new Date(input.createdAt) : new Date();
+  const dueAt = dueDateForPriority(classification.priority, now);
+  return {
+    priority: input.priority || classification.priority,
+    owner: clean(input.owner) || ownerForCategory(classification.category),
+    nextAction: input.nextAction || classification.suggestedAction,
+    dueAt: input.dueAt || dueAt.toISOString(),
+    escalationReason: classification.shouldEscalate ? `${classification.category} reply requires manual escalation.` : "",
+    notes: clean(input.notes),
+    status: classification.shouldEscalate ? "escalation_required" : "ready_for_review",
   };
 }
 
@@ -76,6 +93,19 @@ function actionForCategory(category) {
   if (["legal", "regulatory", "money", "hostile"].includes(category)) return "escalate";
   if (["spam"].includes(category)) return "ignore";
   return "draft_response";
+}
+
+function ownerForCategory(category) {
+  if (["legal", "regulatory", "money"].includes(category)) return "Founder";
+  if (["support", "bug"].includes(category)) return "Support";
+  if (["investor"].includes(category)) return "Founder";
+  if (["influencer"].includes(category)) return "Growth";
+  return "Social";
+}
+
+function dueDateForPriority(priority, now) {
+  const minutes = priority === "high" ? 60 : priority === "medium" ? 4 * 60 : 24 * 60;
+  return new Date(now.getTime() + minutes * 60 * 1000);
 }
 
 function clean(value) {

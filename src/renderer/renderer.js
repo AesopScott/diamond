@@ -9,6 +9,7 @@ import {
   createTenantContext,
   createPostMemoryRecord,
   createPostMetrics,
+  createInboxTriage,
   createResponseDraftForReply,
   createSocialReply,
   evaluateDraftQuality,
@@ -96,6 +97,8 @@ const els = {
   runHistory: document.querySelector("#run-history"),
   replyAuthor: document.querySelector("#reply-author"),
   replyUrl: document.querySelector("#reply-url"),
+  replyOwner: document.querySelector("#reply-owner"),
+  replyNotes: document.querySelector("#reply-notes"),
   replyText: document.querySelector("#reply-text"),
   replyResponse: document.querySelector("#reply-response"),
   replyInbox: document.querySelector("#reply-inbox"),
@@ -1251,23 +1254,30 @@ function renderReplyInbox() {
 
   replies.slice(0, 10).forEach((reply) => {
     const draft = (state.socialResponseDrafts || []).find((item) => item.replyId === reply.id);
+    const triage = reply.triage || createInboxTriage({ classification: reply.classification, text: reply.text });
     const item = document.createElement("article");
-    item.className = `reply-item ${reply.status || ""}`;
+    item.className = `reply-item ${reply.status || ""} ${triage.priority || ""}`;
     const created = reply.createdAt ? new Date(reply.createdAt).toLocaleString() : "Unknown time";
     item.innerHTML = `
       <header>
-        <strong>${escapeHtml(reply.classification?.category || "unclassified")} / ${escapeHtml(reply.classification?.priority || "normal")}</strong>
-        <span class="session-label">${escapeHtml(reply.status || "captured")}</span>
+        <strong>${escapeHtml(reply.classification?.category || "unclassified")} / ${escapeHtml(triage.priority || "normal")}</strong>
+        <span class="session-label">${escapeHtml(reply.status || "captured")} / ${escapeHtml(triage.status || "ready_for_review")}</span>
       </header>
       <p>${escapeHtml(reply.author || "Unknown author")} - ${created}</p>
       <p>${escapeHtml(reply.text || "")}</p>
-      <p>Action: ${escapeHtml(reply.classification?.suggestedAction || "draft_response")}${reply.sourceUrl ? ` / ${escapeHtml(reply.sourceUrl)}` : ""}</p>
+      <p>Owner: ${escapeHtml(triage.owner || "Social")} / Due: ${escapeHtml(formatScheduleTime(triage.dueAt))}</p>
+      <p>Action: ${escapeHtml(triage.nextAction || reply.classification?.suggestedAction || "draft_response")}${reply.sourceUrl ? ` / ${escapeHtml(reply.sourceUrl)}` : ""}</p>
+      ${triage.notes ? `<p>Notes: ${escapeHtml(triage.notes)}</p>` : ""}
+      ${triage.escalationReason ? `<p>${escapeHtml(triage.escalationReason)}</p>` : ""}
       ${draft ? `<p>Response: ${escapeHtml(draft.status)} - ${escapeHtml(draft.text)}</p>` : ""}
       <div class="reply-actions">
         <button type="button" data-reply-action="load" data-reply-id="${reply.id}">Load</button>
+        <button type="button" data-reply-action="assign" data-reply-id="${reply.id}">Assign</button>
+        <button type="button" data-reply-action="progress" data-reply-id="${reply.id}">In progress</button>
         <button type="button" data-reply-action="approve" data-reply-id="${reply.id}">Approve response</button>
         <button type="button" data-reply-action="copy" data-reply-id="${reply.id}">Copy response</button>
         <button type="button" data-reply-action="escalate" data-reply-id="${reply.id}">Escalate</button>
+        <button type="button" data-reply-action="resolve" data-reply-id="${reply.id}">Resolve</button>
         <button type="button" data-reply-action="ignore" data-reply-id="${reply.id}">Ignore</button>
       </div>
     `;
@@ -1282,12 +1292,19 @@ async function captureReply() {
     return;
   }
   const classification = classifySocialReply({ text });
+  const triage = createInboxTriage({
+    classification,
+    text,
+    owner: els.replyOwner.value,
+    notes: els.replyNotes.value,
+  });
   const reply = createSocialReply({
     context: getContext(),
     author: els.replyAuthor.value,
     sourceUrl: els.replyUrl.value,
     text,
     classification,
+    triage,
   });
   const responseDraft = createResponseDraftForReply({
     reply,
@@ -2346,9 +2363,34 @@ async function handleReplyInboxClick(event) {
   if (button.dataset.replyAction === "load") {
     els.replyAuthor.value = reply.author || "";
     els.replyUrl.value = reply.sourceUrl || "";
+    els.replyOwner.value = reply.triage?.owner || "";
+    els.replyNotes.value = reply.triage?.notes || "";
     els.replyText.value = reply.text || "";
     els.replyResponse.value = draft?.text || "";
     log(`Loaded reply ${reply.id}.`);
+  }
+  if (button.dataset.replyAction === "assign") {
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    const owner = prompt("Assign owner", reply.triage.owner || "Social");
+    if (owner === null) return;
+    const notes = prompt("Triage notes", reply.triage.notes || "");
+    if (notes === null) return;
+    reply.triage.owner = owner.trim() || reply.triage.owner;
+    reply.triage.notes = notes.trim();
+    reply.triage.status = reply.triage.status === "resolved" ? "resolved" : "assigned";
+    reply.updatedAt = new Date().toISOString();
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply assigned: ${reply.id} -> ${reply.triage.owner}.`);
+  }
+  if (button.dataset.replyAction === "progress") {
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.triage.status = "in_progress";
+    reply.status = reply.status === "captured" ? "triaged" : reply.status;
+    reply.updatedAt = new Date().toISOString();
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply marked in progress: ${reply.id}.`);
   }
   if (button.dataset.replyAction === "approve") {
     if (!draft) {
@@ -2362,6 +2404,8 @@ async function handleReplyInboxClick(event) {
     draft.status = "approved";
     draft.updatedAt = new Date().toISOString();
     reply.status = "response_approved";
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.triage.status = "response_approved";
     reply.updatedAt = draft.updatedAt;
     await window.diamond.saveState(state);
     renderReplyInbox();
@@ -2377,6 +2421,10 @@ async function handleReplyInboxClick(event) {
   }
   if (button.dataset.replyAction === "escalate") {
     reply.status = "escalated";
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.triage.status = "escalation_required";
+    reply.triage.nextAction = "escalate";
+    reply.triage.escalationReason ||= "Operator escalated this reply.";
     reply.updatedAt = new Date().toISOString();
     if (draft) {
       draft.status = "escalation_required";
@@ -2386,8 +2434,24 @@ async function handleReplyInboxClick(event) {
     renderReplyInbox();
     log(`Reply escalated: ${reply.id}.`);
   }
+  if (button.dataset.replyAction === "resolve") {
+    reply.status = "resolved";
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.triage.status = "resolved";
+    reply.updatedAt = new Date().toISOString();
+    if (draft && draft.status !== "ignored") {
+      draft.status = draft.status === "approved" ? "sent_or_handled" : draft.status;
+      draft.updatedAt = reply.updatedAt;
+    }
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply resolved: ${reply.id}.`);
+  }
   if (button.dataset.replyAction === "ignore") {
     reply.status = "ignored";
+    reply.triage ||= createInboxTriage({ classification: reply.classification, text: reply.text });
+    reply.triage.status = "ignored";
+    reply.triage.nextAction = "ignore";
     reply.updatedAt = new Date().toISOString();
     if (draft) {
       draft.status = "ignored";

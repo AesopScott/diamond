@@ -514,7 +514,7 @@ webview {
 .reply-form {
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1fr) minmax(260px, 1.4fr) minmax(260px, 1.4fr);
+  grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1fr) minmax(150px, 0.7fr) minmax(190px, 1fr) minmax(260px, 1.4fr) minmax(260px, 1.4fr);
   margin-bottom: 10px;
 }
 
@@ -529,6 +529,14 @@ webview {
 
 .reply-item.response_approved {
   border-color: rgba(56, 217, 138, 0.45);
+}
+
+.reply-item.high {
+  border-color: rgba(255, 100, 100, 0.65);
+}
+
+.reply-item.medium {
+  border-color: rgba(241, 189, 69, 0.5);
 }
 
 .reply-item.ignored {

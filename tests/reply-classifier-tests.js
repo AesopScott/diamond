@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   classifySocialReply,
+  createInboxTriage,
   createResponseDraftForReply,
   createSocialReply,
   createSeedWorkspace,
@@ -14,12 +15,21 @@ assert.equal(support.category, "support");
 assert.equal(support.priority, "medium");
 assert.equal(support.suggestedAction, "draft_response");
 assert.equal(support.requiresApproval, true);
+const supportTriage = createInboxTriage({ classification: support, createdAt: "2026-05-11T12:00:00.000Z" });
+assert.equal(supportTriage.priority, "medium");
+assert.equal(supportTriage.owner, "Support");
+assert.equal(supportTriage.status, "ready_for_review");
+assert.equal(supportTriage.dueAt, "2026-05-11T16:00:00.000Z");
 
 const legal = classifySocialReply({ text: "My attorney says this needs a gambling license." });
 assert.equal(legal.category, "legal");
 assert.equal(legal.priority, "high");
 assert.equal(legal.suggestedAction, "escalate");
 assert.equal(legal.shouldEscalate, true);
+const legalTriage = createInboxTriage({ classification: legal, createdAt: "2026-05-11T12:00:00.000Z" });
+assert.equal(legalTriage.owner, "Founder");
+assert.equal(legalTriage.status, "escalation_required");
+assert.equal(legalTriage.nextAction, "escalate");
 
 const reply = createSocialReply({
   context,
@@ -29,6 +39,8 @@ const reply = createSocialReply({
 });
 assert.equal(reply.classification.category, "bug");
 assert.equal(reply.status, "captured");
+assert.equal(reply.triage.owner, "Support");
+assert.equal(reply.triage.nextAction, "draft_response");
 
 const response = createResponseDraftForReply({ reply });
 assert.equal(response.replyId, reply.id);
