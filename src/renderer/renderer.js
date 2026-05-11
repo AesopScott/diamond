@@ -77,6 +77,8 @@ document.querySelector("#approve-draft").addEventListener("click", approveDraft)
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
 document.querySelector("#assist-media").addEventListener("click", assistMediaUpload);
 document.querySelector("#capture-run").addEventListener("click", captureCurrentRun);
+document.querySelector("#mark-posted").addEventListener("click", markActiveRunPosted);
+document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
@@ -464,6 +466,56 @@ async function captureCurrentRun() {
   renderRiskCard();
 }
 
+async function markActiveRunPosted() {
+  const run = getActiveRun();
+  if (!run) {
+    log("Mark posted refused: no active run. Stage or capture a run first.");
+    return;
+  }
+  const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
+  run.status = "posted";
+  run.postUrl = currentUrl;
+  run.platformUrl = currentUrl;
+  run.postedAt = new Date().toISOString();
+  run.note = "Operator marked this run as posted after manual publish.";
+  run.screenshotPath = await captureBrowserScreenshot(`${run.id}-posted`) || run.screenshotPath;
+  if (activeDraft) {
+    activeDraft.status = "posted";
+    activeDraft.postUrl = currentUrl;
+    activeDraft.updatedAt = run.postedAt;
+  }
+  await window.diamond.saveState(state);
+  renderRunHistory();
+  renderRiskCard();
+  log(`Run marked posted: ${run.id}.`);
+}
+
+async function markActiveRunAbandoned() {
+  const run = getActiveRun();
+  if (!run) {
+    log("Mark abandoned refused: no active run. Stage or capture a run first.");
+    return;
+  }
+  run.status = "abandoned";
+  run.abandonedAt = new Date().toISOString();
+  run.note = "Operator marked this run as not posted.";
+  if (activeDraft && activeDraft.lastRunId === run.id) {
+    activeDraft.status = "approved";
+    activeDraft.updatedAt = run.abandonedAt;
+  }
+  await window.diamond.saveState(state);
+  renderRunHistory();
+  renderRiskCard();
+  log(`Run marked abandoned: ${run.id}.`);
+}
+
+function getActiveRun() {
+  if (activeDraft?.lastRunId) {
+    return (state.postRuns || []).find((run) => run.id === activeDraft.lastRunId) || null;
+  }
+  return (state.postRuns || [])[0] || null;
+}
+
 async function capturePostRun({ status, note }) {
   state.postRuns ||= [];
   const context = getContext();
@@ -530,6 +582,12 @@ function renderRiskCard() {
     return;
   }
 
+  if (activeDraft.status === "posted") {
+    els.riskCard.className = "risk-card good";
+    els.riskCard.textContent = `${summary} Posted URL: ${activeDraft.postUrl || "captured in run history"}.`;
+    return;
+  }
+
   els.riskCard.className = activeDraft.approvalLevel === "auto_allowed" ? "risk-card good" : "risk-card warn";
   els.riskCard.textContent = `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`;
 }
@@ -547,7 +605,7 @@ function renderRunHistory() {
 
   runs.slice(0, 8).forEach((run) => {
     const item = document.createElement("article");
-    item.className = "run-item";
+    item.className = `run-item ${run.status || ""}`;
     const created = run.createdAt ? new Date(run.createdAt).toLocaleString() : "Unknown time";
     item.innerHTML = `
       <header>
@@ -555,7 +613,7 @@ function renderRunHistory() {
         <span class="session-label">${created}</span>
       </header>
       <p>${run.note || "No note."}</p>
-      <p>${run.media?.length || 0} media file(s) - ${run.platformUrl || "No platform URL"}</p>
+      <p>${run.media?.length || 0} media file(s) - ${run.postUrl || run.platformUrl || "No platform URL"}</p>
       <div class="run-actions">
         <button type="button" data-run-action="copy-url" data-run-id="${run.id}">Copy URL</button>
         <button type="button" data-run-action="copy-shot" data-run-id="${run.id}">Copy screenshot</button>
@@ -573,7 +631,7 @@ async function handleRunHistoryClick(event) {
   if (!run) return;
 
   if (button.dataset.runAction === "copy-url") {
-    await window.diamond.writeClipboard(run.platformUrl || "");
+    await window.diamond.writeClipboard(run.postUrl || run.platformUrl || "");
     log(`Copied run URL for ${run.id}.`);
   }
   if (button.dataset.runAction === "copy-shot") {

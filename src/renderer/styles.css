@@ -405,6 +405,15 @@ webview {
   padding: 7px 9px;
 }
 
+.run-item.posted {
+  border-color: rgba(56, 217, 138, 0.45);
+}
+
+.run-item.abandoned,
+.run-item.needs_manual_finish {
+  border-color: rgba(241, 189, 69, 0.45);
+}
+
 body.browser-focus #app {
   grid-template-columns: 1fr;
 }
