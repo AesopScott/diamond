@@ -49,6 +49,7 @@ const els = {
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
   draftHistory: document.querySelector("#draft-history"),
+  scheduleCalendar: document.querySelector("#schedule-calendar"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
   sessionNote: document.querySelector("#session-note"),
@@ -78,6 +79,7 @@ document.querySelector("#approve-draft").addEventListener("click", approveDraft)
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
 document.querySelector("#assist-media").addEventListener("click", assistMediaUpload);
 document.querySelector("#capture-run").addEventListener("click", captureCurrentRun);
+document.querySelector("#schedule-draft").addEventListener("click", scheduleActiveDraft);
 document.querySelector("#mark-posted").addEventListener("click", markActiveRunPosted);
 document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
@@ -94,6 +96,7 @@ document.querySelector("#reload-webview").addEventListener("click", () => els.we
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.draftHistory.addEventListener("click", handleDraftHistoryClick);
+els.scheduleCalendar.addEventListener("click", handleScheduleClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
   if (activeDraft) {
@@ -122,6 +125,7 @@ async function loadInitialState() {
     ...seed,
     drafts: [],
     postRuns: [],
+    scheduledPosts: [],
     sessions: {},
     runLog: [],
   };
@@ -182,6 +186,7 @@ function render() {
   renderRiskCard();
   renderRunHistory();
   renderDraftHistory();
+  renderScheduleCalendar();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
@@ -472,6 +477,49 @@ async function captureCurrentRun() {
   renderRiskCard();
 }
 
+async function scheduleActiveDraft() {
+  if (!activeDraft) {
+    log("Schedule refused: evaluate or load a draft first.");
+    return;
+  }
+  if (!["approved", "staged", "posted"].includes(activeDraft.status)) {
+    log("Schedule refused: approve the draft before scheduling.");
+    return;
+  }
+
+  const defaultDate = new Date(Date.now() + 60 * 60 * 1000);
+  const dateTime = prompt("Schedule date/time", toDatetimeLocal(defaultDate));
+  if (!dateTime) return;
+  const scheduledAt = new Date(dateTime);
+  if (Number.isNaN(scheduledAt.getTime())) {
+    log("Schedule refused: invalid date/time.");
+    return;
+  }
+
+  const schedule = {
+    id: `scheduled-${Date.now()}`,
+    draftId: activeDraft.id,
+    context: getContext(),
+    status: "scheduled",
+    scheduledAt: scheduledAt.toISOString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "local",
+    text: activeDraft.text,
+    media: [...(activeDraft.media || media)],
+    createdAt: new Date().toISOString(),
+  };
+  state.scheduledPosts ||= [];
+  state.scheduledPosts.unshift(schedule);
+  activeDraft.status = "scheduled";
+  activeDraft.scheduledPostId = schedule.id;
+  activeDraft.scheduledAt = schedule.scheduledAt;
+  activeDraft.updatedAt = schedule.createdAt;
+  await window.diamond.saveState(state);
+  renderRiskCard();
+  renderDraftHistory();
+  renderScheduleCalendar();
+  log(`Scheduled draft ${activeDraft.id} for ${formatScheduleTime(schedule.scheduledAt)}.`);
+}
+
 async function markActiveRunPosted() {
   const run = getActiveRun();
   if (!run) {
@@ -596,6 +644,12 @@ function renderRiskCard() {
     return;
   }
 
+  if (activeDraft.status === "scheduled") {
+    els.riskCard.className = "risk-card good";
+    els.riskCard.textContent = `${summary} Scheduled for ${formatScheduleTime(activeDraft.scheduledAt)}.`;
+    return;
+  }
+
   els.riskCard.className = activeDraft.approvalLevel === "auto_allowed" ? "risk-card good" : "risk-card warn";
   els.riskCard.textContent = `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`;
 }
@@ -663,6 +717,86 @@ function renderDraftHistory() {
     `;
     els.draftHistory.append(item);
   });
+}
+
+function renderScheduleCalendar() {
+  const schedules = schedulesForActiveContext()
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  els.scheduleCalendar.innerHTML = "";
+  if (!schedules.length) {
+    const empty = document.createElement("div");
+    empty.className = "schedule-empty";
+    empty.textContent = "No scheduled posts yet.";
+    els.scheduleCalendar.append(empty);
+    return;
+  }
+
+  const groups = groupByDay(schedules);
+  Object.entries(groups).forEach(([day, items]) => {
+    const section = document.createElement("section");
+    section.className = "schedule-day";
+    const title = document.createElement("strong");
+    title.textContent = day;
+    section.append(title);
+    items.forEach((item) => {
+      const div = document.createElement("article");
+      div.className = "schedule-item";
+      const preview = item.text.length > 120 ? `${item.text.slice(0, 120)}...` : item.text;
+      div.innerHTML = `
+        <header>
+          <strong>${new Date(item.scheduledAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</strong>
+          <span class="session-label">${item.status}</span>
+        </header>
+        <p>${preview}</p>
+        <p>${item.context.platform.toUpperCase()} / ${item.context.socialAccountId} / ${item.timezone}</p>
+        <div class="draft-history-actions">
+          <button type="button" data-schedule-action="load" data-schedule-id="${item.id}">Load draft</button>
+          <button type="button" data-schedule-action="cancel" data-schedule-id="${item.id}">Cancel</button>
+        </div>
+      `;
+      section.append(div);
+    });
+    els.scheduleCalendar.append(section);
+  });
+}
+
+function schedulesForActiveContext() {
+  const context = getContext();
+  return (state.scheduledPosts || []).filter((item) => item.status !== "canceled" && contextsEqual(item.context, context));
+}
+
+function groupByDay(items) {
+  return items.reduce((groups, item) => {
+    const key = new Date(item.scheduledAt).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+    groups[key] ||= [];
+    groups[key].push(item);
+    return groups;
+  }, {});
+}
+
+async function handleScheduleClick(event) {
+  const button = event.target.closest("button[data-schedule-action]");
+  if (!button) return;
+  const schedule = (state.scheduledPosts || []).find((item) => item.id === button.dataset.scheduleId);
+  if (!schedule) return;
+
+  if (button.dataset.scheduleAction === "load") {
+    const draft = (state.drafts || []).find((item) => item.id === schedule.draftId);
+    if (draft) loadDraft(draft);
+  }
+  if (button.dataset.scheduleAction === "cancel") {
+    schedule.status = "canceled";
+    schedule.canceledAt = new Date().toISOString();
+    const draft = (state.drafts || []).find((item) => item.id === schedule.draftId);
+    if (draft && draft.status === "scheduled") {
+      draft.status = "approved";
+      draft.updatedAt = schedule.canceledAt;
+    }
+    await window.diamond.saveState(state);
+    renderDraftHistory();
+    renderScheduleCalendar();
+    log(`Canceled scheduled post ${schedule.id}.`);
+  }
 }
 
 function draftsForActiveContext() {
@@ -877,4 +1011,13 @@ async function openPlatformMediaPicker() {
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function toDatetimeLocal(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function formatScheduleTime(value) {
+  return value ? new Date(value).toLocaleString() : "unknown time";
 }

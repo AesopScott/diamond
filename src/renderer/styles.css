@@ -353,12 +353,14 @@ webview {
 }
 
 .run-history-panel.panel,
-.draft-history-panel.panel {
+.draft-history-panel.panel,
+.schedule-panel.panel {
   margin: 0;
 }
 
 .run-history,
-.draft-history {
+.draft-history,
+.schedule-calendar {
   display: grid;
   gap: 8px;
   max-height: 170px;
@@ -366,13 +368,16 @@ webview {
 }
 
 .run-history-empty,
-.draft-history-empty {
+.draft-history-empty,
+.schedule-empty {
   color: var(--muted);
   font-size: 13px;
 }
 
 .run-item,
-.draft-item {
+.draft-item,
+.schedule-day,
+.schedule-item {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -425,6 +430,19 @@ webview {
 
 .draft-item.active {
   border-color: rgba(233, 75, 75, 0.6);
+}
+
+.schedule-day {
+  gap: 10px;
+}
+
+.schedule-day > strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.schedule-item {
+  background: #0b1018;
 }
 
 body.browser-focus #app {
