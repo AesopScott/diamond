@@ -208,8 +208,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
 | P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
 | P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
-| P0 | Add Schedule Post button and scheduled-post records | Queued | Operators can schedule an approved draft for a specific date/time/account without publishing immediately; records are tenant scoped. |
-| P0 | Add scheduled-post calendar view | Queued | Calendar shows upcoming scheduled posts by company, brand, campaign, platform, account, status, and timezone. |
+| P0 | Add Schedule Post button and scheduled-post records | Built | Operators can schedule an approved draft for a specific date/time/account without publishing immediately; records are tenant scoped. |
+| P0 | Add scheduled-post calendar view | Built | Calendar shows upcoming scheduled posts by company, brand, campaign, platform, account, status, timezone, readiness, and queue actions. |
 | P0 | Add brand and claim libraries | Queued | Voice rules, approved language, banned claims, identity rules. |
 | P0 | Validate plan against Diamond reality | Queued | Inspect standalone app shell, Firebase admin JSON option, local hooks, Electron/browser patterns. |
 | P0 | Run confidence proof phase | Queued | Standalone app shell, Firebase admin option, browser strategy, repeated X staging. |

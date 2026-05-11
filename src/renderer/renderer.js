@@ -23,6 +23,9 @@ const state = await loadInitialState();
 let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
 let packageFilter = "active";
+let scheduleScope = "target";
+let scheduleStatusFilter = "open";
+let selectedScheduleId = null;
 let lastStageMessage = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
@@ -51,6 +54,9 @@ const els = {
   runHistory: document.querySelector("#run-history"),
   draftHistory: document.querySelector("#draft-history"),
   packageFilters: document.querySelector("#package-filters"),
+  scheduleScope: document.querySelector("#schedule-scope"),
+  scheduleStatusFilter: document.querySelector("#schedule-status-filter"),
+  scheduleDetail: document.querySelector("#schedule-detail"),
   scheduleCalendar: document.querySelector("#schedule-calendar"),
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
@@ -99,7 +105,13 @@ document.querySelector("#clear-log").addEventListener("click", () => { els.runLo
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.draftHistory.addEventListener("click", handleDraftHistoryClick);
 els.packageFilters.addEventListener("click", handlePackageFilterClick);
+els.scheduleScope.addEventListener("click", handleScheduleScopeClick);
+els.scheduleStatusFilter.addEventListener("change", () => {
+  scheduleStatusFilter = els.scheduleStatusFilter.value;
+  renderScheduleCalendar();
+});
 els.scheduleCalendar.addEventListener("click", handleScheduleClick);
+els.scheduleDetail.addEventListener("click", handleScheduleClick);
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
   if (activeDraft) {
@@ -437,6 +449,10 @@ async function stageDraft() {
   activeDraft.updatedAt = activeDraft.stagedAt;
   activeDraft.stageUrl = composeUrl;
   activeDraft.media = media;
+  syncScheduleForDraft(activeDraft, {
+    status: "staged",
+    stagedAt: activeDraft.stagedAt,
+  });
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
   const fillResult = await fillComposerText(activeDraft.text);
@@ -451,6 +467,7 @@ async function stageDraft() {
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
+  renderScheduleCalendar();
 }
 
 async function assistMediaUpload() {
@@ -524,12 +541,25 @@ async function scheduleActiveDraft() {
   activeDraft.scheduledPostId = schedule.id;
   activeDraft.scheduledAt = schedule.scheduledAt;
   activeDraft.updatedAt = schedule.createdAt;
+  selectedScheduleId = schedule.id;
   await window.diamond.saveState(state);
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
   renderScheduleCalendar();
   log(`Scheduled draft ${activeDraft.id} for ${formatScheduleTime(schedule.scheduledAt)}.`);
+}
+
+function syncScheduleForDraft(draft, patch) {
+  const schedule = (state.scheduledPosts || []).find((item) => item.id === draft.scheduledPostId || item.draftId === draft.id);
+  if (!schedule) return null;
+  Object.assign(schedule, patch, {
+    updatedAt: new Date().toISOString(),
+    text: draft.text,
+    media: [...(draft.media || media)],
+  });
+  selectedScheduleId = schedule.id;
+  return schedule;
 }
 
 async function markActiveRunPosted() {
@@ -549,12 +579,18 @@ async function markActiveRunPosted() {
     activeDraft.status = "posted";
     activeDraft.postUrl = currentUrl;
     activeDraft.updatedAt = run.postedAt;
+    syncScheduleForDraft(activeDraft, {
+      status: "posted",
+      postedAt: run.postedAt,
+      postUrl: currentUrl,
+    });
   }
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
+  renderScheduleCalendar();
   log(`Run marked posted: ${run.id}.`);
 }
 
@@ -570,12 +606,17 @@ async function markActiveRunAbandoned() {
   if (activeDraft && activeDraft.lastRunId === run.id) {
     activeDraft.status = "approved";
     activeDraft.updatedAt = run.abandonedAt;
+    syncScheduleForDraft(activeDraft, {
+      status: "scheduled",
+      abandonedRunAt: run.abandonedAt,
+    });
   }
   await window.diamond.saveState(state);
   renderRunHistory();
   renderRiskCard();
   renderPackageFilters();
   renderDraftHistory();
+  renderScheduleCalendar();
   log(`Run marked abandoned: ${run.id}.`);
 }
 
@@ -775,17 +816,31 @@ function countPackagesForFilter(filter) {
 }
 
 function renderScheduleCalendar() {
-  const schedules = schedulesForActiveContext()
+  const schedules = filteredSchedules()
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   els.scheduleCalendar.innerHTML = "";
+  renderScheduleControls();
+  renderScheduleDetail();
   if (!schedules.length) {
     const empty = document.createElement("div");
     empty.className = "schedule-empty";
-    empty.textContent = "No scheduled posts yet.";
+    empty.textContent = "No scheduled posts match this view.";
     els.scheduleCalendar.append(empty);
     return;
   }
 
+  const buckets = groupSchedulesByReadiness(schedules);
+  Object.entries(buckets).forEach(([bucket, bucketSchedules]) => {
+    if (!bucketSchedules.length) return;
+    const bucketTitle = document.createElement("div");
+    bucketTitle.className = `schedule-bucket ${bucket}`;
+    bucketTitle.textContent = scheduleBucketLabel(bucket);
+    els.scheduleCalendar.append(bucketTitle);
+    renderScheduleDayGroups(bucketSchedules);
+  });
+}
+
+function renderScheduleDayGroups(schedules) {
   const groups = groupByDay(schedules);
   Object.entries(groups).forEach(([day, items]) => {
     const section = document.createElement("section");
@@ -795,7 +850,7 @@ function renderScheduleCalendar() {
     section.append(title);
     items.forEach((item) => {
       const div = document.createElement("article");
-      div.className = "schedule-item";
+      div.className = `schedule-item ${selectedScheduleId === item.id ? "active" : ""} ${scheduleBucket(item)}`;
       const preview = item.text.length > 120 ? `${item.text.slice(0, 120)}...` : item.text;
       div.innerHTML = `
         <header>
@@ -806,7 +861,10 @@ function renderScheduleCalendar() {
         <p>${item.companyName || item.context.companyId} / ${item.brandName || item.context.brandId} / ${item.campaignName || item.context.campaignId}</p>
         <p>${item.accountLabel || `${item.context.platform.toUpperCase()} / ${item.context.socialAccountId}`} / ${item.timezone}</p>
         <div class="draft-history-actions">
+          <button type="button" data-schedule-action="select" data-schedule-id="${item.id}">Details</button>
           <button type="button" data-schedule-action="load" data-schedule-id="${item.id}">Load draft</button>
+          <button type="button" data-schedule-action="stage" data-schedule-id="${item.id}">Stage now</button>
+          <button type="button" data-schedule-action="posted" data-schedule-id="${item.id}">Mark posted</button>
           <button type="button" data-schedule-action="cancel" data-schedule-id="${item.id}">Cancel</button>
         </div>
       `;
@@ -816,9 +874,99 @@ function renderScheduleCalendar() {
   });
 }
 
-function schedulesForActiveContext() {
+function renderScheduleControls() {
+  els.scheduleStatusFilter.value = scheduleStatusFilter;
+  els.scheduleScope.querySelectorAll("button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.scheduleScope === scheduleScope);
+  });
+}
+
+function renderScheduleDetail() {
+  const schedule = (state.scheduledPosts || []).find((item) => item.id === selectedScheduleId);
+  if (!schedule || !scheduleMatchesScope(schedule)) {
+    selectedScheduleId = null;
+    els.scheduleDetail.innerHTML = "";
+    return;
+  }
+  const preview = schedule.text.length > 220 ? `${schedule.text.slice(0, 220)}...` : schedule.text;
+  els.scheduleDetail.innerHTML = `
+    <article class="schedule-detail-card ${scheduleBucket(schedule)}">
+      <header>
+        <div>
+          <strong>${formatScheduleTime(schedule.scheduledAt)}</strong>
+          <p>${schedule.companyName || schedule.context.companyId} / ${schedule.brandName || schedule.context.brandId} / ${schedule.campaignName || schedule.context.campaignId}</p>
+        </div>
+        <span class="session-label">${schedule.status}</span>
+      </header>
+      <p>${preview}</p>
+      <p>${schedule.accountLabel || `${schedule.context.platform.toUpperCase()} / ${schedule.context.socialAccountId}`} / ${schedule.timezone}</p>
+      <div class="draft-history-actions">
+        <button type="button" data-schedule-action="load" data-schedule-id="${schedule.id}">Load draft</button>
+        <button type="button" data-schedule-action="stage" data-schedule-id="${schedule.id}">Stage now</button>
+        <button type="button" data-schedule-action="posted" data-schedule-id="${schedule.id}">Mark posted</button>
+        <button type="button" data-schedule-action="cancel" data-schedule-id="${schedule.id}">Cancel</button>
+      </div>
+    </article>
+  `;
+}
+
+function filteredSchedules() {
+  return schedulesForScope().filter((item) => {
+    if (scheduleStatusFilter === "all") return true;
+    if (scheduleStatusFilter === "open") return !["canceled", "posted"].includes(item.status);
+    if (scheduleStatusFilter === "overdue") return scheduleBucket(item) === "overdue";
+    if (scheduleStatusFilter === "ready-today") return scheduleBucket(item) === "ready-today";
+    return item.status === scheduleStatusFilter;
+  });
+}
+
+function schedulesForScope() {
   const context = getContext();
-  return (state.scheduledPosts || []).filter((item) => item.status !== "canceled" && contextsEqual(item.context, context));
+  return (state.scheduledPosts || []).filter((item) => item.status !== "canceled" && scheduleMatchesScope(item, context));
+}
+
+function scheduleMatchesScope(item, context = getContext()) {
+  if (scheduleScope === "all") return true;
+  if (scheduleScope === "company") return item.context?.companyId === context.companyId;
+  return contextsEqual(item.context, context);
+}
+
+function groupSchedulesByReadiness(schedules) {
+  return schedules.reduce((groups, item) => {
+    groups[scheduleBucket(item)].push(item);
+    return groups;
+  }, {
+    overdue: [],
+    "ready-today": [],
+    upcoming: [],
+    completed: [],
+  });
+}
+
+function scheduleBucket(item) {
+  if (["posted", "canceled"].includes(item.status)) return "completed";
+  const scheduledAt = new Date(item.scheduledAt);
+  const now = new Date();
+  if (scheduledAt.getTime() < now.getTime() && item.status === "scheduled") return "overdue";
+  if (isSameLocalDay(scheduledAt, now) && item.status === "scheduled") return "ready-today";
+  return "upcoming";
+}
+
+function scheduleBucketLabel(bucket) {
+  if (bucket === "overdue") return `Overdue ${countSchedulesInBucket(bucket)}`;
+  if (bucket === "ready-today") return `Ready today ${countSchedulesInBucket(bucket)}`;
+  if (bucket === "completed") return `Completed ${countSchedulesInBucket(bucket)}`;
+  return `Upcoming ${countSchedulesInBucket(bucket)}`;
+}
+
+function countSchedulesInBucket(bucket) {
+  return filteredSchedules().filter((item) => scheduleBucket(item) === bucket).length;
+}
+
+function isSameLocalDay(left, right) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
 }
 
 function groupByDay(items) {
@@ -836,9 +984,49 @@ async function handleScheduleClick(event) {
   const schedule = (state.scheduledPosts || []).find((item) => item.id === button.dataset.scheduleId);
   if (!schedule) return;
 
+  if (button.dataset.scheduleAction === "select") {
+    selectedScheduleId = schedule.id;
+    renderScheduleCalendar();
+    return;
+  }
   if (button.dataset.scheduleAction === "load") {
     const draft = (state.drafts || []).find((item) => item.id === schedule.draftId);
+    activateScheduleContext(schedule);
     if (draft) loadDraft(draft);
+    selectedScheduleId = schedule.id;
+    renderScheduleCalendar();
+  }
+  if (button.dataset.scheduleAction === "stage") {
+    const draft = (state.drafts || []).find((item) => item.id === schedule.draftId);
+    if (!draft) {
+      log(`Stage refused: scheduled draft ${schedule.draftId} was not found.`);
+      return;
+    }
+    selectedScheduleId = schedule.id;
+    activateScheduleContext(schedule);
+    loadDraft(draft);
+    await stageDraft();
+  }
+  if (button.dataset.scheduleAction === "posted") {
+    const draft = (state.drafts || []).find((item) => item.id === schedule.draftId);
+    activateScheduleContext(schedule);
+    if (draft) loadDraft(draft);
+    if (activeDraft?.lastRunId) {
+      await markActiveRunPosted();
+    } else {
+      schedule.status = "posted";
+      schedule.postedAt = new Date().toISOString();
+      if (draft) {
+        draft.status = "posted";
+        draft.updatedAt = schedule.postedAt;
+      }
+      await window.diamond.saveState(state);
+      renderScheduleCalendar();
+      renderDraftHistory();
+      renderPackageFilters();
+      renderRiskCard();
+      log(`Scheduled post marked posted: ${schedule.id}.`);
+    }
   }
   if (button.dataset.scheduleAction === "cancel") {
     schedule.status = "canceled";
@@ -849,9 +1037,36 @@ async function handleScheduleClick(event) {
       draft.updatedAt = schedule.canceledAt;
     }
     await window.diamond.saveState(state);
+    if (selectedScheduleId === schedule.id) selectedScheduleId = null;
     renderDraftHistory();
+    renderPackageFilters();
     renderScheduleCalendar();
     log(`Canceled scheduled post ${schedule.id}.`);
+  }
+}
+
+function handleScheduleScopeClick(event) {
+  const button = event.target.closest("button[data-schedule-scope]");
+  if (!button) return;
+  scheduleScope = button.dataset.scheduleScope;
+  selectedScheduleId = null;
+  renderScheduleCalendar();
+}
+
+function activateScheduleContext(schedule) {
+  const context = schedule.context || {};
+  setSelectIfPresent(els.company, context.companyId);
+  setSelectIfPresent(els.brand, context.brandId);
+  setSelectIfPresent(els.campaign, context.campaignId);
+  setSelectIfPresent(els.account, context.socialAccountId);
+  activeMode = context.postingMode || activeMode;
+  syncModeButtons();
+}
+
+function setSelectIfPresent(select, value) {
+  if (!value) return;
+  if ([...select.options].some((option) => option.value === value)) {
+    select.value = value;
   }
 }
 

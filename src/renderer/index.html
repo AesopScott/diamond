@@ -182,6 +182,26 @@
           <div class="panel-heading">
             <span>Scheduled Posts</span>
           </div>
+          <div class="schedule-tools">
+            <div class="segmented schedule-scope" id="schedule-scope" role="group" aria-label="Calendar scope">
+              <button class="active" data-schedule-scope="target" type="button">Target</button>
+              <button data-schedule-scope="company" type="button">Company</button>
+              <button data-schedule-scope="all" type="button">All</button>
+            </div>
+            <label>
+              Status
+              <select id="schedule-status-filter">
+                <option value="open">Open</option>
+                <option value="overdue">Overdue</option>
+                <option value="ready-today">Ready today</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="staged">Staged</option>
+                <option value="posted">Posted</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+          </div>
+          <div id="schedule-detail" class="schedule-detail"></div>
           <div id="schedule-calendar" class="schedule-calendar"></div>
         </section>
       </main>

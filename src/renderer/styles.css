@@ -395,6 +395,10 @@ webview {
   overflow: auto;
 }
 
+.schedule-calendar {
+  max-height: 360px;
+}
+
 .run-history-empty,
 .draft-history-empty,
 .schedule-empty {
@@ -488,6 +492,88 @@ webview {
 
 .schedule-item {
   background: #0b1018;
+}
+
+.schedule-tools {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
+  margin-bottom: 10px;
+}
+
+.schedule-tools label {
+  margin: 0;
+}
+
+.schedule-scope button {
+  font-size: 12px;
+  padding: 8px;
+}
+
+.schedule-scope button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.schedule-detail {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.schedule-detail-card {
+  background: #0b1018;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.schedule-detail-card header,
+.schedule-item header {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.schedule-detail-card p,
+.schedule-item p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.schedule-bucket {
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.schedule-item.active,
+.schedule-detail-card {
+  border-color: rgba(233, 75, 75, 0.6);
+}
+
+.schedule-item.overdue,
+.schedule-detail-card.overdue {
+  border-color: rgba(255, 100, 100, 0.55);
+}
+
+.schedule-item.ready-today,
+.schedule-detail-card.ready-today {
+  border-color: rgba(241, 189, 69, 0.55);
+}
+
+.schedule-item.completed,
+.schedule-detail-card.completed {
+  border-color: rgba(56, 217, 138, 0.45);
 }
 
 body.browser-focus #app {
