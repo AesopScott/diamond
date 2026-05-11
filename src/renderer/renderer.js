@@ -34,6 +34,7 @@ import {
   normalizeHost,
   normalizeLoginUrl,
   platformLabel,
+  markPlatformLoginProof,
   markPlatformProof,
   markPlatformProofFromStage,
   resolveComposeUrl,
@@ -1106,6 +1107,9 @@ function inferAndSaveSession() {
 
 function checkSession() {
   const session = inferAndSaveSession();
+  if (session.status === "ready") {
+    void recordLoginProof(getActiveRows().account, "Login proof recorded from session check.");
+  }
   log(`Session check: ${session.status} - ${session.note}`);
   render();
 }
@@ -1117,6 +1121,7 @@ function markSessionReady() {
     currentUrl,
     note: "Manually marked ready after account/login review.",
   });
+  void recordLoginProof(getActiveRows().account, "Login proof recorded from manual mark-ready.");
   log(`Session marked ready for ${session.context.platform}/${session.context.socialAccountId}.`);
   render();
 }
@@ -1789,8 +1794,9 @@ function renderPlatformProofs() {
         <span>Text ${proof.textProofCount}/3</span>
         <span>Media ${proof.mediaProofCount}/1</span>
         <span>Manual ${proof.manualProofCount}/3</span>
+        <span>Login ${proof.loginProofCount || 0}/1</span>
       </div>
-      <p>${escapeHtml(evaluation.summary)}${proof.lastProofAt ? ` Last proof: ${escapeHtml(new Date(proof.lastProofAt).toLocaleString())}.` : ""}</p>
+      <p>${escapeHtml(evaluation.summary)} ${escapeHtml(evaluation.loginSummary || "")}${proof.lastProofAt ? ` Last proof: ${escapeHtml(new Date(proof.lastProofAt).toLocaleString())}.` : ""}${proof.lastLoginProofAt ? ` Last login: ${escapeHtml(new Date(proof.lastLoginProofAt).toLocaleString())}.` : ""}</p>
       <div class="proof-actions">
         <button type="button" data-proof-action="text" data-proof-id="${escapeHtml(proof.id)}">Mark text proof</button>
         <button type="button" data-proof-action="media" data-proof-id="${escapeHtml(proof.id)}">Mark media proof</button>
@@ -1848,11 +1854,21 @@ function createPlatformProofForAccount(account) {
     textProofCount: 0,
     mediaProofCount: 0,
     manualProofCount: 0,
+    loginProofCount: 0,
+    lastLoginProofAt: null,
     lastProofAt: null,
     notes: getPlatformBrowserAdapter(account.platform).note,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+}
+
+async function recordLoginProof(account, notes) {
+  const proof = getPlatformProof(account);
+  const next = markPlatformLoginProof(proof, notes);
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.id ? next : item);
+  await window.diamond.saveState(state);
+  renderPlatformProofs();
 }
 
 async function addAsset() {

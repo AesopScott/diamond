@@ -5,6 +5,7 @@ import {
   ensurePlatformProofRecords,
   evaluatePlatformProof,
   getPlatformBrowserAdapter,
+  markPlatformLoginProof,
   markPlatformProof,
   markPlatformProofFromStage,
   platformProofId,
@@ -51,6 +52,11 @@ const redditProof = createPlatformProofRecord({
   socialAccountId: "the-card-reddit",
 });
 assert.equal(evaluatePlatformProof(redditProof, getPlatformBrowserAdapter("reddit")).status, "monitoring_only");
+
+const loginProof = markPlatformLoginProof(instagramProof, "Logged in manually.");
+assert.equal(loginProof.loginProofCount, 1);
+assert.ok(loginProof.lastLoginProofAt);
+assert.match(evaluatePlatformProof(loginProof, getPlatformBrowserAdapter("instagram")).loginSummary, /Login proof 1\/1/);
 
 const stageProof = markPlatformProofFromStage(xProof, {
   fillResult: { ok: true },

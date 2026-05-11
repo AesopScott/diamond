@@ -204,6 +204,9 @@ This is the current order for finishing the remaining checklist items.
   - [x] Platform adapter proof panel
   - [x] Manual/text/media proof counters
   - [x] Automatic proof updates from staging results
+  - [x] Login proof tracking
+  - [x] Facebook login proof
+  - [x] TikTok login proof
   - [ ] Assisted composer adapters beyond X
   - [ ] Platform-specific media upload proof
   - [ ] Repeated staging proof for each writable platform
@@ -477,8 +480,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. Do this after legal/accessibility baseline and image template gaps are closed. |
-| P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are wired. Assisted composer and media proofs remain queued. |
-| P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are wired. Assisted composer and media proofs remain queued. |
+| P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and TikTok login proof are wired. Assisted composer and media proofs remain queued. |
+| P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and Facebook login proof are wired. Assisted composer and media proofs remain queued. |
 | P3 | Add Reddit monitoring only | Partial | Reddit account context and planned monitoring slot are wired, and staging refuses because Reddit is monitoring-only. Reply/monitoring capture remains queued. |
 
 ## First Milestone

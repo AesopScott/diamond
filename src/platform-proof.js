@@ -13,6 +13,8 @@ export function createPlatformProofRecord(input = {}) {
     textProofCount: whole(input.textProofCount),
     mediaProofCount: whole(input.mediaProofCount),
     manualProofCount: whole(input.manualProofCount),
+    loginProofCount: whole(input.loginProofCount),
+    lastLoginProofAt: input.lastLoginProofAt || null,
     lastProofAt: input.lastProofAt || null,
     notes: input.notes || adapter.note || "",
     createdAt: now,
@@ -39,6 +41,15 @@ export function ensurePlatformProofRecords(workspace = {}) {
       }));
     }
   });
+  return next;
+}
+
+export function markPlatformLoginProof(proof, notes = "") {
+  const next = createPlatformProofRecord(proof);
+  next.loginProofCount += 1;
+  next.lastLoginProofAt = new Date().toISOString();
+  next.updatedAt = next.lastLoginProofAt;
+  if (notes) next.notes = notes;
   return next;
 }
 
@@ -89,6 +100,7 @@ export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAd
       label: "Monitoring only",
       ok: true,
       summary: "No publishing proof required. Use this platform for monitoring and reply capture.",
+      loginSummary: `Login proof ${record.loginProofCount}/1.`,
     };
   }
   if (adapter.stageMode === "manual") {
@@ -98,6 +110,7 @@ export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAd
       label: ok ? "Manual proven" : "Manual proof needed",
       ok,
       summary: `Manual staging proof ${record.manualProofCount}/3.`,
+      loginSummary: `Login proof ${record.loginProofCount}/1.`,
     };
   }
   const ok = record.textProofCount >= 3 && record.mediaProofCount >= 1;
@@ -106,6 +119,7 @@ export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAd
     label: ok ? "Assisted proven" : "Proof needed",
     ok,
     summary: `Text proof ${record.textProofCount}/3. Media proof ${record.mediaProofCount}/1.`,
+    loginSummary: `Login proof ${record.loginProofCount}/1.`,
   };
 }
 
