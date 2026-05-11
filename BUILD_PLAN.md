@@ -4,6 +4,20 @@
 
 This is the live top-level checklist for the three-build plan. Checked items are implemented in the current Diamond app; unchecked items remain to be built or formally verified.
 
+### Completion Queue
+
+This is the current order for finishing the remaining checklist items.
+
+1. Terms of Service and privacy policy page/content.
+2. Accessibility baseline: keyboard navigation, screen reader labels, color contrast, and reduced motion.
+3. Founder/investor and campaign image templates.
+4. Spanish UI labels needed for operator review.
+5. Configurable routine due window.
+6. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
+7. Reddit monitoring capture workflow.
+8. Expert checklist review and Scott workflow signoff.
+9. Decide whether `auto_publish` ever becomes available.
+
 ### Build 1: Standalone X Posting Loop
 
 - [x] Standalone Electron app shell
@@ -117,7 +131,7 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Skipped slot reasons
   - [x] Draft-to-slot linking
   - [ ] Configurable routine due window
-  - [ ] Routine trigger callable from Polaris
+  - [x] Routine trigger callable from Polaris
 - [x] Routine failure tests
   - [x] Missing tenant/account fields
   - [x] Missing strategy CTA
@@ -462,7 +476,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
-| P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
+| P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. Do this after legal/accessibility baseline and image template gaps are closed. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are wired. Assisted composer and media proofs remain queued. |
 | P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are wired. Assisted composer and media proofs remain queued. |
 | P3 | Add Reddit monitoring only | Partial | Reddit account context and planned monitoring slot are wired, and staging refuses because Reddit is monitoring-only. Reply/monitoring capture remains queued. |
