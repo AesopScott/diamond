@@ -3,6 +3,7 @@ export * from "./content-generation.js";
 export * from "./draft.js";
 export * from "./failure-controls.js";
 export * from "./ids.js";
+export * from "./metrics.js";
 export * from "./quality.js";
 export * from "./risk.js";
 export * from "./seed.js";

@@ -165,12 +165,12 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [ ] Cooldowns
   - [ ] Duplicate prevention
   - [ ] Silence/escalation rules
-- [ ] Metrics logging
+- [x] Metrics logging
   - [x] Post URL capture
   - [x] Screenshot association
-  - [ ] Impression/click/signup fields
-  - [ ] League join attribution
-  - [ ] Performance notes
+  - [x] Impression/click/signup fields
+  - [x] League join attribution
+  - [x] Performance notes
 - [ ] Firebase/admin sync
   - [ ] Confirm Firebase admin JSON loading path
   - [ ] Keep service account out of renderer
@@ -416,7 +416,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
 | P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
-| P1 | Add metrics logging | Partial | Post URLs and screenshots are captured; impressions, clicks, signups, league attribution, and performance notes remain. |
+| P1 | Add metrics logging | Built | Runs capture URLs, screenshots, impressions, clicks, signups, league joins, league attribution, performance notes, and derived rates. |
 | P1 | Add content quality feedback loop | Built | Scores drafts for CTA, novelty, risk, language, visual fit, and audience value before approval or staging. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
 | P1 | Add inbox triage before reply drafting | Queued | Priority, owner, action, and escalation before writing responses. |

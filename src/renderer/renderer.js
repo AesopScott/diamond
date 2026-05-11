@@ -7,6 +7,7 @@ import {
   createSeedWorkspace,
   createTenantContext,
   createPostMemoryRecord,
+  createPostMetrics,
   evaluateDraftQuality,
   getSessionForContext,
   inferSessionStatusFromUrl,
@@ -17,6 +18,7 @@ import {
   normalizeLoginUrl,
   resolveComposeUrl,
   resolveLoginUrl,
+  summarizePostMetrics,
   migrateWorkspaceState,
   insertComposerText,
   openMediaPicker,
@@ -961,6 +963,7 @@ async function capturePostRun({ status, note }) {
     media: [...(activeDraft.media || media)],
     platformUrl: currentUrl,
     screenshotPath,
+    metrics: createPostMetrics(),
     createdAt: new Date().toISOString(),
   };
   state.postRuns.unshift(run);
@@ -1122,10 +1125,14 @@ function renderRunHistory() {
       </header>
       <p>${run.note || "No note."}</p>
       <p>${run.media?.length || 0} media file(s) - ${run.postUrl || run.platformUrl || "No platform URL"}</p>
+      <p>${escapeHtml(summarizePostMetrics(run.metrics || {}))}</p>
+      ${run.metrics?.notes ? `<p>${escapeHtml(run.metrics.notes)}</p>` : ""}
       <div class="run-actions">
         <button type="button" data-run-action="copy-url" data-run-id="${run.id}">Copy URL</button>
         <button type="button" data-run-action="copy-shot" data-run-id="${run.id}">Copy screenshot</button>
         <button type="button" data-run-action="copy-media" data-run-id="${run.id}">Copy media</button>
+        <button type="button" data-run-action="metrics" data-run-id="${run.id}">Update metrics</button>
+        <button type="button" data-run-action="copy-metrics" data-run-id="${run.id}">Copy metrics</button>
       </div>
     `;
     els.runHistory.append(item);
@@ -2157,6 +2164,55 @@ async function handleRunHistoryClick(event) {
     await window.diamond.writeClipboard((run.media || []).join("\n"));
     log(`Copied ${run.media?.length || 0} media path(s) for ${run.id}.`);
   }
+  if (button.dataset.runAction === "metrics") {
+    await updateRunMetrics(run);
+  }
+  if (button.dataset.runAction === "copy-metrics") {
+    await window.diamond.writeClipboard(buildMetricsExport(run));
+    log(`Copied metrics summary for ${run.id}.`);
+  }
+}
+
+async function updateRunMetrics(run) {
+  const current = run.metrics || {};
+  const impressions = prompt("Impressions", current.impressions ?? 0);
+  if (impressions === null) return;
+  const clicks = prompt("Clicks", current.clicks ?? 0);
+  if (clicks === null) return;
+  const signups = prompt("Signups", current.signups ?? 0);
+  if (signups === null) return;
+  const leagueJoins = prompt("League joins", current.leagueJoins ?? 0);
+  if (leagueJoins === null) return;
+  const leagueId = prompt("League ID", current.leagueId || "");
+  if (leagueId === null) return;
+  const leagueName = prompt("League name", current.leagueName || "");
+  if (leagueName === null) return;
+  const notes = prompt("Performance notes", current.notes || "");
+  if (notes === null) return;
+  run.metrics = createPostMetrics({
+    impressions,
+    clicks,
+    signups,
+    leagueJoins,
+    leagueId,
+    leagueName,
+    notes,
+  });
+  run.updatedAt = new Date().toISOString();
+  await window.diamond.saveState(state);
+  renderRunHistory();
+  log(`Metrics updated for ${run.id}: ${summarizePostMetrics(run.metrics)}.`);
+}
+
+function buildMetricsExport(run) {
+  return [
+    `Run: ${run.id}`,
+    `Status: ${run.status || "unknown"}`,
+    `URL: ${run.postUrl || run.platformUrl || ""}`,
+    `Screenshot: ${run.screenshotPath || ""}`,
+    `Metrics: ${summarizePostMetrics(run.metrics || {})}`,
+    `Notes: ${run.metrics?.notes || ""}`,
+  ].join("\n");
 }
 
 function log(message) {
