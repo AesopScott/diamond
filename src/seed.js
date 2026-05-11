@@ -74,7 +74,9 @@ export function createSeedWorkspace() {
           "Free-to-play onboarding",
         ],
         cta: "Join the free World Cup league at thecard.bet.",
+        ctaEs: "Unete gratis a la liga del Mundial en thecard.bet.",
         offer: "$1,000 total payouts for the World Cup campaign.",
+        offerEs: "$1,000 en premios totales para la campana del Mundial.",
         referenceAccounts: [
           "@FIFAWorldCup",
           "@FOXSoccer",
@@ -197,6 +199,9 @@ export function createSeedWorkspace() {
           "free to play",
           "free World Cup league",
           "no purchase required",
+          "gratis para jugar",
+          "liga gratis del Mundial",
+          "no se requiere compra",
         ],
         requiresReviewClaims: [
           "prize",

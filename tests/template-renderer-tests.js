@@ -37,6 +37,18 @@ assert.match(countrySvg, /USA needs you on the board/);
 assert.match(countrySvg, /Free league leaderboard/);
 assert.match(renderWorldCupAssetSvg("country", { country: "Mexico", flag: "MX" }), /Mexico needs you on the board/);
 
+const spanishLeaderboard = renderWorldCupAssetSvg("leaderboard", { language: "es" });
+assert.match(spanishLeaderboard, /Liga del Mundial/);
+assert.match(spanishLeaderboard, /Unete en thecard\.bet/);
+
+const spanishPrize = renderWorldCupPrizeSvg({ language: "es" });
+assert.match(spanishPrize, /Ganador/);
+assert.match(spanishPrize, /premios del Mundial/);
+
+const spanishCountry = renderWorldCupCountrySvg({ language: "es", country: "Mexico", flag: "MX" });
+assert.match(spanishCountry, /Mexico te necesita en la tabla/);
+assert.match(spanishCountry, /Tabla de la liga gratis/);
+
 const asset = buildGeneratedAssetRecord({
   template,
   filePath: "C:/Diamond/generated-assets/world-cup.svg",
@@ -63,5 +75,13 @@ const countryAsset = buildGeneratedAssetRecord({
   type: "country",
 });
 assert.match(countryAsset.altText, /country leaderboard/);
+
+const spanishAsset = buildGeneratedAssetRecord({
+  template,
+  filePath: "C:/Diamond/generated-assets/spanish.svg",
+  language: "es",
+  type: "leaderboard",
+});
+assert.match(spanishAsset.altText, /Tarjeta de tabla/);
 
 console.log("All Diamond template renderer tests passed.");

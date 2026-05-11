@@ -146,10 +146,11 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Country/flag card
   - [ ] Founder/investor card
   - [ ] Campaign card
-- [ ] Spanish generation path
-  - [ ] EN/ES campaign variants
-  - [ ] Spanish slot generation
-  - [ ] Spanish brand/claim checks
+- [x] Spanish generation path
+  - [x] EN/ES campaign variants
+  - [x] Spanish slot generation
+  - [x] Spanish brand/claim checks
+  - [x] Spanish card copy for leaderboard, prize, and country cards
   - [ ] Spanish UI labels where needed for operator review
 - [ ] Reply capture and classification
   - [ ] Capture replies/comments
@@ -413,7 +414,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |
 | P0 | Build draft/approval queue | Queued | Required before any auto-publish mode. |
 | P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |
-| P1 | Add Spanish generation path | Queued | Every campaign post can produce EN/ES variants. |
+| P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
 | P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
 | P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
 | P1 | Add content quality feedback loop | Queued | Voice examples, banned phrases, post review notes, performance notes. |

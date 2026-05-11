@@ -1,5 +1,6 @@
 import {
   approvalLevelForText,
+  buildSlotDraftText,
   browserProfilePath,
   canStageDraft,
   createPostDraft,
@@ -61,7 +62,9 @@ const els = {
   strategyAudience: document.querySelector("#strategy-audience"),
   strategyPillars: document.querySelector("#strategy-pillars"),
   strategyCta: document.querySelector("#strategy-cta"),
+  strategyCtaEs: document.querySelector("#strategy-cta-es"),
   strategyOffer: document.querySelector("#strategy-offer"),
+  strategyOfferEs: document.querySelector("#strategy-offer-es"),
   strategyReferences: document.querySelector("#strategy-references"),
   activeTarget: document.querySelector("#active-target"),
   targetStatus: document.querySelector("#target-status"),
@@ -373,7 +376,9 @@ function getContentStrategy(companyId, brandId, campaignId) {
       audience: [],
       pillars: [],
       cta: "",
+      ctaEs: "",
       offer: "",
+      offerEs: "",
       referenceAccounts: [],
     };
     state.contentStrategies.push(strategy);
@@ -409,7 +414,9 @@ function renderStrategy() {
     "strategy-audience",
     "strategy-pillars",
     "strategy-cta",
+    "strategy-cta-es",
     "strategy-offer",
+    "strategy-offer-es",
     "strategy-references",
   ].includes(document.activeElement.id)) {
     return;
@@ -419,7 +426,9 @@ function renderStrategy() {
   els.strategyAudience.value = linesFor(strategy.audience);
   els.strategyPillars.value = linesFor(strategy.pillars);
   els.strategyCta.value = strategy.cta || "";
+  els.strategyCtaEs.value = strategy.ctaEs || "";
   els.strategyOffer.value = strategy.offer || "";
+  els.strategyOfferEs.value = strategy.offerEs || "";
   els.strategyReferences.value = linesFor(strategy.referenceAccounts);
 }
 
@@ -510,7 +519,9 @@ async function saveStrategy() {
   strategy.audience = linesFrom(els.strategyAudience.value);
   strategy.pillars = linesFrom(els.strategyPillars.value);
   strategy.cta = els.strategyCta.value.trim();
+  strategy.ctaEs = els.strategyCtaEs.value.trim();
   strategy.offer = els.strategyOffer.value.trim();
+  strategy.offerEs = els.strategyOfferEs.value.trim();
   strategy.referenceAccounts = linesFrom(els.strategyReferences.value);
   strategy.updatedAt = new Date().toISOString();
   await window.diamond.saveState(state);
@@ -650,10 +661,12 @@ function renderMedia() {
 
 function evaluateDraft() {
   const { policy, brandLibrary, claimLibrary } = getActiveRows();
+  const selectedSlot = (state.editorialSlots || []).find((slot) => slot.id === selectedSlotId);
   lastStageMessage = null;
   activeDraft = createPostDraft({
     context: getContext(),
     text: els.draftText.value,
+    language: selectedSlot?.language || "en",
     media,
     approvalPolicy: policy,
     brandLibrary,
@@ -1116,10 +1129,11 @@ async function generateAssetFromTemplate() {
     return;
   }
   const svg = renderWorldCupAssetSvg(type, {
-    title: assetTitleForType(type, campaign.name || "World Cup"),
-    subtitle: strategy.offer || "Free picks. Country pride. Real leaderboard heat.",
-    cta: strategy.cta || "Join at thecard.bet",
-    country: "Your country",
+    title: assetTitleForType(type, campaign.name || "World Cup", els.assetLanguage.value || "en"),
+    subtitle: strategyText(strategy, "offer", els.assetLanguage.value || "en") || "Free picks. Country pride. Real leaderboard heat.",
+    cta: strategyText(strategy, "cta", els.assetLanguage.value || "en") || "Join at thecard.bet",
+    country: els.assetLanguage.value === "es" ? "Tu pais" : "Your country",
+    language: els.assetLanguage.value || "en",
   });
   const filePath = await window.diamond.saveGeneratedAsset({
     name: `${campaign.id || "campaign"}-${Date.now()}-${type}`,
@@ -1147,10 +1161,24 @@ async function generateAssetFromTemplate() {
   log(`Generated ${type} asset: ${asset.filePath}.`);
 }
 
-function assetTitleForType(type, campaignName) {
+function assetTitleForType(type, campaignName, language = "en") {
+  if (language === "es" && type === "prize") return "$1,000 en premios del Mundial";
+  if (language === "es" && type === "country") return "Tu pais te necesita en la tabla";
+  if (language === "es") return `Tabla de ${campaignName}`;
   if (type === "prize") return "$1,000 World Cup Payouts";
   if (type === "country") return "Your country needs you on the board";
   return `${campaignName} Leaderboard`;
+}
+
+function strategyText(strategy, key, language) {
+  if (language === "es") return strategy[`${key}Es`] || translateFallback(strategy[key], key);
+  return strategy[key] || "";
+}
+
+function translateFallback(value, key) {
+  if (key === "cta") return "Unete gratis a la liga del Mundial en thecard.bet.";
+  if (key === "offer") return "$1,000 en premios totales para la campana del Mundial.";
+  return value || "";
 }
 
 function renderAssetFilters() {
@@ -1608,15 +1636,7 @@ function handleSlotFilterClick(event) {
 
 function draftSlotText(slot) {
   const { strategy } = getActiveRows();
-  const pillars = Array.isArray(strategy.pillars) ? strategy.pillars.slice(0, 2).join(" / ") : "";
-  const audience = Array.isArray(strategy.audience) ? strategy.audience[0] : "";
-  const text = [
-    slot.topic,
-    strategy.offer ? strategy.offer : "",
-    audience ? `Built for ${audience.toLowerCase()}` : "",
-    pillars ? `Angle: ${pillars}.` : "",
-    strategy.cta || "",
-  ].filter(Boolean).join(" ");
+  const text = buildSlotDraftText(slot, strategy);
   els.draftText.value = text;
   activeDraft = null;
   lastStageMessage = null;

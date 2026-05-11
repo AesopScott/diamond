@@ -9,9 +9,10 @@ export function validateTemplateForRender(template) {
 }
 
 export function renderWorldCupLeaderboardSvg(input = {}) {
-  const title = input.title || "World Cup League";
-  const subtitle = input.subtitle || "Free picks. Country pride. Real leaderboard heat.";
-  const cta = input.cta || "Join at thecard.bet";
+  const spanish = input.language === "es";
+  const title = input.title || (spanish ? "Liga del Mundial" : "World Cup League");
+  const subtitle = input.subtitle || (spanish ? "Predicciones gratis. Orgullo de pais. La tabla se mueve." : "Free picks. Country pride. Real leaderboard heat.");
+  const cta = input.cta || (spanish ? "Unete en thecard.bet" : "Join at thecard.bet");
   const rows = normalizeRows(input.rows);
   const width = 1200;
   const height = 675;
@@ -44,15 +45,21 @@ export function renderWorldCupLeaderboardSvg(input = {}) {
 }
 
 export function renderWorldCupPrizeSvg(input = {}) {
-  const title = input.title || "$1,000 World Cup Payouts";
-  const subtitle = input.subtitle || "Free league. Real prizes. Country pride on the board.";
-  const cta = input.cta || "Join at thecard.bet";
-  const prizes = input.prizes || [
+  const spanish = input.language === "es";
+  const title = input.title || (spanish ? "$1,000 en premios del Mundial" : "$1,000 World Cup Payouts");
+  const subtitle = input.subtitle || (spanish ? "Liga gratis. Premios reales. Tu pais en la tabla." : "Free league. Real prizes. Country pride on the board.");
+  const cta = input.cta || (spanish ? "Unete en thecard.bet" : "Join at thecard.bet");
+  const prizes = input.prizes || (spanish ? [
+    ["Ganador", "$500"],
+    ["Segundo lugar", "$250"],
+    ["Tercer lugar", "$100"],
+    ["Cuarto-sexto", "$50 c/u"],
+  ] : [
     ["Winner", "$500"],
     ["Runner-up", "$250"],
     ["Third place", "$100"],
     ["Fourth-sixth", "$50 each"],
-  ];
+  ]);
   const prizeMarkup = prizes.map(([label, amount], index) => {
     const x = index % 2 === 0 ? 96 : 620;
     const y = index < 2 ? 260 : 410;
@@ -80,11 +87,12 @@ export function renderWorldCupPrizeSvg(input = {}) {
 }
 
 export function renderWorldCupCountrySvg(input = {}) {
-  const country = input.country || "Your Country";
-  const title = input.title || `${country} needs you on the board`;
-  const subtitle = input.subtitle || "Make your picks and climb the free World Cup league.";
-  const cta = input.cta || "Join at thecard.bet";
-  const flag = input.flag || "★";
+  const spanish = input.language === "es";
+  const country = input.country || (spanish ? "Tu pais" : "Your Country");
+  const title = input.title || (spanish ? `${country} te necesita en la tabla` : `${country} needs you on the board`);
+  const subtitle = input.subtitle || (spanish ? "Haz tus predicciones y sube en la liga gratis del Mundial." : "Make your picks and climb the free World Cup league.");
+  const cta = input.cta || (spanish ? "Unete en thecard.bet" : "Join at thecard.bet");
+  const flag = input.flag || "*";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="${escapeXml(country)} World Cup campaign card">
@@ -92,13 +100,13 @@ export function renderWorldCupCountrySvg(input = {}) {
   <rect x="38" y="38" width="1124" height="599" rx="34" fill="#111722" stroke="#283244" stroke-width="2"/>
   <rect x="92" y="94" width="382" height="382" rx="36" fill="#121923" stroke="#e94b4b" stroke-width="3"/>
   <text x="283" y="318" fill="#f4f7fb" font-size="156" font-weight="1000" text-anchor="middle">${escapeXml(flag)}</text>
-  <text x="530" y="132" fill="#e94b4b" font-size="24" font-weight="900" letter-spacing="6">COUNTRY BOARD</text>
+  <text x="530" y="132" fill="#e94b4b" font-size="24" font-weight="900" letter-spacing="6">${spanish ? "TABLA POR PAIS" : "COUNTRY BOARD"}</text>
   <text x="530" y="210" fill="#f4f7fb" font-size="60" font-weight="1000">${escapeXml(title)}</text>
   <text x="532" y="268" fill="#8f9bae" font-size="28" font-weight="800">${escapeXml(subtitle)}</text>
   <rect x="530" y="330" width="574" height="76" rx="18" fill="#121923" stroke="#283244"/>
-  <text x="562" y="378" fill="#38d98a" font-size="30" font-weight="1000">Free league leaderboard</text>
+  <text x="562" y="378" fill="#38d98a" font-size="30" font-weight="1000">${spanish ? "Tabla de la liga gratis" : "Free league leaderboard"}</text>
   <rect x="530" y="430" width="574" height="76" rx="18" fill="#121923" stroke="#283244"/>
-  <text x="562" y="478" fill="#f4f7fb" font-size="30" font-weight="1000">Every pick can move the table</text>
+  <text x="562" y="478" fill="#f4f7fb" font-size="30" font-weight="1000">${spanish ? "Cada prediccion puede mover la tabla" : "Every pick can move the table"}</text>
   <rect x="96" y="575" width="1008" height="42" rx="21" fill="#e94b4b"/>
   <text x="600" y="604" fill="#ffffff" font-size="22" font-weight="1000" text-anchor="middle">${escapeXml(cta)}</text>
 </svg>`;
@@ -111,7 +119,11 @@ export function renderWorldCupAssetSvg(type, input = {}) {
 }
 
 export function buildGeneratedAssetRecord({ template, filePath, language = "en", type = "leaderboard" }) {
-  const labels = {
+  const labels = language === "es" ? {
+    leaderboard: "Tarjeta de tabla de posiciones de la liga del Mundial para thecard.bet.",
+    prize: "Tarjeta de premios del Mundial para thecard.bet.",
+    country: "Tarjeta de campana por pais del Mundial para thecard.bet.",
+  } : {
     leaderboard: "World Cup league leaderboard card for thecard.bet.",
     prize: "World Cup prize payout card for thecard.bet.",
     country: "World Cup country leaderboard campaign card for thecard.bet.",
