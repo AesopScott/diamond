@@ -70,6 +70,30 @@ Before expanding beyond one platform, Diamond should prove the risky parts with 
 
 Confidence target: move from 7/10 to 8.5/10 before building additional platform routines, and toward 9/10 after repeated staging works with a real account.
 
+## Plan Validation
+
+Diamond should not treat this plan as perfect until it is verified against the real Polaris codebase, a working prototype, failure tests, an expert checklist, and Scott's workflow review.
+
+| Validation Track | What To Verify | Acceptance Signal | Stage |
+|---|---|---|---|
+| Codebase reality check | Inspect Polaris routines, Firebase admin JSON loading, MCP/local tool hooks, Electron/browser patterns, and existing app conventions. | The plan names real integration points and avoids imaginary architecture. | P0 before implementation depth. |
+| Prototype proof | Build one company, one brand, one X account, one browser profile, one generated post, one rendered image, one staged composer, one screenshot log. | The first assisted-posting loop works end to end without publishing. | P0 first milestone. |
+| Repeated proof | Run the staged X flow three times across separate sessions. | The workflow is repeatable, not a lucky demo. | P0 confidence proof. |
+| Failure testing | Test wrong account, expired login, missing media, selector miss, risky language, duplicate content, missing approval, missing Spanish variant, and Firebase write failure. | Diamond pauses, logs, or routes for review instead of publishing incorrectly. | P0/P1 before platform expansion. |
+| Expert checklist | Compare the system against strategy, calendar, brand voice, claim review, asset pipeline, approvals, inbox triage, escalation, cadence limits, account safety, metrics, memory, multitenancy, audit logs, and manual takeover. | Any missing operating layer becomes a build item before scale. | P0/P1 after first prototype. |
+| Workflow signoff | Scott reviews the first staged workflow in the visible browser and approval queue. | Scott confirms the flow matches how he wants Diamond to operate. | Required before `auto_publish`. |
+
+The build plan becomes the working spine only after:
+
+1. Polaris inspection confirms the integration path.
+2. X staging proof works three times.
+3. Tenant isolation blocks wrong-account staging.
+4. Risky content is held for approval.
+5. Post package, screenshot, and run state are logged.
+6. Scott approves the first staged workflow.
+
+Until those checks pass, the plan is a strong hypothesis, not a final operating model.
+
 ## Posting Modes
 
 | Mode | Behavior |
@@ -180,6 +204,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
 | P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
 | P0 | Add brand and claim libraries | Queued | Voice rules, approved language, banned claims, identity rules. |
+| P0 | Validate plan against Polaris reality | Queued | Inspect routines, Firebase admin JSON, MCP/local tool hooks, Electron/browser patterns. |
 | P0 | Run confidence proof phase | Queued | Polaris routines, Firebase admin JSON, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
@@ -195,6 +220,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add cadence and do-not-engage policies | Queued | Rate limits, quiet hours, cooldowns, silence rules. |
 | P1 | Add post memory and draft evaluation | Queued | Prevent repetition/contradiction and score drafts before staging. |
 | P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
+| P1 | Run formal failure tests | Queued | Wrong account, expired login, missing media, selector miss, risky copy, duplicate post, missing approval. |
+| P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |
 | P3 | Add Reddit monitoring only | Queued | No autoposting initially. |
 
