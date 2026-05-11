@@ -21,6 +21,7 @@ import {
 const state = await loadInitialState();
 let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
+let lastStageMessage = null;
 let media = [];
 let browserZoom = Number(state.browserZoom || 0.85);
 
@@ -347,6 +348,7 @@ function renderMedia() {
 
 function evaluateDraft() {
   const { policy } = getActiveRows();
+  lastStageMessage = null;
   activeDraft = createPostDraft({
     context: getContext(),
     text: els.draftText.value,
@@ -364,6 +366,7 @@ function approveDraft() {
     log("Cannot approve blocked draft.");
     return;
   }
+  lastStageMessage = null;
   activeDraft.status = "approved";
   activeDraft.updatedAt = new Date().toISOString();
   log("Draft approved for staging.");
@@ -375,6 +378,7 @@ async function stageDraft() {
   const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
   const check = canStageDraft(activeDraft, { sessionCheck });
   if (!check.ok) {
+    lastStageMessage = check.reason;
     log(`Staging refused: ${check.reason}.`);
     renderRiskCard();
     return;
@@ -382,6 +386,7 @@ async function stageDraft() {
 
   const { account } = getActiveRows();
   const composeUrl = resolveComposeUrl(account);
+  lastStageMessage = null;
   await window.diamond.writeClipboard(activeDraft.text);
   activeDraft.status = "staged";
   activeDraft.stagedAt = new Date().toISOString();
@@ -405,8 +410,23 @@ function renderRiskCard() {
 
   const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
   const stageCheck = canStageDraft(activeDraft, { sessionCheck });
-  els.riskCard.className = `risk-card ${activeDraft.approvalLevel === "auto_allowed" && stageCheck.ok ? "good" : stageCheck.ok ? "warn" : "bad"}`;
-  els.riskCard.textContent = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}. ${activeDraft.riskFlags.length ? `Flags: ${activeDraft.riskFlags.join(", ")}. ` : ""}${stageCheck.reason}.`;
+  const flags = activeDraft.riskFlags.length ? ` Flags: ${activeDraft.riskFlags.join(", ")}.` : "";
+  const summary = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}.${flags}`;
+
+  if (lastStageMessage) {
+    els.riskCard.className = "risk-card bad";
+    els.riskCard.textContent = `${summary} Staging blocked: ${lastStageMessage}.`;
+    return;
+  }
+
+  if (activeDraft.status === "staged") {
+    els.riskCard.className = stageCheck.ok ? "risk-card good" : "risk-card warn";
+    els.riskCard.textContent = `${summary} Copied to clipboard and opened in the browser.`;
+    return;
+  }
+
+  els.riskCard.className = activeDraft.approvalLevel === "auto_allowed" ? "risk-card good" : "risk-card warn";
+  els.riskCard.textContent = `${summary} ${activeDraft.approvalLevel === "review_required" && activeDraft.status !== "approved" ? "Approval required before staging." : "Draft is ready for approval or staging."}`;
 }
 
 function log(message) {
