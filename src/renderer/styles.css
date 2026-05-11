@@ -407,6 +407,7 @@ webview {
 }
 
 .run-history-panel.panel,
+.reply-panel.panel,
 .editorial-panel.panel,
 .routine-panel.panel,
 .asset-panel.panel,
@@ -439,6 +440,7 @@ webview {
 }
 
 .run-item,
+.reply-item,
 .routine-item,
 .asset-item,
 .slot-item,
@@ -454,6 +456,7 @@ webview {
 }
 
 .run-item header,
+.reply-item header,
 .routine-item header,
 .asset-item header,
 .slot-item header,
@@ -465,6 +468,7 @@ webview {
 }
 
 .run-item strong,
+.reply-item strong,
 .routine-item strong,
 .asset-item strong,
 .slot-item strong,
@@ -473,6 +477,7 @@ webview {
 }
 
 .run-item p,
+.reply-item p,
 .routine-item p,
 .asset-item p,
 .slot-item p,
@@ -483,6 +488,7 @@ webview {
 }
 
 .run-actions,
+.reply-actions,
 .draft-history-actions {
   display: flex;
   flex-wrap: wrap;
@@ -490,6 +496,7 @@ webview {
 }
 
 .run-actions button,
+.reply-actions button,
 .draft-history-actions button {
   font-size: 12px;
   padding: 7px 9px;
@@ -502,6 +509,30 @@ webview {
 .run-item.abandoned,
 .run-item.needs_manual_finish {
   border-color: rgba(241, 189, 69, 0.45);
+}
+
+.reply-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1fr) minmax(260px, 1.4fr) minmax(260px, 1.4fr);
+  margin-bottom: 10px;
+}
+
+.reply-form label {
+  margin: 0;
+}
+
+.reply-item.escalated,
+.reply-item.escalation_required {
+  border-color: rgba(255, 100, 100, 0.55);
+}
+
+.reply-item.response_approved {
+  border-color: rgba(56, 217, 138, 0.45);
+}
+
+.reply-item.ignored {
+  opacity: 0.72;
 }
 
 .draft-item.active {

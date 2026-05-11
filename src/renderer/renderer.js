@@ -9,6 +9,8 @@ import {
   createTenantContext,
   createPostMemoryRecord,
   createPostMetrics,
+  createResponseDraftForReply,
+  createSocialReply,
   evaluateDraftQuality,
   getSessionForContext,
   inferSessionStatusFromUrl,
@@ -20,6 +22,7 @@ import {
   resolveComposeUrl,
   resolveLoginUrl,
   summarizePostMetrics,
+  classifySocialReply,
   migrateWorkspaceState,
   insertComposerText,
   openMediaPicker,
@@ -91,6 +94,11 @@ const els = {
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
+  replyAuthor: document.querySelector("#reply-author"),
+  replyUrl: document.querySelector("#reply-url"),
+  replyText: document.querySelector("#reply-text"),
+  replyResponse: document.querySelector("#reply-response"),
+  replyInbox: document.querySelector("#reply-inbox"),
   routineRuns: document.querySelector("#routine-runs"),
   assetPath: document.querySelector("#asset-path"),
   assetType: document.querySelector("#asset-type"),
@@ -147,6 +155,7 @@ document.querySelector("#capture-run").addEventListener("click", captureCurrentR
 document.querySelector("#schedule-draft").addEventListener("click", scheduleActiveDraft);
 document.querySelector("#mark-posted").addEventListener("click", markActiveRunPosted);
 document.querySelector("#mark-abandoned").addEventListener("click", markActiveRunAbandoned);
+document.querySelector("#capture-reply").addEventListener("click", captureReply);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#save-cadence").addEventListener("click", saveCadencePolicy);
 document.querySelector("#save-brand-rules").addEventListener("click", saveBrandRules);
@@ -170,6 +179,7 @@ document.querySelector("#mark-ready").addEventListener("click", markSessionReady
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 els.runHistory.addEventListener("click", handleRunHistoryClick);
+els.replyInbox.addEventListener("click", handleReplyInboxClick);
 els.editorialSlots.addEventListener("click", handleSlotClick);
 els.slotFilters.addEventListener("click", handleSlotFilterClick);
 els.assetFilters.addEventListener("click", handleAssetFilterClick);
@@ -213,6 +223,8 @@ async function loadInitialState() {
     drafts: [],
     postRuns: [],
     postMemory: [],
+    socialReplies: [],
+    socialResponseDrafts: [],
     scheduledPosts: [],
     editorialSlots: seed.editorialSlots || [],
     contentStrategies: seed.contentStrategies || [],
@@ -234,6 +246,8 @@ function ensureWorkspaceData(workspace) {
   next.assetLibrary ||= [];
   next.socialTemplates ||= [];
   next.postMemory ||= [];
+  next.socialReplies ||= [];
+  next.socialResponseDrafts ||= [];
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
@@ -340,6 +354,7 @@ function render() {
   renderMedia();
   renderRiskCard();
   renderRunHistory();
+  renderReplyInbox();
   renderRoutineRuns();
   renderAssetFilters();
   renderAssetLibrary();
@@ -1220,6 +1235,71 @@ function renderRunHistory() {
     `;
     els.runHistory.append(item);
   });
+}
+
+function renderReplyInbox() {
+  const context = getContext();
+  const replies = (state.socialReplies || []).filter((reply) => contextsEqual(reply.context, context));
+  els.replyInbox.innerHTML = "";
+  if (!replies.length) {
+    const empty = document.createElement("div");
+    empty.className = "run-history-empty";
+    empty.textContent = "No replies captured yet.";
+    els.replyInbox.append(empty);
+    return;
+  }
+
+  replies.slice(0, 10).forEach((reply) => {
+    const draft = (state.socialResponseDrafts || []).find((item) => item.replyId === reply.id);
+    const item = document.createElement("article");
+    item.className = `reply-item ${reply.status || ""}`;
+    const created = reply.createdAt ? new Date(reply.createdAt).toLocaleString() : "Unknown time";
+    item.innerHTML = `
+      <header>
+        <strong>${escapeHtml(reply.classification?.category || "unclassified")} / ${escapeHtml(reply.classification?.priority || "normal")}</strong>
+        <span class="session-label">${escapeHtml(reply.status || "captured")}</span>
+      </header>
+      <p>${escapeHtml(reply.author || "Unknown author")} - ${created}</p>
+      <p>${escapeHtml(reply.text || "")}</p>
+      <p>Action: ${escapeHtml(reply.classification?.suggestedAction || "draft_response")}${reply.sourceUrl ? ` / ${escapeHtml(reply.sourceUrl)}` : ""}</p>
+      ${draft ? `<p>Response: ${escapeHtml(draft.status)} - ${escapeHtml(draft.text)}</p>` : ""}
+      <div class="reply-actions">
+        <button type="button" data-reply-action="load" data-reply-id="${reply.id}">Load</button>
+        <button type="button" data-reply-action="approve" data-reply-id="${reply.id}">Approve response</button>
+        <button type="button" data-reply-action="copy" data-reply-id="${reply.id}">Copy response</button>
+        <button type="button" data-reply-action="escalate" data-reply-id="${reply.id}">Escalate</button>
+        <button type="button" data-reply-action="ignore" data-reply-id="${reply.id}">Ignore</button>
+      </div>
+    `;
+    els.replyInbox.append(item);
+  });
+}
+
+async function captureReply() {
+  const text = els.replyText.value.trim();
+  if (!text) {
+    log("Reply capture refused: add reply text first.");
+    return;
+  }
+  const classification = classifySocialReply({ text });
+  const reply = createSocialReply({
+    context: getContext(),
+    author: els.replyAuthor.value,
+    sourceUrl: els.replyUrl.value,
+    text,
+    classification,
+  });
+  const responseDraft = createResponseDraftForReply({
+    reply,
+    text: els.replyResponse.value,
+  });
+  state.socialReplies ||= [];
+  state.socialResponseDrafts ||= [];
+  state.socialReplies.unshift(reply);
+  state.socialResponseDrafts.unshift(responseDraft);
+  await window.diamond.saveState(state);
+  renderReplyInbox();
+  log(`Reply captured: ${classification.category}/${classification.priority}. ${classification.suggestedAction}.`);
 }
 
 function renderRoutineRuns() {
@@ -2253,6 +2333,69 @@ async function handleRunHistoryClick(event) {
   if (button.dataset.runAction === "copy-metrics") {
     await window.diamond.writeClipboard(buildMetricsExport(run));
     log(`Copied metrics summary for ${run.id}.`);
+  }
+}
+
+async function handleReplyInboxClick(event) {
+  const button = event.target.closest("button[data-reply-action]");
+  if (!button) return;
+  const reply = (state.socialReplies || []).find((item) => item.id === button.dataset.replyId);
+  if (!reply) return;
+  const draft = (state.socialResponseDrafts || []).find((item) => item.replyId === reply.id);
+
+  if (button.dataset.replyAction === "load") {
+    els.replyAuthor.value = reply.author || "";
+    els.replyUrl.value = reply.sourceUrl || "";
+    els.replyText.value = reply.text || "";
+    els.replyResponse.value = draft?.text || "";
+    log(`Loaded reply ${reply.id}.`);
+  }
+  if (button.dataset.replyAction === "approve") {
+    if (!draft) {
+      log(`Approve refused: reply ${reply.id} has no response draft.`);
+      return;
+    }
+    if (draft.status === "escalation_required") {
+      log(`Approve refused: reply ${reply.id} requires escalation.`);
+      return;
+    }
+    draft.status = "approved";
+    draft.updatedAt = new Date().toISOString();
+    reply.status = "response_approved";
+    reply.updatedAt = draft.updatedAt;
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Response approved for ${reply.id}.`);
+  }
+  if (button.dataset.replyAction === "copy") {
+    if (!draft || draft.status !== "approved") {
+      log(`Copy refused: approve the response for ${reply.id} first.`);
+      return;
+    }
+    await window.diamond.writeClipboard(draft.text || "");
+    log(`Copied approved response for ${reply.id}.`);
+  }
+  if (button.dataset.replyAction === "escalate") {
+    reply.status = "escalated";
+    reply.updatedAt = new Date().toISOString();
+    if (draft) {
+      draft.status = "escalation_required";
+      draft.updatedAt = reply.updatedAt;
+    }
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply escalated: ${reply.id}.`);
+  }
+  if (button.dataset.replyAction === "ignore") {
+    reply.status = "ignored";
+    reply.updatedAt = new Date().toISOString();
+    if (draft) {
+      draft.status = "ignored";
+      draft.updatedAt = reply.updatedAt;
+    }
+    await window.diamond.saveState(state);
+    renderReplyInbox();
+    log(`Reply ignored: ${reply.id}.`);
   }
 }
 

@@ -152,12 +152,12 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Spanish brand/claim checks
   - [x] Spanish card copy for leaderboard, prize, and country cards
   - [ ] Spanish UI labels where needed for operator review
-- [ ] Reply capture and classification
-  - [ ] Capture replies/comments
-  - [ ] Classify support, bug, investor, influencer, product, hostile, spam, legal, money, regulatory
-  - [ ] Response draft queue
-  - [ ] Human approval gate
-  - [ ] Escalation rules
+- [x] Reply capture and classification
+  - [x] Capture replies/comments
+  - [x] Classify support, bug, investor, influencer, product, hostile, spam, legal, money, regulatory
+  - [x] Response draft queue
+  - [x] Human approval gate
+  - [x] Escalation rules
 - [x] Cadence and do-not-engage controls
   - [x] Max posts/day
   - [x] Max replies/hour
@@ -413,7 +413,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, and show ready/skipped calendar states. |
 | P0 | Build Playwright staging worker | Deferred | Embedded webview staging fills composer, captures screenshots, and stops before publish; external Playwright worker remains optional. |
 | P0 | Build draft/approval queue | Built | Package queue supports evaluate, approve, stage, schedule, copy, load, remove, posted, and abandoned states. |
-| P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |
+| P1 | Add reply capture and classification | Built | Operators can capture replies, classify them, generate response drafts, approve safe responses, ignore spam, or escalate sensitive replies. |
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
 | P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
 | P1 | Add metrics logging | Built | Runs capture URLs, screenshots, impressions, clicks, signups, league joins, league attribution, performance notes, and derived rates. |

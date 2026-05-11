@@ -287,6 +287,32 @@
           <div id="run-history" class="run-history"></div>
         </section>
 
+        <section class="panel reply-panel">
+          <div class="panel-heading">
+            <span>Reply Inbox</span>
+            <button id="capture-reply" type="button">Capture reply</button>
+          </div>
+          <div class="reply-form">
+            <label>
+              Author
+              <input id="reply-author" type="text" placeholder="@person">
+            </label>
+            <label>
+              Source URL
+              <input id="reply-url" type="url" placeholder="https://x.com/...">
+            </label>
+            <label>
+              Reply/comment text
+              <textarea id="reply-text" rows="4" spellcheck="true"></textarea>
+            </label>
+            <label>
+              Response draft
+              <textarea id="reply-response" rows="4" spellcheck="true"></textarea>
+            </label>
+          </div>
+          <div id="reply-inbox" class="reply-inbox"></div>
+        </section>
+
         <section id="editorial-calendar-panel" class="panel editorial-panel">
           <div class="panel-heading">
             <span>Editorial Calendar Slots</span>
