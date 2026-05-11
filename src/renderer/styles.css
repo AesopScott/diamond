@@ -107,6 +107,13 @@ h1 { font-size: 24px; line-height: 1; }
   margin-bottom: 12px;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .panel-heading span, .eyebrow {
   color: var(--accent);
   font-size: 11px;
@@ -393,12 +400,14 @@ webview {
 
 .run-history-panel.panel,
 .editorial-panel.panel,
+.routine-panel.panel,
 .package-queue-panel.panel,
 .schedule-panel.panel {
   margin: 0;
 }
 
 .run-history,
+.routine-runs,
 .editorial-slots,
 .draft-history,
 .schedule-calendar {
@@ -420,6 +429,7 @@ webview {
 }
 
 .run-item,
+.routine-item,
 .slot-item,
 .draft-item,
 .schedule-day,
@@ -433,6 +443,7 @@ webview {
 }
 
 .run-item header,
+.routine-item header,
 .slot-item header,
 .draft-item header {
   align-items: center;
@@ -442,12 +453,14 @@ webview {
 }
 
 .run-item strong,
+.routine-item strong,
 .slot-item strong,
 .draft-item strong {
   font-size: 13px;
 }
 
 .run-item p,
+.routine-item p,
 .slot-item p,
 .draft-item p {
   color: var(--muted);

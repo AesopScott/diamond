@@ -214,7 +214,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Validate plan against Diamond reality | Queued | Inspect standalone app shell, Firebase admin JSON option, local hooks, Electron/browser patterns. |
 | P0 | Run confidence proof phase | Queued | Standalone app shell, Firebase admin option, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
-| P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
+| P0 | Build `x-daily-post` routine | Built | Generate one post package from the next planned editorial slot. |
 | P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |
 | P0 | Build draft/approval queue | Queued | Required before any auto-publish mode. |
 | P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |

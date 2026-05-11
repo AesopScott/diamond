@@ -239,7 +239,10 @@
         <section class="panel editorial-panel">
           <div class="panel-heading">
             <span>Editorial Calendar Slots</span>
-            <button id="add-editorial-slot" type="button">Add slot</button>
+            <div class="panel-actions">
+              <button id="generate-next-slot" type="button">Generate from next slot</button>
+              <button id="add-editorial-slot" type="button">Add slot</button>
+            </div>
           </div>
           <div class="slot-form">
             <label>
@@ -268,6 +271,13 @@
           </div>
           <div class="queue-filters" id="slot-filters"></div>
           <div id="editorial-slots" class="editorial-slots"></div>
+        </section>
+
+        <section class="panel routine-panel">
+          <div class="panel-heading">
+            <span>Routine Runs</span>
+          </div>
+          <div id="routine-runs" class="routine-runs"></div>
         </section>
 
         <section class="panel package-queue-panel">

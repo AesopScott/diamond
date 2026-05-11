@@ -67,6 +67,7 @@ const els = {
   mediaRow: document.querySelector("#media-row"),
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
+  routineRuns: document.querySelector("#routine-runs"),
   slotTopic: document.querySelector("#slot-topic"),
   slotTime: document.querySelector("#slot-time"),
   slotLanguage: document.querySelector("#slot-language"),
@@ -116,6 +117,7 @@ document.querySelector("#save-account").addEventListener("click", saveAccountSet
 document.querySelector("#save-brand-rules").addEventListener("click", saveBrandRules);
 document.querySelector("#save-strategy").addEventListener("click", saveStrategy);
 document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
+document.querySelector("#generate-next-slot").addEventListener("click", generateFromNextSlot);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
@@ -171,6 +173,7 @@ async function loadInitialState() {
     scheduledPosts: [],
     editorialSlots: seed.editorialSlots || [],
     contentStrategies: seed.contentStrategies || [],
+    routineRuns: [],
     sessions: {},
     runLog: [],
   };
@@ -270,6 +273,7 @@ function render() {
   renderMedia();
   renderRiskCard();
   renderRunHistory();
+  renderRoutineRuns();
   renderSlotFilters();
   renderEditorialSlots();
   renderDraftHistory();
@@ -994,6 +998,98 @@ function renderRunHistory() {
     `;
     els.runHistory.append(item);
   });
+}
+
+function renderRoutineRuns() {
+  const runs = (state.routineRuns || []).filter((run) => contextsEqual(run.context, getContext()));
+  els.routineRuns.innerHTML = "";
+  if (!runs.length) {
+    const empty = document.createElement("div");
+    empty.className = "run-history-empty";
+    empty.textContent = "No routine runs yet.";
+    els.routineRuns.append(empty);
+    return;
+  }
+  runs.slice(0, 8).forEach((run) => {
+    const item = document.createElement("article");
+    item.className = `routine-item ${run.status || ""}`;
+    const created = run.createdAt ? new Date(run.createdAt).toLocaleString() : "Unknown time";
+    item.innerHTML = `
+      <header>
+        <strong>${escapeHtml(run.name || run.id)}</strong>
+        <span class="session-label">${run.status}</span>
+      </header>
+      <p>${created} / slot ${escapeHtml(run.slotId || "none")} / draft ${escapeHtml(run.draftId || "none")}</p>
+      <p>${escapeHtml(run.note || "No note.")}</p>
+    `;
+    els.routineRuns.append(item);
+  });
+}
+
+async function generateFromNextSlot() {
+  const slot = nextPlannedSlot();
+  if (!slot) {
+    recordRoutineRun({
+      status: "skipped",
+      note: "No planned editorial slot is available for the active target.",
+    });
+    await window.diamond.saveState(state);
+    renderRoutineRuns();
+    log("Routine skipped: no planned editorial slot for this target.");
+    return;
+  }
+
+  selectedSlotId = slot.id;
+  activateSlotContext(slot);
+  draftSlotText(slot);
+  evaluateDraft();
+  slot.status = "drafted";
+  slot.draftId = activeDraft.id;
+  slot.draftedAt = activeDraft.createdAt;
+  const run = recordRoutineRun({
+    status: activeDraft.status === "blocked" ? "blocked" : "drafted",
+    slotId: slot.id,
+    draftId: activeDraft.id,
+    note: `Generated ${activeDraft.id} from planned slot "${slot.topic}".`,
+  });
+  await window.diamond.saveState(state);
+  renderRoutineRuns();
+  renderSlotFilters();
+  renderEditorialSlots();
+  renderDraftHistory();
+  renderPackageFilters();
+  log(`Routine run ${run.id}: generated draft from ${slot.topic}.`);
+}
+
+function nextPlannedSlot() {
+  return (state.editorialSlots || [])
+    .filter((slot) => slot.status === "planned" && slotMatchesActiveContext(slot))
+    .sort((a, b) => new Date(a.plannedAt).getTime() - new Date(b.plannedAt).getTime())[0] || null;
+}
+
+function slotMatchesActiveContext(slot) {
+  const context = getContext();
+  return slot.companyId === context.companyId
+    && slot.brandId === context.brandId
+    && slot.campaignId === context.campaignId
+    && slot.platform === context.platform
+    && slot.socialAccountId === context.socialAccountId;
+}
+
+function recordRoutineRun(input) {
+  state.routineRuns ||= [];
+  const run = {
+    id: `routine-${Date.now()}`,
+    name: "x-next-slot-draft",
+    context: getContext(),
+    status: input.status,
+    slotId: input.slotId || null,
+    draftId: input.draftId || null,
+    note: input.note || "",
+    createdAt: new Date().toISOString(),
+  };
+  state.routineRuns.unshift(run);
+  return run;
 }
 
 async function addEditorialSlot() {
