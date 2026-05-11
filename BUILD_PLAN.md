@@ -1,7 +1,7 @@
 # Diamond Build Plan
 
 ## Current Phase
-Build a Polaris-powered social media operations system for Project Diamond. Polaris routines will generate daily campaign content, render post assets, operate platform web UIs through Playwright, and manage replies through an approval-aware response queue.
+Build a multitenant Polaris-powered social media operations system for Project Diamond. Polaris routines will generate daily campaign content, render post assets, operate platform web UIs through Playwright, and manage replies through an approval-aware response queue for multiple companies.
 
 The posting path should avoid direct social platform APIs. The AI should act through a normal browser session using authenticated web pages, with screenshots, logs, and human approval gates where risk is higher.
 
@@ -15,6 +15,43 @@ The posting path should avoid direct social platform APIs. The AI should act thr
 | Firebase admin | Job state, draft queue, reply queue, metrics, audit logs, using the existing service account JSON. |
 | Approval queue | Review, edit, approve, reject, and publish. |
 | Metrics loop | Track post URLs, screenshots, impressions, clicks, signups, and follow-up notes. |
+
+## Multitenancy
+
+Company/tenant isolation is a P0 requirement. Diamond should support multiple companies, each with its own brands, accounts, campaigns, browser sessions, approval rules, assets, logs, and metrics.
+
+Suggested hierarchy:
+
+```text
+companies/{companyId}
+  brands/{brandId}
+    socialAccounts/{accountId}
+    campaigns/{campaignId}
+    postDrafts/{draftId}
+    postRuns/{runId}
+    replies/{replyId}
+    responseDrafts/{responseDraftId}
+    metrics/{metricId}
+    templates/{templateId}
+```
+
+Every routine run must include `companyId`, `brandId`, `platform`, `socialAccountId`, `campaignId`, `approvalPolicyId`, and `browserProfileId`.
+
+The UI must always show the active company, brand, platform, and account before a post can be staged or published.
+
+Do not reuse browser profiles across companies. Do not allow a queued post from one company to stage in another company's browser tab.
+
+## Embedded Social Browser
+
+Diamond should include a visible Social Command Browser inside the app:
+
+```text
+Left: company/brand/campaign queue
+Middle: embedded browser tabs for the selected company's social accounts
+Right: generated post package, approval controls, logs, and screenshots
+```
+
+Each social account tab should open to the correct account/page/composer for the selected company. The AI can stage posts through the visible tab, but the user can take over at any time.
 
 ## Posting Modes
 
@@ -40,6 +77,9 @@ The posting path should avoid direct social platform APIs. The AI should act thr
 
 | Collection | Purpose |
 |---|---|
+| `companies` | Tenant root records, company settings, default approval policies. |
+| `companyBrands` or nested `brands` | Brand voice, colors, links, languages, logo/media references. |
+| `socialAccounts` | Platform account/page metadata per company/brand. |
 | `socialCampaigns` | Campaign briefs, languages, CTAs, date windows. |
 | `socialPostDrafts` | Generated copy, assets, approval state, platform target. |
 | `socialPostRuns` | Routine executions, status, logs, screenshots, errors. |
@@ -49,6 +89,8 @@ The posting path should avoid direct social platform APIs. The AI should act thr
 | `socialMetrics` | Post performance, clicks, signups, league joins, notes. |
 | `socialTemplates` | Reusable prompts, image templates, CTA variants. |
 
+All records must be company-scoped. The first implementation should prefer nested `companies/{companyId}/...` paths unless Polaris already has a strong top-level collection convention.
+
 ## Guardrails
 
 - Do not bypass CAPTCHA, 2FA, platform rate limits, or account security checks.
@@ -57,12 +99,17 @@ The posting path should avoid direct social platform APIs. The AI should act thr
 - Require approval for prizes, money, gambling, regulatory, equity, investment, hostile, or support-sensitive replies.
 - Screenshot every staged and published post.
 - Store every generated post package before publishing.
+- Refuse to stage or publish without matching company, brand, platform, account, and browser profile.
+- Store browser profiles separately per company/platform/account.
 
 ## Build Sequence
 
 | Priority | Item | Status | Notes |
 |---|---|---|---|
 | P0 | Confirm Polaris Firebase admin JSON loading path | Queued | Reuse existing admin/service-account configuration. |
+| P0 | Add multitenant company/brand/account model | Queued | Company is the root of all social objects. |
+| P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
+| P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
 | P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |
@@ -84,3 +131,5 @@ Deliver X/Twitter draft and staging flow:
 4. Worker fills composer and attaches image.
 5. Worker stops before publishing.
 6. Polaris records screenshot, draft text, media path, and approval state in Firebase.
+
+The milestone is complete only if the staged post is tied to one selected company, one selected brand, and one selected social account.
