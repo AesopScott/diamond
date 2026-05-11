@@ -86,7 +86,8 @@ h1 { font-size: 24px; line-height: 1; }
   height: 100vh;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 18px;
 }
 
@@ -214,8 +215,8 @@ textarea {
   display: grid;
   gap: 14px;
   grid-template-columns: minmax(360px, 0.7fr) minmax(520px, 1.3fr);
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 clamp(560px, calc(100vh - 150px), 820px);
+  min-height: 560px;
 }
 
 .composer.panel, .browser.panel {
