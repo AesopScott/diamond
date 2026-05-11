@@ -1,0 +1,112 @@
+import assert from "node:assert/strict";
+import {
+  buildLicensePortalRecord,
+  createDiamondLicense,
+  evaluateDiamondLicense,
+  licenseFirebasePath,
+} from "../src/index.js";
+
+const license = createDiamondLicense({
+  userId: "scott",
+  email: "scott@example.com",
+  brandLimit: 2,
+  brands: ["the-card", "world-cup"],
+  platformLimit: 2,
+  platforms: ["x", "linkedin"],
+  automationPlatforms: ["x"],
+  lastVerifiedAt: "2026-05-11T12:00:00.000Z",
+});
+
+assert.equal(license.product, "diamond");
+assert.equal(license.source, "mojo-ai-studio");
+assert.equal(license.firebasePath, "products/diamond/licenses/scott");
+assert.equal(license.brandLimit, 2);
+
+const valid = evaluateDiamondLicense(license, {
+  requestedBrands: ["the-card", "world-cup"],
+  requestedPlatforms: ["x", "linkedin"],
+  now: "2026-05-11T13:00:00.000Z",
+  online: true,
+});
+assert.equal(valid.ok, true);
+assert.equal(valid.brandLimit, 2);
+assert.equal(valid.platformLimit, 2);
+assert.deepEqual(valid.automationPlatforms, ["x"]);
+
+const automationAllowed = evaluateDiamondLicense(license, {
+  requestedBrands: ["the-card"],
+  requestedPlatforms: ["x"],
+  requestedAutomationPlatforms: ["x"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(automationAllowed.ok, true);
+
+const automationBlocked = evaluateDiamondLicense(license, {
+  requestedBrands: ["the-card"],
+  requestedPlatforms: ["linkedin"],
+  requestedAutomationPlatforms: ["linkedin"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(automationBlocked.ok, false);
+assert.match(automationBlocked.reason, /Automation not licensed/);
+
+const tooManyBrands = evaluateDiamondLicense(license, {
+  requestedBrands: ["the-card", "world-cup", "another-brand"],
+  requestedPlatforms: ["x"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(tooManyBrands.ok, false);
+assert.match(tooManyBrands.reason, /Brand limit/);
+
+const tooMany = evaluateDiamondLicense(license, {
+  requestedBrands: ["the-card"],
+  requestedPlatforms: ["x", "linkedin", "instagram"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(tooMany.ok, false);
+assert.match(tooMany.reason, /Platform limit/);
+
+const offlineGrace = evaluateDiamondLicense(license, {
+  requestedPlatforms: ["x"],
+  now: "2026-05-18T11:59:00.000Z",
+  online: false,
+});
+assert.equal(offlineGrace.ok, true);
+assert.equal(offlineGrace.graceExpiresAt, "2026-05-18T12:00:00.000Z");
+
+const offlineExpired = evaluateDiamondLicense(license, {
+  requestedPlatforms: ["x"],
+  now: "2026-05-18T12:01:00.000Z",
+  online: false,
+});
+assert.equal(offlineExpired.ok, false);
+assert.match(offlineExpired.reason, /grace window/);
+
+const dev = createDiamondLicense({
+  userId: "dev",
+  role: "dev",
+  status: "active",
+  platformLimit: 0,
+});
+const devCheck = evaluateDiamondLicense(dev, {
+  requestedBrands: ["a", "b", "c"],
+  requestedPlatforms: ["x", "linkedin", "instagram", "tiktok"],
+});
+assert.equal(devCheck.ok, true);
+assert.equal(devCheck.brandLimit, "unlimited");
+assert.equal(devCheck.platformLimit, "unlimited");
+assert.equal(devCheck.automationPlatforms, "unlimited");
+
+const wrongProduct = evaluateDiamondLicense({ ...license, product: "polaris" });
+assert.equal(wrongProduct.ok, false);
+assert.match(wrongProduct.reason, /different product/);
+
+const portal = buildLicensePortalRecord(license);
+assert.equal(portal.path, licenseFirebasePath("scott"));
+assert.equal(portal.data.product, "diamond");
+assert.equal(portal.data.source, "mojo-ai-studio");
+assert.equal(portal.data.brandLimit, 2);
+assert.equal(portal.data.platformLimit, 2);
+assert.deepEqual(portal.data.automationPlatforms, ["x"]);
+
+console.log("All Diamond license tests passed.");

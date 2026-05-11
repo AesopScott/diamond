@@ -7,7 +7,8 @@
   "main": "src/electron/main.cjs",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/run-tests.js && node tests/failure-tests.js && node tests/x-browser-adapter-tests.js && node tests/template-renderer-tests.js && node tests/content-generation-tests.js && node tests/quality-tests.js && node tests/metrics-tests.js && node tests/cadence-tests.js && node tests/reply-classifier-tests.js && node tests/firebase-sync-tests.js",
+    "bridge": "node scripts/diamond-bridge.js",
+    "test": "node tests/run-tests.js && node tests/failure-tests.js && node tests/x-browser-adapter-tests.js && node tests/template-renderer-tests.js && node tests/content-generation-tests.js && node tests/quality-tests.js && node tests/metrics-tests.js && node tests/cadence-tests.js && node tests/reply-classifier-tests.js && node tests/firebase-sync-tests.js && node tests/polaris-bridge-tests.js && node tests/license-tests.js",
     "validate": "node scripts/validate-build.js"
   },
   "engines": {
