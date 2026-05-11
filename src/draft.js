@@ -49,6 +49,9 @@ export function canStageDraft(draft, options = {}) {
   if (options.sessionCheck && !options.sessionCheck.ok) {
     return { ok: false, reason: options.sessionCheck.reason };
   }
+  if (options.licenseCheck && !options.licenseCheck.ok) {
+    return { ok: false, reason: options.licenseCheck.reason };
+  }
   if (options.cadenceCheck && !options.cadenceCheck.ok) {
     return { ok: false, reason: options.cadenceCheck.summary || options.cadenceCheck.reasons?.[0] || "Cadence blocked" };
   }

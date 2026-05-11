@@ -193,7 +193,7 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [ ] Terms of Service page/content
   - [ ] Privacy policy page/content
   - [x] Licensing and entitlement model
-  - [ ] License enforcement architecture
+  - [x] License enforcement architecture
   - [x] Diamond licenses are separate from Polaris and every other project
   - [x] Per-user monthly licensing by brand count and social platform access count
   - [x] Per-platform automation license add-ons default off
@@ -442,7 +442,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add Terms of Service and privacy policy | Queued | Draft and surface public-facing legal terms before broader distribution, social campaigns, licensing, or paid usage. |
 | P1 | Add accessibility baseline | Queued | Audit keyboard navigation, focus states, labels, color contrast, reduced motion, and screen reader semantics across the Diamond app. |
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |
-| P1 | Add license enforcement architecture | Queued | Diamond must check Firebase license records, cache last verification locally, enforce brand-count, platform-count, and per-platform automation entitlements, and fail closed after the seven-day offline grace period. |
+| P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |

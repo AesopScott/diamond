@@ -39,10 +39,20 @@ export function evaluateDiamondLicense(license = {}, input = {}) {
     if (!grace.ok) return grace;
   }
   const requestedBrands = normalizeList(input.requestedBrands || license.brands);
+  const licensedBrands = normalizeList(license.brands);
+  const missingBrands = requestedBrands.filter((brand) => !licensedBrands.includes(brand));
+  if (!isAdminOrDev(license) && missingBrands.length) {
+    return deny(`Brand not licensed: ${missingBrands.join(", ")}.`);
+  }
   if (!isAdminOrDev(license) && requestedBrands.length > count(license.brandLimit, 0)) {
     return deny(`Brand limit exceeded (${requestedBrands.length}/${license.brandLimit}).`);
   }
   const requestedPlatforms = normalizeList(input.requestedPlatforms || license.platforms);
+  const licensedPlatforms = normalizeList(license.platforms);
+  const missingPlatforms = requestedPlatforms.filter((platform) => !licensedPlatforms.includes(platform));
+  if (!isAdminOrDev(license) && missingPlatforms.length) {
+    return deny(`Platform not licensed: ${missingPlatforms.join(", ")}.`);
+  }
   if (!isAdminOrDev(license) && requestedPlatforms.length > count(license.platformLimit, 0)) {
     return deny(`Platform limit exceeded (${requestedPlatforms.length}/${license.platformLimit}).`);
   }
@@ -61,6 +71,17 @@ export function evaluateDiamondLicense(license = {}, input = {}) {
     platformLimit: isAdminOrDev(license) ? "unlimited" : count(license.platformLimit, 0),
     automationPlatforms: isAdminOrDev(license) ? "unlimited" : licensedAutomation,
   };
+}
+
+export function evaluateDiamondAccess(input = {}) {
+  const context = input.context || {};
+  return evaluateDiamondLicense(input.license || {}, {
+    now: input.now,
+    online: input.online,
+    requestedBrands: [context.brandId].filter(Boolean),
+    requestedPlatforms: [context.platform].filter(Boolean),
+    requestedAutomationPlatforms: input.automation ? [context.platform].filter(Boolean) : [],
+  });
 }
 
 export function licenseFirebasePath(userId) {

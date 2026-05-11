@@ -4,6 +4,7 @@ import {
   browserProfilePath,
   canStageDraft,
   createDefaultCadencePolicy,
+  createDiamondLicense,
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
@@ -14,6 +15,7 @@ import {
   createResponseDraftForReply,
   createSocialReply,
   evaluateDraftQuality,
+  evaluateDiamondAccess,
   getSessionForContext,
   inferSessionStatusFromUrl,
   normalizeAccountUrl,
@@ -134,6 +136,8 @@ const els = {
   sessionNote: document.querySelector("#session-note"),
   firebaseStatus: document.querySelector("#firebase-status"),
   firebaseNote: document.querySelector("#firebase-note"),
+  licenseStatus: document.querySelector("#license-status"),
+  licenseNote: document.querySelector("#license-note"),
 };
 
 hydrate();
@@ -188,6 +192,7 @@ document.querySelector("#reload-webview").addEventListener("click", () => els.we
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 document.querySelector("#check-firebase").addEventListener("click", checkFirebaseAdmin);
 document.querySelector("#export-sync-bundle").addEventListener("click", exportFirestoreSyncBundle);
+document.querySelector("#check-license").addEventListener("click", () => checkLicense(false));
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.replyInbox.addEventListener("click", handleReplyInboxClick);
 els.editorialSlots.addEventListener("click", handleSlotClick);
@@ -235,6 +240,7 @@ async function loadInitialState() {
     postMemory: [],
     socialReplies: [],
     socialResponseDrafts: [],
+    licenseCache: createLocalDevLicense(seed.context),
     scheduledPosts: [],
     editorialSlots: seed.editorialSlots || [],
     contentStrategies: seed.contentStrategies || [],
@@ -258,6 +264,7 @@ function ensureWorkspaceData(workspace) {
   next.postMemory ||= [];
   next.socialReplies ||= [];
   next.socialResponseDrafts ||= [];
+  next.licenseCache ||= createLocalDevLicense(next.context || seed.context);
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
@@ -529,6 +536,7 @@ function renderValidation(context) {
     runs: state.postRuns || [],
     memory: state.postMemory || [],
   });
+  const licenseCheck = evaluateLicenseForActiveTarget(false);
   const items = [
     ["Company selected", Boolean(context.companyId)],
     ["Brand selected", Boolean(context.brandId)],
@@ -538,6 +546,7 @@ function renderValidation(context) {
     ["Browser profile isolated", browserProfilePath(context).includes(context.companyId)],
     ["Auto-publish locked until signoff", activeMode !== "auto_publish"],
     ["Browser session ready", sessionCheck.ok],
+    ["License permits active brand/platform", licenseCheck.ok],
     ["Cadence guardrails clear", cadenceCheck.ok],
   ];
 
@@ -548,6 +557,45 @@ function renderValidation(context) {
     li.textContent = `${ok ? "OK" : "Review"} - ${label}`;
     els.validationList.append(li);
   });
+}
+
+function createLocalDevLicense(context) {
+  return createDiamondLicense({
+    userId: "local-dev",
+    email: "dev@thecard.bet",
+    role: "dev",
+    status: "active",
+    brandLimit: 0,
+    brands: [context.brandId],
+    platformLimit: 0,
+    platforms: [context.platform],
+    automationPlatforms: [context.platform],
+    lastVerifiedAt: new Date().toISOString(),
+    source: "firebase-dev-seed",
+  });
+}
+
+function getCachedLicense() {
+  state.licenseCache ||= createLocalDevLicense(getContext());
+  return state.licenseCache;
+}
+
+function evaluateLicenseForActiveTarget(automation = false) {
+  return evaluateDiamondAccess({
+    license: getCachedLicense(),
+    context: getContext(),
+    automation,
+    online: false,
+  });
+}
+
+function checkLicense(automation = false) {
+  const result = evaluateLicenseForActiveTarget(automation);
+  const license = getCachedLicense();
+  els.licenseStatus.textContent = result.ok ? "Ready" : "Blocked";
+  els.licenseNote.textContent = `${result.reason} User: ${license.email || license.userId || "unknown"}. Brands: ${result.brandLimit || license.brandLimit}. Platforms: ${result.platformLimit || license.platformLimit}. Automation: ${Array.isArray(result.automationPlatforms) ? result.automationPlatforms.join(", ") || "off" : result.automationPlatforms || "off"}.`;
+  log(`License check: ${result.reason}`);
+  return result;
 }
 
 async function checkFirebaseAdmin() {
@@ -838,6 +886,7 @@ async function stageDraft() {
   const session = inferAndSaveSession();
   const context = getContext();
   const sessionCheck = validateSessionForStaging(session, context);
+  const licenseCheck = evaluateLicenseForActiveTarget(false);
   const cadenceCheck = validateCadenceForStaging({
     policy: getActiveRows().cadencePolicy,
     context,
@@ -845,7 +894,7 @@ async function stageDraft() {
     runs: state.postRuns || [],
     memory: state.postMemory || [],
   });
-  const check = canStageDraft(activeDraft, { sessionCheck, cadenceCheck });
+  const check = canStageDraft(activeDraft, { sessionCheck, licenseCheck, cadenceCheck });
   if (!check.ok) {
     lastStageMessage = check.reason;
     log(`Staging refused: ${check.reason}.`);
@@ -1137,6 +1186,7 @@ function renderRiskCard() {
   }
 
   const sessionCheck = validateSessionForStaging(getActiveSession(), getContext());
+  const licenseCheck = evaluateLicenseForActiveTarget(false);
   const cadenceCheck = validateCadenceForStaging({
     policy: getActiveRows().cadencePolicy,
     context: getContext(),
@@ -1144,7 +1194,7 @@ function renderRiskCard() {
     runs: state.postRuns || [],
     memory: state.postMemory || [],
   });
-  const stageCheck = canStageDraft(activeDraft, { sessionCheck, cadenceCheck });
+  const stageCheck = canStageDraft(activeDraft, { sessionCheck, licenseCheck, cadenceCheck });
   const flags = activeDraft.riskFlags.length ? ` Flags: ${activeDraft.riskFlags.join(", ")}.` : "";
   const summary = `Draft ${activeDraft.id}: ${activeDraft.approvalLevel}. Status: ${activeDraft.status}.${flags}`;
 
@@ -1595,6 +1645,18 @@ function findAssetByPath(filePath) {
 }
 
 async function generateFromNextSlot() {
+  const licenseCheck = evaluateLicenseForActiveTarget(true);
+  if (!licenseCheck.ok) {
+    recordRoutineRun({
+      status: "blocked",
+      note: `Automation license blocked: ${licenseCheck.reason}`,
+    });
+    await window.diamond.saveState(state);
+    renderRoutineRuns();
+    checkLicense(true);
+    log(`Routine blocked: ${licenseCheck.reason}`);
+    return;
+  }
   const slot = nextPlannedSlot();
   if (!slot) {
     recordRoutineRun({
@@ -1618,6 +1680,18 @@ async function generateFromNextSlot() {
 }
 
 async function runDueSlots() {
+  const licenseCheck = evaluateLicenseForActiveTarget(true);
+  if (!licenseCheck.ok) {
+    const blocked = recordRoutineRun({
+      status: "blocked",
+      note: `Automation license blocked: ${licenseCheck.reason}`,
+    });
+    await window.diamond.saveState(state);
+    renderRoutineRuns();
+    checkLicense(true);
+    log(`Routine run ${blocked.id}: automation blocked by license.`);
+    return;
+  }
   const slots = dueRoutineSlots();
   if (!slots.length) {
     const skipped = recordRoutineRun({

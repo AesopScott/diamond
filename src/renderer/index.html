@@ -226,6 +226,21 @@
           <button id="export-sync-bundle" type="button">Export sync bundle</button>
           <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
         </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>License</span>
+            <button id="check-license" type="button">Check</button>
+          </div>
+          <div class="session-card">
+            <div>
+              <span class="session-label">Diamond license</span>
+              <strong id="license-status">Unknown</strong>
+            </div>
+            <p id="license-note">License has not been checked.</p>
+          </div>
+          <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
+        </section>
       </aside>
 
       <main class="workspace">

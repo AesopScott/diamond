@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import {
   buildLicensePortalRecord,
+  canStageDraft,
   createDiamondLicense,
+  createPostDraft,
+  createSeedWorkspace,
+  evaluateDiamondAccess,
   evaluateDiamondLicense,
   licenseFirebasePath,
 } from "../src/index.js";
@@ -56,7 +60,15 @@ const tooManyBrands = evaluateDiamondLicense(license, {
   now: "2026-05-11T13:00:00.000Z",
 });
 assert.equal(tooManyBrands.ok, false);
-assert.match(tooManyBrands.reason, /Brand limit/);
+assert.match(tooManyBrands.reason, /Brand not licensed/);
+
+const brandLimitExceeded = evaluateDiamondLicense({ ...license, brands: ["the-card", "world-cup", "another-brand"] }, {
+  requestedBrands: ["the-card", "world-cup", "another-brand"],
+  requestedPlatforms: ["x"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(brandLimitExceeded.ok, false);
+assert.match(brandLimitExceeded.reason, /Brand limit/);
 
 const tooMany = evaluateDiamondLicense(license, {
   requestedBrands: ["the-card"],
@@ -64,7 +76,15 @@ const tooMany = evaluateDiamondLicense(license, {
   now: "2026-05-11T13:00:00.000Z",
 });
 assert.equal(tooMany.ok, false);
-assert.match(tooMany.reason, /Platform limit/);
+assert.match(tooMany.reason, /Platform not licensed/);
+
+const platformLimitExceeded = evaluateDiamondLicense({ ...license, platforms: ["x", "linkedin", "instagram"] }, {
+  requestedBrands: ["the-card"],
+  requestedPlatforms: ["x", "linkedin", "instagram"],
+  now: "2026-05-11T13:00:00.000Z",
+});
+assert.equal(platformLimitExceeded.ok, false);
+assert.match(platformLimitExceeded.reason, /Platform limit/);
 
 const offlineGrace = evaluateDiamondLicense(license, {
   requestedPlatforms: ["x"],
@@ -108,5 +128,34 @@ assert.equal(portal.data.source, "mojo-ai-studio");
 assert.equal(portal.data.brandLimit, 2);
 assert.equal(portal.data.platformLimit, 2);
 assert.deepEqual(portal.data.automationPlatforms, ["x"]);
+
+const workspace = createSeedWorkspace();
+const draft = createPostDraft({
+  context: workspace.context,
+  text: "Join the free World Cup league and chase the leaderboard.",
+  approvalPolicy: workspace.approvalPolicies[0],
+});
+const stageLicense = evaluateDiamondAccess({
+  license: createDiamondLicense({
+    userId: "licensed-user",
+    brandLimit: 1,
+    brands: [workspace.context.brandId],
+    platformLimit: 1,
+    platforms: [workspace.context.platform],
+  }),
+  context: workspace.context,
+});
+assert.equal(canStageDraft(draft, { licenseCheck: stageLicense }).ok, true);
+const blockedStageLicense = evaluateDiamondAccess({
+  license: createDiamondLicense({
+    userId: "unlicensed-user",
+    brandLimit: 1,
+    brands: ["other-brand"],
+    platformLimit: 1,
+    platforms: [workspace.context.platform],
+  }),
+  context: workspace.context,
+});
+assert.equal(canStageDraft(draft, { licenseCheck: blockedStageLicense }).ok, false);
 
 console.log("All Diamond license tests passed.");

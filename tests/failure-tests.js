@@ -21,6 +21,7 @@ const brandLibrary = workspace.brandLibraries[0];
 const claimLibrary = workspace.claimLibraries[0];
 
 const safeDraft = createPostDraft({
+  draftId: "safe-draft",
   context,
   text: "Check the match card and compare your read with the leaderboard.",
   approvalPolicy: policy,
@@ -102,6 +103,7 @@ assert.equal(validateAssetForUse({ filePath: "C:/asset.png" }, { requireAltText:
 assert.equal(validateAssetForUse({ filePath: "C:/asset.png", altText: "Leaderboard", safeZone: "center safe" }, { requireAltText: true, requireSafeZone: true }).ok, true);
 
 const duplicateDraft = createPostDraft({
+  draftId: "duplicate-draft",
   context,
   text: "Check the match card and compare your read with the leaderboard.",
   approvalPolicy: policy,
