@@ -399,7 +399,6 @@ async function stageDraft() {
   activeDraft.stageUrl = composeUrl;
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
-  setBrowserFocus(true);
   const fillResult = await fillComposerText(activeDraft.text);
   log(fillResult.ok
     ? "Draft copied to clipboard, X compose opened, and text inserted. Review it, attach media if needed, then publish manually."
