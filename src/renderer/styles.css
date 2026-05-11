@@ -175,6 +175,14 @@ textarea {
   text-transform: uppercase;
 }
 
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .session-card {
   background: var(--panel-2);
   border: 1px solid var(--line);

@@ -118,6 +118,8 @@ document.querySelector("#save-brand-rules").addEventListener("click", saveBrandR
 document.querySelector("#save-strategy").addEventListener("click", saveStrategy);
 document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
 document.querySelector("#generate-next-slot").addEventListener("click", generateFromNextSlot);
+document.querySelector("#jump-editorial-calendar").addEventListener("click", () => scrollPanelIntoView("#editorial-calendar-panel"));
+document.querySelector("#jump-schedule-calendar").addEventListener("click", () => scrollPanelIntoView("#schedule-calendar-panel"));
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
 document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
@@ -1727,6 +1729,10 @@ function log(message) {
   const div = document.createElement("div");
   div.textContent = `[${time}] ${message}`;
   els.runLog.prepend(div);
+}
+
+function scrollPanelIntoView(selector) {
+  document.querySelector(selector)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function syncModeButtons() {

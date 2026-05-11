@@ -171,7 +171,11 @@
             <p class="eyebrow">Active target</p>
             <h2 id="active-target">No target selected</h2>
           </div>
-          <div class="status-pill" id="target-status">Fail closed</div>
+          <div class="topbar-actions">
+            <button id="jump-editorial-calendar" type="button">Editorial Calendar</button>
+            <button id="jump-schedule-calendar" type="button">Schedule Calendar</button>
+            <div class="status-pill" id="target-status">Fail closed</div>
+          </div>
         </header>
 
         <section class="grid">
@@ -236,7 +240,7 @@
           <div id="run-history" class="run-history"></div>
         </section>
 
-        <section class="panel editorial-panel">
+        <section id="editorial-calendar-panel" class="panel editorial-panel">
           <div class="panel-heading">
             <span>Editorial Calendar Slots</span>
             <div class="panel-actions">
@@ -288,9 +292,9 @@
           <div id="draft-history" class="draft-history"></div>
         </section>
 
-        <section class="panel schedule-panel">
+        <section id="schedule-calendar-panel" class="panel schedule-panel">
           <div class="panel-heading">
-            <span>Scheduled Posts</span>
+            <span>Schedule Calendar</span>
           </div>
           <div class="schedule-tools">
             <div class="segmented schedule-scope" id="schedule-scope" role="group" aria-label="Calendar scope">
