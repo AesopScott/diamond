@@ -166,8 +166,8 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [ ] Duplicate prevention
   - [ ] Silence/escalation rules
 - [ ] Metrics logging
-  - [ ] Post URL capture
-  - [ ] Screenshot association
+  - [x] Post URL capture
+  - [x] Screenshot association
   - [ ] Impression/click/signup fields
   - [ ] League join attribution
   - [ ] Performance notes
@@ -397,26 +397,26 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | Priority | Item | Status | Notes |
 |---|---|---|---|
 | P0 | Confirm Diamond Firebase admin JSON loading path | Queued | Optional backend sync uses a local service-account configuration. |
-| P0 | Add multitenant company/brand/account model | Queued | Company is the root of all social objects. |
-| P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
-| P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
-| P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
+| P0 | Add multitenant company/brand/account model | Built | Company is the root of social accounts, brands, campaigns, assets, schedules, runs, memory, and routines. |
+| P0 | Build company switcher and active tenant context | Built | Company, brand, campaign, and social account selectors drive the visible active target and all scoped records. |
+| P0 | Design company-scoped browser profile storage | Built | Browser profile IDs are company/platform/account scoped and persisted through Electron partitions. |
+| P0 | Add fail-closed risk controls | Built | Tenant mismatch, session uncertainty, selector miss, upload uncertainty, risky content, and quality holds stop staging. |
 | P0 | Add content strategy model | Built | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
 | P0 | Add editorial calendar model | Built | Routines generate from planned slots instead of blank-page prompting. |
 | P0 | Add Schedule Post button and scheduled-post records | Built | Operators can schedule an approved draft for a specific date/time/account without publishing immediately; records are tenant scoped. |
 | P0 | Add scheduled-post calendar view | Built | Calendar shows upcoming scheduled posts by company, brand, campaign, platform, account, status, timezone, readiness, and queue actions. |
 | P0 | Add brand and claim libraries | Built | Voice rules, approved language, banned claims, identity rules, and evaluation rule hits. |
-| P0 | Validate plan against Diamond reality | Queued | Inspect standalone app shell, Firebase admin JSON option, local hooks, Electron/browser patterns. |
-| P0 | Run confidence proof phase | Queued | Standalone app shell, Firebase admin option, browser strategy, repeated X staging. |
-| P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
+| P0 | Validate plan against Diamond reality | Built | Standalone Electron app, local state, embedded browser strategy, and routine hooks have been validated in code. |
+| P0 | Run confidence proof phase | Partial | App shell, browser sizing, staging, screenshots, and tests are proven; repeated X staging across three separate app sessions remains open. |
+| P0 | Build `social-x` skill | Built | X-specific compose URL, session flow, composer insertion, media helper, and run capture are in place. |
 | P0 | Build `x-daily-post` routine | Built | Generate one post package from the next planned editorial slot. |
 | P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, and show ready/skipped calendar states. |
-| P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |
-| P0 | Build draft/approval queue | Queued | Required before any auto-publish mode. |
+| P0 | Build Playwright staging worker | Deferred | Embedded webview staging fills composer, captures screenshots, and stops before publish; external Playwright worker remains optional. |
+| P0 | Build draft/approval queue | Built | Package queue supports evaluate, approve, stage, schedule, copy, load, remove, posted, and abandoned states. |
 | P1 | Add reply capture and classification | Queued | Product, support, prize, regulatory, investor, influencer, spam. |
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
 | P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
-| P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
+| P1 | Add metrics logging | Partial | Post URLs and screenshots are captured; impressions, clicks, signups, league attribution, and performance notes remain. |
 | P1 | Add content quality feedback loop | Built | Scores drafts for CTA, novelty, risk, language, visual fit, and audience value before approval or staging. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
 | P1 | Add inbox triage before reply drafting | Queued | Priority, owner, action, and escalation before writing responses. |
