@@ -5,12 +5,14 @@ const os = require("os");
 
 const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
+const SYNC_DIR = path.join(APP_DIR, "sync");
 
 function ensureAppDir() {
   fs.mkdirSync(APP_DIR, { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "browser-profiles"), { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "screenshots"), { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "generated-assets"), { recursive: true });
+  fs.mkdirSync(SYNC_DIR, { recursive: true });
 }
 
 function readState() {
@@ -69,7 +71,28 @@ ipcMain.handle("diamond:get-paths", () => ({
   browserProfilesDir: path.join(APP_DIR, "browser-profiles"),
   screenshotsDir: path.join(APP_DIR, "screenshots"),
   generatedAssetsDir: path.join(APP_DIR, "generated-assets"),
+  syncDir: SYNC_DIR,
 }));
+ipcMain.handle("diamond:get-firebase-admin-status", () => {
+  const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
+  const exists = Boolean(configuredPath && fs.existsSync(configuredPath));
+  return {
+    configured: Boolean(configuredPath),
+    exists,
+    source: process.env.DIAMOND_FIREBASE_ADMIN_JSON ? "DIAMOND_FIREBASE_ADMIN_JSON" : process.env.GOOGLE_APPLICATION_CREDENTIALS ? "GOOGLE_APPLICATION_CREDENTIALS" : "missing",
+    redactedPath: redactPath(configuredPath),
+    projectId: process.env.FIREBASE_PROJECT_ID || "",
+    reason: configuredPath ? exists ? "Firebase admin JSON path is configured and exists." : "Firebase admin JSON path is configured but the file was not found." : "No Firebase admin JSON path configured.",
+  };
+});
+ipcMain.handle("diamond:export-sync-bundle", (_event, input = {}) => {
+  ensureAppDir();
+  const name = String(input.name || `firestore-sync-${Date.now()}`).replace(/[^a-z0-9_.-]+/gi, "-");
+  const fileName = name.endsWith(".json") ? name : `${name}.json`;
+  const target = path.join(SYNC_DIR, fileName);
+  fs.writeFileSync(target, JSON.stringify(input.bundle || {}, null, 2), "utf8");
+  return target;
+});
 ipcMain.handle("diamond:open-external", (_event, url) => shell.openExternal(url));
 ipcMain.handle("diamond:write-clipboard", (_event, text) => {
   clipboard.writeText(String(text || ""));
@@ -105,3 +128,11 @@ ipcMain.handle("diamond:pick-media", async () => {
   });
   return result.canceled ? [] : result.filePaths;
 });
+
+function redactPath(value) {
+  const input = String(value || "");
+  if (!input) return "";
+  const parts = input.split(/[\\/]/).filter(Boolean);
+  if (parts.length <= 2) return `.../${parts.at(-1) || ""}`;
+  return `.../${parts.at(-2)}/${parts.at(-1)}`;
+}

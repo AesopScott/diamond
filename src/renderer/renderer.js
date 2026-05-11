@@ -30,6 +30,8 @@ import {
   openMediaPicker,
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
+  buildFirestoreSyncBundle,
+  summarizeFirestoreSyncBundle,
   upsertSessionForContext,
   validateCadenceForStaging,
   validateAssetForUse,
@@ -130,6 +132,8 @@ const els = {
   sessionCard: document.querySelector("#session-card"),
   sessionStatus: document.querySelector("#session-status"),
   sessionNote: document.querySelector("#session-note"),
+  firebaseStatus: document.querySelector("#firebase-status"),
+  firebaseNote: document.querySelector("#firebase-note"),
 };
 
 hydrate();
@@ -182,6 +186,8 @@ document.querySelector("#check-session").addEventListener("click", checkSession)
 document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
+document.querySelector("#check-firebase").addEventListener("click", checkFirebaseAdmin);
+document.querySelector("#export-sync-bundle").addEventListener("click", exportFirestoreSyncBundle);
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.replyInbox.addEventListener("click", handleReplyInboxClick);
 els.editorialSlots.addEventListener("click", handleSlotClick);
@@ -542,6 +548,24 @@ function renderValidation(context) {
     li.textContent = `${ok ? "OK" : "Review"} - ${label}`;
     els.validationList.append(li);
   });
+}
+
+async function checkFirebaseAdmin() {
+  const status = await window.diamond.getFirebaseAdminStatus();
+  els.firebaseStatus.textContent = status.configured && status.exists ? "Ready" : status.configured ? "Missing file" : "Not configured";
+  els.firebaseNote.textContent = `${status.reason}${status.redactedPath ? ` Path: ${status.redactedPath}.` : ""}${status.projectId ? ` Project: ${status.projectId}.` : ""}`;
+  log(`Firebase admin check: ${status.reason}`);
+  return status;
+}
+
+async function exportFirestoreSyncBundle() {
+  const bundle = buildFirestoreSyncBundle(state);
+  const summary = summarizeFirestoreSyncBundle(bundle);
+  const target = await window.diamond.exportSyncBundle({
+    name: `firestore-sync-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+    bundle,
+  });
+  log(`Firestore sync bundle exported: ${target}. ${Object.entries(summary).map(([name, count]) => `${name}=${count}`).join(", ")}.`);
 }
 
 async function saveAccountSettings() {

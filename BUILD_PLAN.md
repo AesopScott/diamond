@@ -171,12 +171,12 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Impression/click/signup fields
   - [x] League join attribution
   - [x] Performance notes
-- [ ] Firebase/admin sync
-  - [ ] Confirm Firebase admin JSON loading path
-  - [ ] Keep service account out of renderer
-  - [ ] Optional backend sync for drafts
-  - [ ] Optional backend sync for schedules
-  - [ ] Optional backend sync for runs and metrics
+- [x] Firebase/admin sync foundation
+  - [x] Confirm Firebase admin JSON loading path
+  - [x] Keep service account out of renderer
+  - [x] Export backend sync bundle for drafts
+  - [x] Export backend sync bundle for schedules
+  - [x] Export backend sync bundle for runs, metrics, replies, responses, and memory
 - [ ] Platform expansion
   - [ ] Instagram routine
   - [ ] TikTok routine
@@ -396,7 +396,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 
 | Priority | Item | Status | Notes |
 |---|---|---|---|
-| P0 | Confirm Diamond Firebase admin JSON loading path | Queued | Optional backend sync uses a local service-account configuration. |
+| P0 | Confirm Diamond Firebase admin JSON loading path | Built | Electron main process checks `DIAMOND_FIREBASE_ADMIN_JSON` or `GOOGLE_APPLICATION_CREDENTIALS`, renderer receives only redacted status, and Diamond can export Firestore-shaped sync bundles. |
 | P0 | Add multitenant company/brand/account model | Built | Company is the root of social accounts, brands, campaigns, assets, schedules, runs, memory, and routines. |
 | P0 | Build company switcher and active tenant context | Built | Company, brand, campaign, and social account selectors drive the visible active target and all scoped records. |
 | P0 | Design company-scoped browser profile storage | Built | Browser profile IDs are company/platform/account scoped and persisted through Electron partitions. |

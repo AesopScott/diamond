@@ -210,6 +210,22 @@
           </div>
           <ul id="validation-list" class="validation-list"></ul>
         </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Firebase Admin</span>
+            <button id="check-firebase" type="button">Check</button>
+          </div>
+          <div class="session-card">
+            <div>
+              <span class="session-label">Admin JSON</span>
+              <strong id="firebase-status">Unknown</strong>
+            </div>
+            <p id="firebase-note">Firebase admin status has not been checked.</p>
+          </div>
+          <button id="export-sync-bundle" type="button">Export sync bundle</button>
+          <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
+        </section>
       </aside>
 
       <main class="workspace">
