@@ -114,6 +114,12 @@ h1 { font-size: 24px; line-height: 1; }
   justify-content: flex-end;
 }
 
+.legal-jump-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .panel-heading span, .eyebrow {
   color: var(--accent);
   font-size: 11px;
@@ -437,6 +443,7 @@ webview {
 .asset-panel.panel,
 .package-queue-panel.panel,
 .guide-panel.panel,
+.legal-panel.panel,
 .schedule-panel.panel {
   margin: 0;
 }
@@ -472,6 +479,61 @@ webview {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.legal-content {
+  display: grid;
+  gap: 12px;
+}
+
+.legal-document {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.legal-document header {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.legal-document h3,
+.legal-document h4 {
+  margin: 0;
+}
+
+.legal-document h3 {
+  font-size: 18px;
+}
+
+.legal-document h4 {
+  font-size: 13px;
+}
+
+.legal-document p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.legal-sections {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.legal-sections section {
+  background: #0b1018;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
 }
 
 .guide-card ol {

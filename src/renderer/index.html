@@ -245,6 +245,17 @@
           </div>
           <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
         </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Legal Drafts</span>
+          </div>
+          <div class="legal-jump-actions">
+            <button id="jump-terms" type="button">Terms</button>
+            <button id="jump-privacy" type="button">Privacy</button>
+          </div>
+          <p class="hint">Draft legal copy for product review. Counsel review is still required before public launch.</p>
+        </section>
       </aside>
 
       <main class="workspace">
@@ -331,6 +342,17 @@
           <div class="voiceover-note">
             Voiceover generation is designed for ElevenLabs and stays key-free in the renderer. Add an ElevenLabs voice ID when the API generation worker is built.
           </div>
+        </section>
+
+        <section id="legal-panel" class="panel legal-panel">
+          <div class="panel-heading">
+            <span>Legal Drafts</span>
+            <div class="panel-actions">
+              <button id="copy-terms" type="button">Copy terms</button>
+              <button id="copy-privacy" type="button">Copy privacy</button>
+            </div>
+          </div>
+          <div id="legal-content" class="legal-content"></div>
         </section>
 
         <section class="panel run-history-panel">

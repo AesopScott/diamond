@@ -25,6 +25,7 @@ import {
   evaluatePlatformProof,
   getDiamondGuideSections,
   getDiamondTourSteps,
+  getDiamondLegalDocuments,
   getPlatformBrowserAdapter,
   getSessionForContext,
   inferSessionStatusFromUrl,
@@ -77,6 +78,7 @@ let voiceoverStatus = { configured: false, files: [] };
 let tourAudio = null;
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
+const legalDocuments = getDiamondLegalDocuments();
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -156,6 +158,7 @@ const els = {
   scheduleDetail: document.querySelector("#schedule-detail"),
   scheduleCalendar: document.querySelector("#schedule-calendar"),
   guideContent: document.querySelector("#guide-content"),
+  legalContent: document.querySelector("#legal-content"),
   tourLayer: document.querySelector("#tour-layer"),
   tourPopover: document.querySelector("#tour-popover"),
   tourProgress: document.querySelector("#tour-progress"),
@@ -212,6 +215,10 @@ document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
 document.querySelector("#add-asset").addEventListener("click", addAsset);
 document.querySelector("#generate-asset").addEventListener("click", generateAssetFromTemplate);
 document.querySelector("#jump-user-guide").addEventListener("click", () => scrollPanelIntoView("#user-guide-panel"));
+document.querySelector("#jump-terms").addEventListener("click", () => scrollPanelIntoView("#legal-terms"));
+document.querySelector("#jump-privacy").addEventListener("click", () => scrollPanelIntoView("#legal-privacy"));
+document.querySelector("#copy-terms").addEventListener("click", () => copyLegalDocument("terms"));
+document.querySelector("#copy-privacy").addEventListener("click", () => copyLegalDocument("privacy"));
 document.querySelector("#start-tour").addEventListener("click", startGuideTour);
 document.querySelector("#guide-start-tour").addEventListener("click", startGuideTour);
 document.querySelector("#generate-tour-voiceovers").addEventListener("click", generateTourVoiceovers);
@@ -543,6 +550,7 @@ function render() {
   renderPackageFilters();
   renderScheduleCalendar();
   renderUserGuide();
+  renderLegalDocuments();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
@@ -575,6 +583,48 @@ function renderUserGuide() {
       showTourStep();
     });
   });
+}
+
+function renderLegalDocuments() {
+  els.legalContent.innerHTML = legalDocuments.map((document) => `
+    <article class="legal-document" id="legal-${escapeHtml(document.id)}">
+      <header>
+        <div>
+          <h3>${escapeHtml(document.title)}</h3>
+          <p>${escapeHtml(document.summary)}</p>
+        </div>
+        <span class="status-pill">${escapeHtml(document.status)} / ${escapeHtml(document.updatedAt)}</span>
+      </header>
+      <div class="legal-sections">
+        ${document.sections.map((section) => `
+          <section>
+            <h4>${escapeHtml(section.title)}</h4>
+            <p>${escapeHtml(section.body)}</p>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `).join("");
+}
+
+async function copyLegalDocument(id) {
+  const document = legalDocuments.find((item) => item.id === id);
+  if (!document) return;
+  await window.diamond.writeClipboard(formatLegalDocument(document));
+  log(`Copied ${document.title} draft.`);
+}
+
+function formatLegalDocument(document) {
+  return [
+    `${document.title} (${document.status}, updated ${document.updatedAt})`,
+    document.summary,
+    "",
+    ...document.sections.flatMap((section) => [
+      section.title,
+      section.body,
+      "",
+    ]),
+  ].join("\n");
 }
 
 function startGuideTour() {

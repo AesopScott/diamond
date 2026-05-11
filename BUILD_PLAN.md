@@ -8,15 +8,14 @@ This is the live top-level checklist for the three-build plan. Checked items are
 
 This is the current order for finishing the remaining checklist items.
 
-1. Terms of Service and privacy policy page/content.
-2. Accessibility baseline: keyboard navigation, screen reader labels, color contrast, and reduced motion.
-3. Founder/investor and campaign image templates.
-4. Spanish UI labels needed for operator review.
-5. Configurable routine due window.
-6. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-7. Reddit monitoring capture workflow.
-8. Expert checklist review and Scott workflow signoff.
-9. Decide whether `auto_publish` ever becomes available.
+1. Accessibility baseline: keyboard navigation, screen reader labels, color contrast, and reduced motion.
+2. Founder/investor and campaign image templates.
+3. Spanish UI labels needed for operator review.
+4. Configurable routine due window.
+5. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
+6. Reddit monitoring capture workflow.
+7. Expert checklist review and Scott workflow signoff.
+8. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -216,8 +215,8 @@ This is the current order for finishing the remaining checklist items.
   - [x] Launch/bridge path from Polaris to Diamond
   - [x] Standalone fallback remains intact
 - [ ] Legal, licensing, and accessibility
-  - [ ] Terms of Service page/content
-  - [ ] Privacy policy page/content
+  - [x] Terms of Service page/content
+  - [x] Privacy policy page/content
   - [x] Licensing and entitlement model
   - [x] License enforcement architecture
   - [x] Diamond licenses are separate from Polaris and every other project
@@ -473,7 +472,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add cadence and do-not-engage policies | Built | Campaign guardrails now enforce daily caps, reply caps, quiet hours, cooldowns, duplicate lookback, do-not-engage terms, and escalation terms. |
 | P1 | Add post memory and draft evaluation | Built | Drafts and captured post runs now create post memory records, and repetitive drafts are held. |
 | P1 | Add lead/support routing | Built | Replies now route into support tickets, bug reports, investor leads, influencer leads, product feedback, ignored items, or escalation records with owner and route status. |
-| P1 | Add Terms of Service and privacy policy | Queued | Draft and surface public-facing legal terms before broader distribution, social campaigns, licensing, or paid usage. |
+| P1 | Add Terms of Service and privacy policy | Built | Draft operator-facing Terms of Service and Privacy Policy are surfaced in-app with copy controls and draft/counsel-review status. |
 | P1 | Add accessibility baseline | Queued | Audit keyboard navigation, focus states, labels, color contrast, reduced motion, and screen reader semantics across the Diamond app. |
 | P1 | Add user guide and narrated tour | Partial | In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. First operator-session review remains queued. |
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |

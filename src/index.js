@@ -5,6 +5,7 @@ export * from "./draft.js";
 export * from "./failure-controls.js";
 export * from "./firebase-sync.js";
 export * from "./ids.js";
+export * from "./legal-content.js";
 export * from "./license.js";
 export * from "./metrics.js";
 export * from "./platform-browser-adapter.js";
