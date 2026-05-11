@@ -58,7 +58,7 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] Wrong account
   - [x] Expired/unknown/challenge login states
   - [x] Missing media guard helper
-  - [ ] Selector miss
+  - [x] Selector miss
   - [x] Risky/blocked copy
   - [x] Duplicate draft detection helper
   - [x] Missing approval
@@ -421,7 +421,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add cadence and do-not-engage policies | Queued | Rate limits, quiet hours, cooldowns, silence rules. |
 | P1 | Add post memory and draft evaluation | Queued | Prevent repetition/contradiction and score drafts before staging. |
 | P1 | Add lead/support routing | Queued | Replies become support tickets, bugs, investor leads, influencer leads, or ignored items. |
-| P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
+| P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |
 | P3 | Add Reddit monitoring only | Queued | No autoposting initially. |

@@ -15,6 +15,8 @@ import {
   resolveComposeUrl,
   resolveLoginUrl,
   migrateWorkspaceState,
+  insertComposerText,
+  openMediaPicker,
   upsertSessionForContext,
   validateSessionForStaging,
 } from "../index.js";
@@ -1895,65 +1897,18 @@ function refreshGuestBounds() {
 }
 
 async function fillComposerText(text) {
+  let lastReason = "composer textbox was not ready";
   for (let attempt = 0; attempt < 16; attempt += 1) {
     await wait(500);
-    const result = await insertTextIntoComposer(text);
+    const result = await insertComposerText(els.webview, text);
     if (result.ok) return result;
+    lastReason = result.reason || lastReason;
   }
-  return { ok: false, reason: "composer textbox was not ready" };
-}
-
-async function insertTextIntoComposer(text) {
-  if (typeof els.webview.executeJavaScript !== "function") {
-    return { ok: false, reason: "embedded browser does not support script execution" };
-  }
-
-  const script = `
-    (() => {
-      const text = ${JSON.stringify(text)};
-      const editor = document.querySelector('[data-testid="tweetTextarea_0"], div[role="textbox"][contenteditable="true"]');
-      if (!editor) return { ok: false, reason: "composer textbox was not found" };
-      editor.focus();
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(editor);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      document.execCommand("selectAll", false, null);
-      document.execCommand("insertText", false, text);
-      editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
-      const value = editor.innerText || editor.textContent || "";
-      return { ok: value.includes(text.slice(0, Math.min(24, text.length))), reason: "composer text inserted" };
-    })();
-  `;
-
-  try {
-    return await els.webview.executeJavaScript(script);
-  } catch (error) {
-    return { ok: false, reason: error.message || "script execution failed" };
-  }
+  return { ok: false, reason: lastReason };
 }
 
 async function openPlatformMediaPicker() {
-  if (typeof els.webview.executeJavaScript !== "function") {
-    return { ok: false, reason: "embedded browser does not support script execution" };
-  }
-
-  const script = `
-    (() => {
-      const input = document.querySelector('input[data-testid="fileInput"][type="file"], input[type="file"]');
-      if (!input) return { ok: false, reason: "file input was not found" };
-      input.click();
-      return { ok: true, reason: "platform file picker opened" };
-    })();
-  `;
-
-  try {
-    return await els.webview.executeJavaScript(script);
-  } catch (error) {
-    return { ok: false, reason: error.message || "script execution failed" };
-  }
+  return openMediaPicker(els.webview);
 }
 
 function wait(ms) {
