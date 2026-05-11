@@ -119,6 +119,25 @@ All records must be company-scoped. The first implementation should prefer neste
 - Refuse to stage or publish without matching company, brand, platform, account, and browser profile.
 - Store browser profiles separately per company/platform/account.
 
+## Failure Mode Controls
+
+These controls are part of the build, not cleanup work. Each risk gets handled at the earliest stage where it can materially reduce blast radius.
+
+| Risk | What Could Go Wrong | Control | When Accounted For |
+|---|---|---|---|
+| Platform UI changes | A platform changes buttons/selectors and the worker posts incorrectly or gets stuck. | Platform adapters must use visible staging, screenshot logs, manual takeover, and fail-closed behavior. | P0 confidence proof and every platform adapter. |
+| Login/session challenges | 2FA, CAPTCHA, expired sessions, or suspicious login checks interrupt routines. | Session health checks pause the routine and ask for human action. No bypass logic. | P0 browser profile proof. |
+| Wrong tenant/account | A post for one company stages in another company's account. | Require company/brand/account/profile match before staging; visibly show target context; refuse mismatches. | P0 multitenancy model, active tenant context, staging worker. |
+| Risky AI language | AI makes claims about prizes, money, gambling, equity, investing, legal status, or support promises. | Content classifier and approval policy force risky categories into approval-required mode. | P0 approval queue, P1 reply classification. |
+| Too much complexity too early | The build spreads across platforms before the core loop works. | Ship one company, one brand, one X account, one image, one staged post before platform expansion. | P0 first milestone. |
+| Embedded browser strategy fails | Electron browser tabs and Playwright control do not fit cleanly together. | Decide strategy during proof phase; allow hybrid embedded browser plus Playwright persistent profile. | P0 confidence proof. |
+| Platform/account risk | Automated behavior looks spammy or violates platform expectations. | Human-paced staging, no CAPTCHA/2FA bypass, no mass replies, no scraping, conservative cadence. | P0 guardrails and platform skills. |
+| Useless metrics | Posts go out but Diamond cannot learn what worked. | Log post package, URL, screenshot, campaign, tenant, and later metrics from day one. | P0 post run logging, P1 metrics logging. |
+| Firebase/admin exposure | Service account JSON or tenant data leaks into renderer/browser code. | Keep Firebase admin access server/local-tool side only; never expose service account to browser surfaces. | P0 Firebase admin path confirmation. |
+| Bland AI content | The system generates generic content at scale. | Platform skills require examples, voice rules, banned phrases, review feedback, and performance notes. | P0 `social-x` skill, P1 metrics loop. |
+
+Fail-closed rule: when Diamond is unsure about account, tenant, content risk, session state, upload state, or publish state, it pauses and asks for review instead of publishing.
+
 ## Build Sequence
 
 | Priority | Item | Status | Notes |
@@ -127,6 +146,7 @@ All records must be company-scoped. The first implementation should prefer neste
 | P0 | Add multitenant company/brand/account model | Queued | Company is the root of all social objects. |
 | P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
 | P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
+| P0 | Add fail-closed risk controls | Queued | Tenant mismatch, session challenge, selector miss, upload uncertainty, risky content. |
 | P0 | Run confidence proof phase | Queued | Polaris routines, Firebase admin JSON, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
@@ -136,6 +156,7 @@ All records must be company-scoped. The first implementation should prefer neste
 | P1 | Add Spanish generation path | Queued | Every campaign post can produce EN/ES variants. |
 | P1 | Add image rendering templates | Queued | Leaderboard, prize, country, founder, campaign cards. |
 | P1 | Add metrics logging | Queued | Track post URLs, screenshots, impressions/clicks/signups when available. |
+| P1 | Add content quality feedback loop | Queued | Voice examples, banned phrases, post review notes, performance notes. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Queued | Reuse the same post package pattern. |
 | P3 | Add Reddit monitoring only | Queued | No autoposting initially. |
 
