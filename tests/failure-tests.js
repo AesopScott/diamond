@@ -8,6 +8,7 @@ import {
   getSessionForContext,
   inferSessionStatusFromUrl,
   updateAccountSession,
+  validateAssetForUse,
   validateMediaRequirement,
   validateRoutineSlot,
   validateSessionForStaging,
@@ -96,6 +97,9 @@ assert.equal(canStageDraft(draftOnly, { sessionCheck: validateSessionForStaging(
 
 assert.equal(validateMediaRequirement([], { required: true }).ok, false, "required media must fail when missing");
 assert.equal(validateMediaRequirement(["C:/asset.png"], { required: true }).ok, true, "required media passes when present");
+assert.equal(validateAssetForUse({ filePath: "C:/asset.png", doNotUse: true }).ok, false, "do-not-use assets must fail");
+assert.equal(validateAssetForUse({ filePath: "C:/asset.png" }, { requireAltText: true }).ok, false, "required alt text must fail when missing");
+assert.equal(validateAssetForUse({ filePath: "C:/asset.png", altText: "Leaderboard", safeZone: "center safe" }, { requireAltText: true, requireSafeZone: true }).ok, true);
 
 const duplicateDraft = createPostDraft({
   context,

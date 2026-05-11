@@ -285,6 +285,60 @@
           <div id="routine-runs" class="routine-runs"></div>
         </section>
 
+        <section class="panel asset-panel">
+          <div class="panel-heading">
+            <span>Asset Library</span>
+            <button id="add-asset" type="button">Add asset</button>
+          </div>
+          <div class="asset-form">
+            <label>
+              File path
+              <input id="asset-path" type="text" placeholder="C:\path\to\image.png">
+            </label>
+            <label>
+              Type
+              <select id="asset-type">
+                <option value="leaderboard">Leaderboard</option>
+                <option value="prize">Prize</option>
+                <option value="country">Country</option>
+                <option value="founder">Founder</option>
+                <option value="campaign">Campaign</option>
+              </select>
+            </label>
+            <label>
+              Language
+              <select id="asset-language">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+              </select>
+            </label>
+            <label>
+              Platform
+              <select id="asset-platform">
+                <option value="x">X</option>
+              </select>
+            </label>
+            <label>
+              Alt text
+              <input id="asset-alt" type="text" placeholder="Describe the image for accessibility">
+            </label>
+            <label>
+              Safe zone
+              <input id="asset-safe-zone" type="text" placeholder="Center 80%, avoid bottom crop">
+            </label>
+            <label>
+              Notes
+              <input id="asset-notes" type="text" placeholder="Usage notes">
+            </label>
+            <label class="checkbox-label">
+              <input id="asset-do-not-use" type="checkbox">
+              Do not use
+            </label>
+          </div>
+          <div class="queue-filters" id="asset-filters"></div>
+          <div id="asset-library" class="asset-library"></div>
+        </section>
+
         <section class="panel package-queue-panel">
           <div class="panel-heading">
             <span>Post Package Queue</span>

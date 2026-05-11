@@ -18,6 +18,7 @@ import {
   insertComposerText,
   openMediaPicker,
   upsertSessionForContext,
+  validateAssetForUse,
   validateSessionForStaging,
 } from "../index.js";
 
@@ -26,6 +27,7 @@ let activeMode = state.context?.postingMode || "stage_for_review";
 let activeDraft = null;
 let packageFilter = "active";
 let slotFilter = "active";
+let assetFilter = "usable";
 let scheduleScope = "target";
 let scheduleStatusFilter = "open";
 let selectedScheduleId = null;
@@ -70,6 +72,16 @@ const els = {
   runLog: document.querySelector("#run-log"),
   runHistory: document.querySelector("#run-history"),
   routineRuns: document.querySelector("#routine-runs"),
+  assetPath: document.querySelector("#asset-path"),
+  assetType: document.querySelector("#asset-type"),
+  assetLanguage: document.querySelector("#asset-language"),
+  assetPlatform: document.querySelector("#asset-platform"),
+  assetAlt: document.querySelector("#asset-alt"),
+  assetSafeZone: document.querySelector("#asset-safe-zone"),
+  assetNotes: document.querySelector("#asset-notes"),
+  assetDoNotUse: document.querySelector("#asset-do-not-use"),
+  assetFilters: document.querySelector("#asset-filters"),
+  assetLibrary: document.querySelector("#asset-library"),
   slotTopic: document.querySelector("#slot-topic"),
   slotTime: document.querySelector("#slot-time"),
   slotLanguage: document.querySelector("#slot-language"),
@@ -121,6 +133,7 @@ document.querySelector("#save-strategy").addEventListener("click", saveStrategy)
 document.querySelector("#add-editorial-slot").addEventListener("click", addEditorialSlot);
 document.querySelector("#generate-next-slot").addEventListener("click", generateFromNextSlot);
 document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
+document.querySelector("#add-asset").addEventListener("click", addAsset);
 document.querySelector("#jump-editorial-calendar").addEventListener("click", () => scrollPanelIntoView("#editorial-calendar-panel"));
 document.querySelector("#jump-schedule-calendar").addEventListener("click", () => scrollPanelIntoView("#schedule-calendar-panel"));
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
@@ -137,6 +150,8 @@ document.querySelector("#clear-log").addEventListener("click", () => { els.runLo
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.editorialSlots.addEventListener("click", handleSlotClick);
 els.slotFilters.addEventListener("click", handleSlotFilterClick);
+els.assetFilters.addEventListener("click", handleAssetFilterClick);
+els.assetLibrary.addEventListener("click", handleAssetClick);
 els.draftHistory.addEventListener("click", handleDraftHistoryClick);
 els.packageFilters.addEventListener("click", handlePackageFilterClick);
 els.scheduleScope.addEventListener("click", handleScheduleScopeClick);
@@ -192,6 +207,8 @@ function ensureWorkspaceData(workspace) {
   next.claimLibraries ||= [];
   next.contentStrategies ||= [];
   next.editorialSlots ||= [];
+  next.assetLibrary ||= [];
+  next.socialTemplates ||= [];
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
@@ -213,6 +230,18 @@ function ensureWorkspaceData(workspace) {
   seed.editorialSlots.forEach((slot) => {
     if (!next.editorialSlots.some((row) => row.id === slot.id)) {
       next.editorialSlots.push(slot);
+      changed = true;
+    }
+  });
+  seed.assetLibrary.forEach((asset) => {
+    if (!next.assetLibrary.some((row) => row.id === asset.id)) {
+      next.assetLibrary.push(asset);
+      changed = true;
+    }
+  });
+  seed.socialTemplates.forEach((template) => {
+    if (!next.socialTemplates.some((row) => row.id === template.id)) {
+      next.socialTemplates.push(template);
       changed = true;
     }
   });
@@ -279,6 +308,8 @@ function render() {
   renderRiskCard();
   renderRunHistory();
   renderRoutineRuns();
+  renderAssetFilters();
+  renderAssetLibrary();
   renderSlotFilters();
   renderEditorialSlots();
   renderDraftHistory();
@@ -602,11 +633,12 @@ function renderMedia() {
   media.forEach((file) => {
     const div = document.createElement("div");
     div.className = "media-item";
+    const asset = findAssetByPath(file);
     const name = document.createElement("span");
     name.textContent = file.split(/[\\/]/).pop() || file;
-    name.title = file;
+    name.title = asset?.altText ? `${file} - ${asset.altText}` : file;
     const badge = document.createElement("strong");
-    badge.textContent = file.split(".").pop()?.toUpperCase() || "FILE";
+    badge.textContent = asset ? asset.type.toUpperCase() : file.split(".").pop()?.toUpperCase() || "FILE";
     div.append(name, badge);
     els.mediaRow.append(div);
   });
@@ -1029,6 +1061,160 @@ function renderRoutineRuns() {
     `;
     els.routineRuns.append(item);
   });
+}
+
+async function addAsset() {
+  const filePath = els.assetPath.value.trim();
+  if (!filePath) {
+    log("Asset refused: add a file path first.");
+    return;
+  }
+  const { company, brand, campaign, account } = getActiveRows();
+  const asset = {
+    id: `asset-${Date.now()}`,
+    companyId: company.id,
+    brandId: brand.id,
+    campaignId: campaign.id,
+    platform: els.assetPlatform.value || account.platform,
+    language: els.assetLanguage.value,
+    type: els.assetType.value,
+    filePath,
+    altText: els.assetAlt.value.trim(),
+    safeZone: els.assetSafeZone.value.trim(),
+    notes: els.assetNotes.value.trim(),
+    doNotUse: els.assetDoNotUse.checked,
+    createdAt: new Date().toISOString(),
+  };
+  state.assetLibrary ||= [];
+  state.assetLibrary.unshift(asset);
+  els.assetPath.value = "";
+  els.assetAlt.value = "";
+  els.assetSafeZone.value = "";
+  els.assetNotes.value = "";
+  els.assetDoNotUse.checked = false;
+  await window.diamond.saveState(state);
+  renderAssetFilters();
+  renderAssetLibrary();
+  log(`Asset added: ${asset.filePath}.`);
+}
+
+function renderAssetFilters() {
+  const filters = [
+    ["usable", "Usable"],
+    ["leaderboard", "Leaderboard"],
+    ["prize", "Prize"],
+    ["country", "Country"],
+    ["campaign", "Campaign"],
+    ["do-not-use", "Do not use"],
+    ["all", "All"],
+  ];
+  els.assetFilters.innerHTML = "";
+  filters.forEach(([value, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.assetFilter = value;
+    button.className = assetFilter === value ? "active" : "";
+    button.textContent = `${label} ${countAssetsForFilter(value)}`;
+    els.assetFilters.append(button);
+  });
+}
+
+function renderAssetLibrary() {
+  const assets = filteredAssets();
+  els.assetLibrary.innerHTML = "";
+  if (!assets.length) {
+    const empty = document.createElement("div");
+    empty.className = "draft-history-empty";
+    empty.textContent = "No assets match this filter.";
+    els.assetLibrary.append(empty);
+    return;
+  }
+  assets.slice(0, 16).forEach((asset) => {
+    const check = validateAssetForUse(asset, { requireAltText: true });
+    const item = document.createElement("article");
+    item.className = `asset-item ${asset.doNotUse ? "blocked" : ""} ${check.ok ? "usable" : "warn"}`;
+    item.innerHTML = `
+      <header>
+        <strong>${escapeHtml(asset.type || "asset")} / ${escapeHtml(asset.language || "en")}</strong>
+        <span class="session-label">${asset.doNotUse ? "do not use" : check.reason}</span>
+      </header>
+      <p>${escapeHtml(asset.filePath || "")}</p>
+      <p>${escapeHtml(asset.altText || "No alt text.")}</p>
+      <p>${escapeHtml(asset.safeZone || "No safe-zone metadata.")}${asset.notes ? ` / ${escapeHtml(asset.notes)}` : ""}</p>
+      <div class="draft-history-actions">
+        <button type="button" data-asset-action="attach" data-asset-id="${asset.id}">Attach</button>
+        <button type="button" data-asset-action="toggle" data-asset-id="${asset.id}">${asset.doNotUse ? "Allow use" : "Do not use"}</button>
+        <button type="button" data-asset-action="copy" data-asset-id="${asset.id}">Copy path</button>
+      </div>
+    `;
+    els.assetLibrary.append(item);
+  });
+}
+
+function filteredAssets() {
+  const context = getContext();
+  const assets = (state.assetLibrary || []).filter((asset) => asset.companyId === context.companyId
+    && asset.brandId === context.brandId
+    && asset.campaignId === context.campaignId
+    && asset.platform === context.platform);
+  if (assetFilter === "all") return assets;
+  if (assetFilter === "usable") return assets.filter((asset) => !asset.doNotUse);
+  if (assetFilter === "do-not-use") return assets.filter((asset) => asset.doNotUse);
+  return assets.filter((asset) => asset.type === assetFilter);
+}
+
+function countAssetsForFilter(filter) {
+  const previous = assetFilter;
+  assetFilter = filter;
+  const count = filteredAssets().length;
+  assetFilter = previous;
+  return count;
+}
+
+async function handleAssetClick(event) {
+  const button = event.target.closest("button[data-asset-action]");
+  if (!button) return;
+  const asset = (state.assetLibrary || []).find((item) => item.id === button.dataset.assetId);
+  if (!asset) return;
+  if (button.dataset.assetAction === "attach") {
+    const check = validateAssetForUse(asset, { requireAltText: true });
+    if (!check.ok) {
+      log(`Asset attach refused: ${check.reason}.`);
+      return;
+    }
+    media = [...new Set([...media, asset.filePath])];
+    if (activeDraft) {
+      activeDraft.media = media;
+      activeDraft.assetIds = [...new Set([...(activeDraft.assetIds || []), asset.id])];
+      activeDraft.updatedAt = new Date().toISOString();
+    }
+    renderMedia();
+    log(`Asset attached: ${asset.filePath}.`);
+  }
+  if (button.dataset.assetAction === "toggle") {
+    asset.doNotUse = !asset.doNotUse;
+    asset.updatedAt = new Date().toISOString();
+    await window.diamond.saveState(state);
+    renderAssetFilters();
+    renderAssetLibrary();
+    log(`Asset ${asset.doNotUse ? "blocked" : "allowed"}: ${asset.filePath}.`);
+  }
+  if (button.dataset.assetAction === "copy") {
+    await window.diamond.writeClipboard(asset.filePath || "");
+    log(`Copied asset path for ${asset.id}.`);
+  }
+}
+
+function handleAssetFilterClick(event) {
+  const button = event.target.closest("button[data-asset-filter]");
+  if (!button) return;
+  assetFilter = button.dataset.assetFilter;
+  renderAssetFilters();
+  renderAssetLibrary();
+}
+
+function findAssetByPath(filePath) {
+  return (state.assetLibrary || []).find((asset) => asset.filePath === filePath) || null;
 }
 
 async function generateFromNextSlot() {

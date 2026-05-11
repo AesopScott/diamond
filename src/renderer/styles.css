@@ -409,6 +409,7 @@ webview {
 .run-history-panel.panel,
 .editorial-panel.panel,
 .routine-panel.panel,
+.asset-panel.panel,
 .package-queue-panel.panel,
 .schedule-panel.panel {
   margin: 0;
@@ -416,6 +417,7 @@ webview {
 
 .run-history,
 .routine-runs,
+.asset-library,
 .editorial-slots,
 .draft-history,
 .schedule-calendar {
@@ -438,6 +440,7 @@ webview {
 
 .run-item,
 .routine-item,
+.asset-item,
 .slot-item,
 .draft-item,
 .schedule-day,
@@ -452,6 +455,7 @@ webview {
 
 .run-item header,
 .routine-item header,
+.asset-item header,
 .slot-item header,
 .draft-item header {
   align-items: center;
@@ -462,6 +466,7 @@ webview {
 
 .run-item strong,
 .routine-item strong,
+.asset-item strong,
 .slot-item strong,
 .draft-item strong {
   font-size: 13px;
@@ -469,6 +474,7 @@ webview {
 
 .run-item p,
 .routine-item p,
+.asset-item p,
 .slot-item p,
 .draft-item p {
   color: var(--muted);
@@ -531,6 +537,40 @@ webview {
 
 .slot-item.posted {
   border-color: rgba(56, 217, 138, 0.45);
+}
+
+.asset-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(130px, 0.7fr) minmax(120px, 0.5fr) minmax(110px, 0.5fr) minmax(220px, 1.2fr) minmax(190px, 1fr) minmax(180px, 1fr) minmax(120px, 0.5fr);
+  margin-bottom: 10px;
+}
+
+.asset-form label {
+  margin: 0;
+}
+
+.checkbox-label {
+  align-content: end;
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
+.asset-item.usable {
+  border-color: rgba(56, 217, 138, 0.45);
+}
+
+.asset-item.warn {
+  border-color: rgba(241, 189, 69, 0.45);
+}
+
+.asset-item.blocked {
+  border-color: rgba(255, 100, 100, 0.55);
 }
 
 .queue-filters {

@@ -99,6 +99,37 @@ export function createSeedWorkspace() {
         createdAt: new Date().toISOString(),
       },
     ],
+    assetLibrary: [
+      {
+        id: "world-cup-leaderboard-placeholder",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        platform: context.platform,
+        language: "en",
+        type: "leaderboard",
+        filePath: "assets/world-cup-leaderboard-placeholder.png",
+        altText: "World Cup league leaderboard card for thecard.bet.",
+        safeZone: "Keep text and flags inside center 80% for social crop safety.",
+        notes: "Placeholder record until rendered templates exist.",
+        doNotUse: false,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    socialTemplates: [
+      {
+        id: "world-cup-leaderboard-template",
+        companyId: context.companyId,
+        brandId: context.brandId,
+        campaignId: context.campaignId,
+        platform: context.platform,
+        type: "leaderboard",
+        language: "en",
+        safeZone: "Center 80%; avoid text at top/bottom edges.",
+        notes: "Template record for later image renderer build.",
+        createdAt: new Date().toISOString(),
+      },
+    ],
     brandLibraries: [
       {
         id: "the-card-brand-library",

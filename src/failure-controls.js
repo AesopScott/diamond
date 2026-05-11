@@ -16,6 +16,19 @@ export function validateMediaRequirement(media = [], options = {}) {
   return { ok: false, reason: "Required media is missing" };
 }
 
+export function validateAssetForUse(asset, options = {}) {
+  if (!asset) return { ok: false, reason: "Asset is missing" };
+  if (asset.doNotUse) return { ok: false, reason: "Asset is marked do-not-use" };
+  if (options.requireAltText && !String(asset.altText || "").trim()) {
+    return { ok: false, reason: "Asset is missing alt text" };
+  }
+  if (options.requireSafeZone && !String(asset.safeZone || "").trim()) {
+    return { ok: false, reason: "Asset is missing safe-zone metadata" };
+  }
+  if (!String(asset.filePath || "").trim()) return { ok: false, reason: "Asset is missing a file path" };
+  return { ok: true, reason: "Asset can be used" };
+}
+
 export function validateRoutineSlot(slot, options = {}) {
   const missing = [
     ["company", slot?.companyId],
