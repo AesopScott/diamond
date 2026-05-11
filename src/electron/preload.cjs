@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld("diamond", {
   getPaths: () => ipcRenderer.invoke("diamond:get-paths"),
   openExternal: (url) => ipcRenderer.invoke("diamond:open-external", url),
   writeClipboard: (text) => ipcRenderer.invoke("diamond:write-clipboard", text),
+  saveScreenshot: (input) => ipcRenderer.invoke("diamond:save-screenshot", input),
   pickMedia: () => ipcRenderer.invoke("diamond:pick-media"),
 });

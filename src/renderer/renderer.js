@@ -74,6 +74,7 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelector("#evaluate-draft").addEventListener("click", evaluateDraft);
 document.querySelector("#approve-draft").addEventListener("click", approveDraft);
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
+document.querySelector("#capture-run").addEventListener("click", captureCurrentRun);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
 document.querySelector("#open-login").addEventListener("click", openLogin);
@@ -88,6 +89,10 @@ document.querySelector("#reload-webview").addEventListener("click", () => els.we
 document.querySelector("#clear-log").addEventListener("click", () => { els.runLog.innerHTML = ""; });
 document.querySelector("#pick-media").addEventListener("click", async () => {
   media = await window.diamond.pickMedia();
+  if (activeDraft) {
+    activeDraft.media = media;
+    activeDraft.updatedAt = new Date().toISOString();
+  }
   renderMedia();
 });
 
@@ -350,7 +355,13 @@ function renderMedia() {
   }
   media.forEach((file) => {
     const div = document.createElement("div");
-    div.textContent = file;
+    div.className = "media-item";
+    const name = document.createElement("span");
+    name.textContent = file.split(/[\\/]/).pop() || file;
+    name.title = file;
+    const badge = document.createElement("strong");
+    badge.textContent = file.split(".").pop()?.toUpperCase() || "FILE";
+    div.append(name, badge);
     els.mediaRow.append(div);
   });
 }
@@ -402,13 +413,67 @@ async function stageDraft() {
   activeDraft.stagedAt = new Date().toISOString();
   activeDraft.updatedAt = activeDraft.stagedAt;
   activeDraft.stageUrl = composeUrl;
+  activeDraft.media = media;
   await window.diamond.saveState(state);
   els.webview.src = composeUrl;
   const fillResult = await fillComposerText(activeDraft.text);
+  await capturePostRun({
+    status: fillResult.ok ? "staged" : "needs_manual_finish",
+    note: fillResult.ok ? "Composer text inserted. Media upload remains manual." : `Composer opened. ${fillResult.reason}.`,
+  });
   log(fillResult.ok
-    ? "Draft copied to clipboard, X compose opened, and text inserted. Review it, attach media if needed, then publish manually."
+    ? `Draft copied to clipboard, X compose opened, and text inserted. ${media.length ? `${media.length} media file(s) selected for manual upload. ` : ""}Review it, attach media if needed, then publish manually.`
     : `Draft copied to clipboard and X compose opened. Auto-fill did not complete: ${fillResult.reason}. Paste manually if needed.`);
   renderRiskCard();
+}
+
+async function captureCurrentRun() {
+  if (!activeDraft) {
+    log("Capture refused: evaluate or stage a draft first.");
+    return;
+  }
+  const run = await capturePostRun({ status: "manual_capture", note: "Manual run capture." });
+  log(`Run captured: ${run.id}${run.screenshotPath ? ` screenshot=${run.screenshotPath}` : ""}.`);
+  renderRiskCard();
+}
+
+async function capturePostRun({ status, note }) {
+  state.postRuns ||= [];
+  const context = getContext();
+  const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
+  const runId = `run-${Date.now()}`;
+  const screenshotPath = await captureBrowserScreenshot(runId);
+  const run = {
+    id: runId,
+    draftId: activeDraft.id,
+    context,
+    status,
+    note,
+    text: activeDraft.text,
+    media: [...(activeDraft.media || media)],
+    platformUrl: currentUrl,
+    screenshotPath,
+    createdAt: new Date().toISOString(),
+  };
+  state.postRuns.unshift(run);
+  activeDraft.lastRunId = run.id;
+  activeDraft.screenshotPath = screenshotPath;
+  await window.diamond.saveState(state);
+  return run;
+}
+
+async function captureBrowserScreenshot(runId) {
+  if (typeof els.webview.capturePage !== "function") return null;
+  try {
+    const image = await els.webview.capturePage();
+    return window.diamond.saveScreenshot({
+      name: `${runId}-${getContext().platform}-${getContext().socialAccountId}.png`,
+      dataUrl: image.toDataURL(),
+    });
+  } catch (error) {
+    log(`Screenshot capture failed: ${error.message || "unknown error"}.`);
+    return null;
+  }
 }
 
 function renderRiskCard() {

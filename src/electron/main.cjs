@@ -73,6 +73,16 @@ ipcMain.handle("diamond:write-clipboard", (_event, text) => {
   clipboard.writeText(String(text || ""));
   return true;
 });
+ipcMain.handle("diamond:save-screenshot", (_event, input = {}) => {
+  ensureAppDir();
+  const name = String(input.name || `screenshot-${Date.now()}`).replace(/[^a-z0-9_.-]+/gi, "-");
+  const fileName = name.endsWith(".png") ? name : `${name}.png`;
+  const target = path.join(APP_DIR, "screenshots", fileName);
+  const dataUrl = String(input.dataUrl || "");
+  const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+  fs.writeFileSync(target, Buffer.from(base64, "base64"));
+  return target;
+});
 ipcMain.handle("diamond:pick-media", async () => {
   const result = await dialog.showOpenDialog({
     title: "Select social media asset",
