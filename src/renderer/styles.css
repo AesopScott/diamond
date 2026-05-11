@@ -231,10 +231,37 @@ textarea {
 }
 
 .draft-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 12px;
+}
+
+.draft-actions button {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 24px 1fr;
+  justify-items: start;
+  min-height: 62px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.draft-actions button span {
+  align-items: center;
+  background: rgba(233, 75, 75, 0.18);
+  border: 1px solid rgba(233, 75, 75, 0.45);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  width: 24px;
 }
 
 .risk-card {
