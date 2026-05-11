@@ -35,8 +35,8 @@ import {
   summarizePostMetrics,
   classifySocialReply,
   migrateWorkspaceState,
-  insertComposerText,
-  openMediaPicker,
+  insertPlatformComposerText,
+  openPlatformMediaPicker,
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
   buildFirestoreSyncBundle,
@@ -2924,18 +2924,20 @@ function refreshGuestBounds() {
 }
 
 async function fillComposerText(text) {
+  const { account } = getActiveRows();
   let lastReason = "composer textbox was not ready";
   for (let attempt = 0; attempt < 16; attempt += 1) {
     await wait(500);
-    const result = await insertComposerText(els.webview, text);
-    if (result.ok) return result;
+    const result = await insertPlatformComposerText(els.webview, text, account.platform);
+    if (result.ok || result.manual) return result;
     lastReason = result.reason || lastReason;
   }
   return { ok: false, reason: lastReason };
 }
 
 async function openPlatformMediaPicker() {
-  return openMediaPicker(els.webview);
+  const { account } = getActiveRows();
+  return openPlatformMediaPicker(els.webview, account.platform);
 }
 
 function wait(ms) {

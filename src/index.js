@@ -7,6 +7,7 @@ export * from "./firebase-sync.js";
 export * from "./ids.js";
 export * from "./license.js";
 export * from "./metrics.js";
+export * from "./platform-browser-adapter.js";
 export * from "./polaris-bridge.js";
 export * from "./quality.js";
 export * from "./risk.js";

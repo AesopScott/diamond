@@ -185,7 +185,9 @@ This is the live top-level checklist for the three-build plan. Checked items are
   - [x] YouTube Shorts account/routine scaffold
   - [x] Facebook account/routine scaffold
   - [x] Reddit monitoring-only scaffold
-  - [ ] Platform-specific composer adapters beyond X
+  - [x] Platform adapter registry
+  - [x] Manual staging mode for non-X writable platforms
+  - [ ] Assisted composer adapters beyond X
   - [ ] Platform-specific media upload proof
   - [ ] Repeated staging proof for each writable platform
 - [x] Polaris integration bridge
@@ -458,8 +460,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. |
-| P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, and routine scaffolds are wired. Platform-specific composer and media proofs remain queued. |
-| P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, and routine scaffolds are wired. Platform-specific composer and media proofs remain queued. |
+| P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, and manual staging adapter states are wired. Assisted composer and media proofs remain queued. |
+| P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, and manual staging adapter states are wired. Assisted composer and media proofs remain queued. |
 | P3 | Add Reddit monitoring only | Partial | Reddit account context and planned monitoring slot are wired, and staging refuses because Reddit is monitoring-only. Reply/monitoring capture remains queued. |
 
 ## First Milestone
