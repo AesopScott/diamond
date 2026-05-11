@@ -63,6 +63,8 @@ document.querySelector("#approve-draft").addEventListener("click", approveDraft)
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
 document.querySelector("#save-account").addEventListener("click", saveAccountSettings);
 document.querySelector("#open-account").addEventListener("click", openActiveAccount);
+document.querySelector("#focus-browser").addEventListener("click", () => setBrowserFocus(true));
+document.querySelector("#exit-focus").addEventListener("click", () => setBrowserFocus(false));
 document.querySelector("#check-session").addEventListener("click", checkSession);
 document.querySelector("#mark-ready").addEventListener("click", markSessionReady);
 document.querySelector("#reload-webview").addEventListener("click", () => els.webview.reload());
@@ -364,4 +366,11 @@ function log(message) {
   const div = document.createElement("div");
   div.textContent = `[${time}] ${message}`;
   els.runLog.prepend(div);
+}
+
+function setBrowserFocus(focused) {
+  document.body.classList.toggle("browser-focus", focused);
+  document.querySelector("#focus-browser").classList.toggle("hidden", focused);
+  document.querySelector("#exit-focus").classList.toggle("hidden", !focused);
+  log(focused ? "Browser focus mode enabled." : "Browser focus mode closed.");
 }

@@ -42,6 +42,8 @@ button:disabled {
   opacity: 0.45;
 }
 
+.hidden { display: none !important; }
+
 #app {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -268,7 +270,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 10px;
   flex: 1;
-  min-height: 620px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -320,4 +322,31 @@ webview {
 .run-log div {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   padding-bottom: 6px;
+}
+
+body.browser-focus #app {
+  grid-template-columns: 1fr;
+}
+
+body.browser-focus .sidebar,
+body.browser-focus .topbar,
+body.browser-focus .composer.panel,
+body.browser-focus .log-panel {
+  display: none;
+}
+
+body.browser-focus .workspace {
+  padding: 10px;
+}
+
+body.browser-focus .grid {
+  display: block;
+}
+
+body.browser-focus .browser.panel {
+  height: calc(100vh - 20px);
+}
+
+body.browser-focus .browser-shell {
+  min-height: 0;
 }
