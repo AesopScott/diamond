@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diamond</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <div class="brandmark">
+          <span class="stone"></span>
+          <div>
+            <h1>Diamond</h1>
+            <p>Social command center</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Tenant</span>
+            <button id="save-state" type="button">Save</button>
+          </div>
+          <label>
+            Company
+            <select id="company-select"></select>
+          </label>
+          <label>
+            Brand
+            <select id="brand-select"></select>
+          </label>
+          <label>
+            Campaign
+            <select id="campaign-select"></select>
+          </label>
+          <label>
+            Social account
+            <select id="account-select"></select>
+          </label>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Mode</span>
+          </div>
+          <div class="segmented" role="group" aria-label="Posting mode">
+            <button class="mode active" data-mode="draft_only" type="button">Draft</button>
+            <button class="mode" data-mode="stage_for_review" type="button">Stage</button>
+            <button class="mode" data-mode="auto_publish" type="button">Auto</button>
+          </div>
+          <p class="hint">Auto is disabled until proof, tests, and workflow signoff are complete.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Validation</span>
+          </div>
+          <ul id="validation-list" class="validation-list"></ul>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Active target</p>
+            <h2 id="active-target">No target selected</h2>
+          </div>
+          <div class="status-pill" id="target-status">Fail closed</div>
+        </header>
+
+        <section class="grid">
+          <section class="composer panel">
+            <div class="panel-heading">
+              <span>Post Package</span>
+              <button id="pick-media" type="button">Add media</button>
+            </div>
+            <label>
+              Draft text
+              <textarea id="draft-text" rows="9" spellcheck="true"></textarea>
+            </label>
+            <div class="media-row" id="media-row"></div>
+            <div class="draft-actions">
+              <button id="evaluate-draft" type="button">Evaluate</button>
+              <button id="approve-draft" type="button">Approve</button>
+              <button id="stage-draft" type="button">Stage in browser</button>
+            </div>
+            <div id="risk-card" class="risk-card"></div>
+          </section>
+
+          <section class="browser panel">
+            <div class="panel-heading">
+              <span>Visible Social Browser</span>
+              <button id="reload-webview" type="button">Reload</button>
+            </div>
+            <div class="browser-tabs" id="browser-tabs"></div>
+            <div class="browser-shell">
+              <webview id="social-webview" partition="persist:diamond-placeholder" src="about:blank" allowpopups></webview>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-heading">
+            <span>Run Log</span>
+            <button id="clear-log" type="button">Clear</button>
+          </div>
+          <div id="run-log" class="run-log"></div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

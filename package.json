@@ -1,0 +1,19 @@
+{
+  "name": "diamond",
+  "version": "0.1.0",
+  "description": "Standalone multitenant social operating system with assisted browser publishing.",
+  "private": true,
+  "type": "module",
+  "main": "src/electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/run-tests.js",
+    "validate": "node scripts/validate-build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^42.0.1"
+  }
+}

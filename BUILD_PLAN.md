@@ -1,18 +1,19 @@
 # Diamond Build Plan
 
 ## Current Phase
-Build a multitenant Polaris-powered social media operations system for Project Diamond. Polaris routines will generate daily campaign content, render post assets, operate platform web UIs through Playwright, and manage replies through an approval-aware response queue for multiple companies.
+Build Diamond as a standalone multitenant social media operating system. Diamond will generate campaign content, render post assets, operate platform web UIs through visible browser surfaces, and manage replies through an approval-aware response queue for multiple companies.
 
-The posting path should avoid direct social platform APIs. The AI should act through a normal browser session using authenticated web pages, with screenshots, logs, and human approval gates where risk is higher.
+The posting path should avoid direct social platform APIs. Diamond should act through normal browser sessions using authenticated web pages, with screenshots, logs, and human approval gates where risk is higher. Polaris is an integration target after Diamond works on its own, not a required runtime component.
 
 ## Architecture
 
 | Layer | Responsibility |
 |---|---|
-| Polaris routines | Scheduling and orchestration. One routine per platform/cadence. |
+| Diamond routines | Scheduling and orchestration. One routine per platform/cadence. |
 | Platform skills | Platform-specific voice, format, reply etiquette, and guardrails. |
-| Playwright worker | Browser posting, media upload, screenshots, and reply capture. |
-| Firebase admin | Job state, draft queue, reply queue, metrics, audit logs, using the existing service account JSON. |
+| Electron app shell | Standalone UI, company switcher, visible browser surfaces, local persistence, and approval workflow. |
+| Browser worker | Browser posting, media upload, screenshots, and reply capture. |
+| Firebase admin | Optional backend sync for job state, draft queue, reply queue, metrics, and audit logs. |
 | Approval queue | Review, edit, approve, reject, and publish. |
 | Metrics loop | Track post URLs, screenshots, impressions, clicks, signups, and follow-up notes. |
 
@@ -43,7 +44,7 @@ Do not reuse browser profiles across companies. Do not allow a queued post from 
 
 ## Embedded Social Browser
 
-Diamond should include a visible Social Command Browser inside the app:
+Diamond includes a visible Social Command Browser inside its own app:
 
 ```text
 Left: company/brand/campaign queue
@@ -72,11 +73,11 @@ Confidence target: move from 7/10 to 8.5/10 before building additional platform 
 
 ## Plan Validation
 
-Diamond should not treat this plan as perfect until it is verified against the real Polaris codebase, a working prototype, failure tests, an expert checklist, and Scott's workflow review.
+Diamond should not treat this plan as perfect until it is verified against the standalone app prototype, optional Polaris integration path, failure tests, an expert checklist, and Scott's workflow review.
 
 | Validation Track | What To Verify | Acceptance Signal | Stage |
 |---|---|---|---|
-| Codebase reality check | Inspect Polaris routines, Firebase admin JSON loading, MCP/local tool hooks, Electron/browser patterns, and existing app conventions. | The plan names real integration points and avoids imaginary architecture. | P0 before implementation depth. |
+| Codebase reality check | Inspect Diamond standalone app paths, optional Polaris launch hooks, Firebase admin JSON loading, local tool hooks, and Electron/browser patterns. | The plan names real integration points and avoids imaginary architecture. | P0 before implementation depth. |
 | Prototype proof | Build one company, one brand, one X account, one browser profile, one generated post, one rendered image, one staged composer, one screenshot log. | The first assisted-posting loop works end to end without publishing. | P0 first milestone. |
 | Repeated proof | Run the staged X flow three times across separate sessions. | The workflow is repeatable, not a lucky demo. | P0 confidence proof. |
 | Failure testing | Test wrong account, expired login, missing media, selector miss, risky language, duplicate content, missing approval, missing Spanish variant, and Firebase write failure. | Diamond pauses, logs, or routes for review instead of publishing incorrectly. | P0/P1 before platform expansion. |
@@ -85,7 +86,7 @@ Diamond should not treat this plan as perfect until it is verified against the r
 
 The build plan becomes the working spine only after:
 
-1. Polaris inspection confirms the integration path.
+1. Standalone Diamond inspection confirms the app architecture and optional Polaris integration path.
 2. X staging proof works three times.
 3. Tenant isolation blocks wrong-account staging.
 4. Risky content is held for approval.
@@ -196,7 +197,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 
 | Priority | Item | Status | Notes |
 |---|---|---|---|
-| P0 | Confirm Polaris Firebase admin JSON loading path | Queued | Reuse existing admin/service-account configuration. |
+| P0 | Confirm Diamond Firebase admin JSON loading path | Queued | Optional backend sync uses a local service-account configuration. |
 | P0 | Add multitenant company/brand/account model | Queued | Company is the root of all social objects. |
 | P0 | Build company switcher and active tenant context | Queued | Must be visible before posting workflows. |
 | P0 | Design company-scoped browser profile storage | Queued | One browser profile per company/platform/account. |
@@ -204,8 +205,8 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add content strategy model | Queued | Goals, personas, pillars, offers, CTAs, reference accounts, audience-value checks. |
 | P0 | Add editorial calendar model | Queued | Routines generate from planned slots instead of blank-page prompting. |
 | P0 | Add brand and claim libraries | Queued | Voice rules, approved language, banned claims, identity rules. |
-| P0 | Validate plan against Polaris reality | Queued | Inspect routines, Firebase admin JSON, MCP/local tool hooks, Electron/browser patterns. |
-| P0 | Run confidence proof phase | Queued | Polaris routines, Firebase admin JSON, browser strategy, repeated X staging. |
+| P0 | Validate plan against Diamond reality | Queued | Inspect standalone app shell, Firebase admin JSON option, local hooks, Electron/browser patterns. |
+| P0 | Run confidence proof phase | Queued | Standalone app shell, Firebase admin option, browser strategy, repeated X staging. |
 | P0 | Build `social-x` skill | Queued | First platform because it rewards speed and reply loops. |
 | P0 | Build `x-daily-post` routine | Queued | Generate one daily post package. |
 | P0 | Build Playwright staging worker | Queued | Fill composer, attach media, screenshot, stop before publish. |

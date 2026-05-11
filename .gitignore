@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+*.log
+dist/
+coverage/
+.diamond-data/
+browser-profiles/
+service-account*.json
+firebase-service-account*.json
