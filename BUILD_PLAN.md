@@ -8,14 +8,13 @@ This is the live top-level checklist for the three-build plan. Checked items are
 
 This is the current order for finishing the remaining checklist items.
 
-1. Accessibility baseline: keyboard navigation, screen reader labels, color contrast, and reduced motion.
-2. Founder/investor and campaign image templates.
-3. Spanish UI labels needed for operator review.
-4. Configurable routine due window.
-5. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-6. Reddit monitoring capture workflow.
-7. Expert checklist review and Scott workflow signoff.
-8. Decide whether `auto_publish` ever becomes available.
+1. Founder/investor and campaign image templates.
+2. Spanish UI labels needed for operator review.
+3. Configurable routine due window.
+4. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
+5. Reddit monitoring capture workflow.
+6. Expert checklist review and Scott workflow signoff.
+7. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -214,7 +213,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Firebase shared state mapping
   - [x] Launch/bridge path from Polaris to Diamond
   - [x] Standalone fallback remains intact
-- [ ] Legal, licensing, and accessibility
+- [x] Legal, licensing, and accessibility
   - [x] Terms of Service page/content
   - [x] Privacy policy page/content
   - [x] Licensing and entitlement model
@@ -226,10 +225,10 @@ This is the current order for finishing the remaining checklist items.
   - [x] Mojo AI Studio as license purchase/update source
   - [x] Seven-day offline grace window
   - [x] Dev/admin license role support in Firebase
-  - [ ] Accessibility audit
-  - [ ] Keyboard navigation pass
-  - [ ] Screen reader labels and form semantics
-  - [ ] Color contrast and reduced-motion pass
+  - [x] Accessibility audit
+  - [x] Keyboard navigation pass
+  - [x] Screen reader labels and form semantics
+  - [x] Color contrast and reduced-motion pass
 - [ ] Expert review and workflow signoff
   - [ ] Formal expert checklist pass
   - [ ] Scott workflow signoff
@@ -473,7 +472,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Add post memory and draft evaluation | Built | Drafts and captured post runs now create post memory records, and repetitive drafts are held. |
 | P1 | Add lead/support routing | Built | Replies now route into support tickets, bug reports, investor leads, influencer leads, product feedback, ignored items, or escalation records with owner and route status. |
 | P1 | Add Terms of Service and privacy policy | Built | Draft operator-facing Terms of Service and Privacy Policy are surfaced in-app with copy controls and draft/counsel-review status. |
-| P1 | Add accessibility baseline | Queued | Audit keyboard navigation, focus states, labels, color contrast, reduced motion, and screen reader semantics across the Diamond app. |
+| P1 | Add accessibility baseline | Built | Added skip link, landmarks, focus-visible states, screen-reader labels/live regions, higher muted contrast, reduced-motion behavior, and regression tests. |
 | P1 | Add user guide and narrated tour | Partial | In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. First operator-session review remains queued. |
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |

@@ -79,6 +79,7 @@ let tourAudio = null;
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
 const legalDocuments = getDiamondLegalDocuments();
+const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -651,7 +652,11 @@ function showTourStep() {
   activeTourTarget = target;
   if (target) {
     target.classList.add("tour-highlight");
-    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    target.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "center",
+      inline: "nearest",
+    });
   }
   requestAnimationFrame(() => placeTourPopover(target));
 }
@@ -1089,6 +1094,9 @@ function renderBrowserTabs() {
     button.type = "button";
     button.textContent = platformLabel(account.platform);
     button.className = account.id === els.account.value ? "active" : "";
+    button.role = "tab";
+    button.setAttribute("aria-selected", account.id === els.account.value ? "true" : "false");
+    button.setAttribute("aria-controls", "social-webview");
     button.addEventListener("click", () => {
       els.account.value = account.id;
       render();
@@ -3140,7 +3148,15 @@ function log(message) {
 }
 
 function scrollPanelIntoView(selector) {
-  document.querySelector(selector)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const target = document.querySelector(selector);
+  if (!target) return;
+  target.scrollIntoView({
+    behavior: prefersReducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+  if (typeof target.focus === "function") {
+    target.focus({ preventScroll: true });
+  }
 }
 
 function syncModeButtons() {

@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main-workspace">Skip to workspace</a>
     <div id="app">
-      <aside class="sidebar">
+      <aside class="sidebar" aria-label="Diamond controls">
         <div class="brandmark">
           <span class="stone"></span>
           <div>
@@ -17,13 +18,13 @@
           </div>
         </div>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="tenant-heading">
           <div class="panel-heading">
-            <span>Tenant</span>
+            <span id="tenant-heading">Tenant</span>
             <div class="panel-actions">
-              <button id="add-company" type="button">Add company</button>
-              <button id="add-brand" type="button">Add brand</button>
-              <button id="save-state" type="button">Save</button>
+              <button id="add-company" type="button" aria-label="Add company">Add company</button>
+              <button id="add-brand" type="button" aria-label="Add brand">Add brand</button>
+              <button id="save-state" type="button" aria-label="Save tenant selection">Save</button>
             </div>
           </div>
           <label>
@@ -42,7 +43,7 @@
             Social account
             <select id="account-select"></select>
           </label>
-          <div class="session-card" id="session-card">
+          <div class="session-card" id="session-card" role="status" aria-live="polite">
             <div>
               <span class="session-label">Session</span>
               <strong id="session-status">Unknown</strong>
@@ -51,10 +52,10 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="account-settings-heading">
           <div class="panel-heading">
-            <span>Account Settings</span>
-            <button id="save-account" type="button">Update</button>
+            <span id="account-settings-heading">Account Settings</span>
+            <button id="save-account" type="button" aria-label="Update account settings">Update</button>
           </div>
           <label>
             Handle / page
@@ -83,9 +84,9 @@
           <p class="hint">Diamond stores the browser session for this profile, not your password.</p>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="brand-claims-heading">
           <div class="panel-heading">
-            <span>Brand + Claims</span>
+            <span id="brand-claims-heading">Brand + Claims</span>
             <button id="save-brand-rules" type="button">Save rules</button>
           </div>
           <label>
@@ -118,9 +119,9 @@
           </label>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="campaign-strategy-heading">
           <div class="panel-heading">
-            <span>Campaign Strategy</span>
+            <span id="campaign-strategy-heading">Campaign Strategy</span>
             <button id="save-strategy" type="button">Save</button>
           </div>
           <label>
@@ -157,9 +158,9 @@
           </label>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="mode-heading">
           <div class="panel-heading">
-            <span>Mode</span>
+            <span id="mode-heading">Mode</span>
           </div>
           <div class="segmented" role="group" aria-label="Posting mode">
             <button class="mode active" data-mode="draft_only" type="button">Draft</button>
@@ -169,9 +170,9 @@
           <p class="hint">Auto is disabled until proof, tests, and workflow signoff are complete.</p>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="cadence-heading">
           <div class="panel-heading">
-            <span>Cadence Guardrails</span>
+            <span id="cadence-heading">Cadence Guardrails</span>
             <button id="save-cadence" type="button">Save</button>
           </div>
           <label>
@@ -208,19 +209,19 @@
           </label>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="validation-heading">
           <div class="panel-heading">
-            <span>Validation</span>
+            <span id="validation-heading">Validation</span>
           </div>
-          <ul id="validation-list" class="validation-list"></ul>
+          <ul id="validation-list" class="validation-list" aria-live="polite"></ul>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="firebase-heading">
           <div class="panel-heading">
-            <span>Firebase Admin</span>
+            <span id="firebase-heading">Firebase Admin</span>
             <button id="check-firebase" type="button">Check</button>
           </div>
-          <div class="session-card">
+          <div class="session-card" role="status" aria-live="polite">
             <div>
               <span class="session-label">Admin JSON</span>
               <strong id="firebase-status">Unknown</strong>
@@ -231,12 +232,12 @@
           <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="license-heading">
           <div class="panel-heading">
-            <span>License</span>
+            <span id="license-heading">License</span>
             <button id="check-license" type="button">Check</button>
           </div>
-          <div class="session-card">
+          <div class="session-card" role="status" aria-live="polite">
             <div>
               <span class="session-label">Diamond license</span>
               <strong id="license-status">Unknown</strong>
@@ -246,37 +247,37 @@
           <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
         </section>
 
-        <section class="panel">
+        <section class="panel" aria-labelledby="legal-drafts-sidebar-heading">
           <div class="panel-heading">
-            <span>Legal Drafts</span>
+            <span id="legal-drafts-sidebar-heading">Legal Drafts</span>
           </div>
           <div class="legal-jump-actions">
-            <button id="jump-terms" type="button">Terms</button>
-            <button id="jump-privacy" type="button">Privacy</button>
+            <button id="jump-terms" type="button" aria-controls="legal-terms">Terms</button>
+            <button id="jump-privacy" type="button" aria-controls="legal-privacy">Privacy</button>
           </div>
           <p class="hint">Draft legal copy for product review. Counsel review is still required before public launch.</p>
         </section>
       </aside>
 
-      <main class="workspace">
+      <main id="main-workspace" class="workspace" tabindex="-1" aria-label="Diamond workspace">
         <header class="topbar">
           <div>
             <p class="eyebrow">Active target</p>
             <h2 id="active-target">No target selected</h2>
           </div>
           <div class="topbar-actions">
-            <button id="jump-user-guide" type="button">User Guide</button>
+            <button id="jump-user-guide" type="button" aria-controls="user-guide-panel">User Guide</button>
             <button id="start-tour" type="button">Start Tour</button>
-            <button id="jump-editorial-calendar" type="button">Editorial Calendar</button>
-            <button id="jump-schedule-calendar" type="button">Schedule Calendar</button>
-            <div class="status-pill" id="target-status">Fail closed</div>
+            <button id="jump-editorial-calendar" type="button" aria-controls="editorial-calendar-panel">Editorial Calendar</button>
+            <button id="jump-schedule-calendar" type="button" aria-controls="schedule-calendar-panel">Schedule Calendar</button>
+            <div class="status-pill" id="target-status" role="status" aria-live="polite">Fail closed</div>
           </div>
         </header>
 
         <section class="grid">
-          <section class="composer panel">
+          <section class="composer panel" aria-labelledby="post-package-heading">
             <div class="panel-heading">
-              <span>Post Package</span>
+              <span id="post-package-heading">Post Package</span>
               <button id="pick-media" type="button">Add media</button>
             </div>
             <label>
@@ -294,12 +295,12 @@
               <button id="mark-posted" type="button"><span>7</span>Mark posted</button>
               <button id="mark-abandoned" type="button"><span>8</span>Mark abandoned</button>
             </div>
-            <div id="risk-card" class="risk-card"></div>
+            <div id="risk-card" class="risk-card" role="status" aria-live="polite"></div>
           </section>
 
-          <section class="browser panel">
+          <section class="browser panel" aria-labelledby="browser-heading">
             <div class="panel-heading">
-              <span>Visible Social Browser</span>
+              <span id="browser-heading">Visible Social Browser</span>
               <div class="browser-actions">
                 <button id="open-account" type="button">Open account</button>
                 <button id="open-login" type="button">Open login</button>
@@ -313,24 +314,24 @@
                 <button id="reload-webview" type="button">Reload</button>
               </div>
             </div>
-            <div class="browser-tabs" id="browser-tabs"></div>
+            <div class="browser-tabs" id="browser-tabs" role="tablist" aria-label="Social browser tabs"></div>
             <div class="browser-shell">
-              <webview id="social-webview" partition="persist:diamond-placeholder" src="about:blank" allowpopups></webview>
+              <webview id="social-webview" aria-label="Visible social browser" partition="persist:diamond-placeholder" src="about:blank" allowpopups></webview>
             </div>
           </section>
         </section>
 
-        <section class="panel log-panel">
+        <section class="panel log-panel" aria-labelledby="run-log-heading">
           <div class="panel-heading">
-            <span>Run Log</span>
+            <span id="run-log-heading">Run Log</span>
             <button id="clear-log" type="button">Clear</button>
           </div>
-          <div id="run-log" class="run-log"></div>
+          <div id="run-log" class="run-log" role="log" aria-live="polite" aria-label="Run log entries"></div>
         </section>
 
-        <section id="user-guide-panel" class="panel guide-panel">
+        <section id="user-guide-panel" class="panel guide-panel" tabindex="-1" aria-labelledby="user-guide-heading">
           <div class="panel-heading">
-            <span>User Guide</span>
+            <span id="user-guide-heading">User Guide</span>
             <div class="panel-actions">
               <button id="generate-tour-voiceovers" type="button">Generate voiceovers</button>
               <button id="copy-tour-script" type="button">Copy voiceover script</button>
@@ -344,9 +345,9 @@
           </div>
         </section>
 
-        <section id="legal-panel" class="panel legal-panel">
+        <section id="legal-panel" class="panel legal-panel" tabindex="-1" aria-labelledby="legal-panel-heading">
           <div class="panel-heading">
-            <span>Legal Drafts</span>
+            <span id="legal-panel-heading">Legal Drafts</span>
             <div class="panel-actions">
               <button id="copy-terms" type="button">Copy terms</button>
               <button id="copy-privacy" type="button">Copy privacy</button>
@@ -355,16 +356,16 @@
           <div id="legal-content" class="legal-content"></div>
         </section>
 
-        <section class="panel run-history-panel">
+        <section class="panel run-history-panel" aria-labelledby="post-runs-heading">
           <div class="panel-heading">
-            <span>Post Runs</span>
+            <span id="post-runs-heading">Post Runs</span>
           </div>
           <div id="run-history" class="run-history"></div>
         </section>
 
-        <section class="panel reply-panel">
+        <section class="panel reply-panel" aria-labelledby="reply-inbox-heading">
           <div class="panel-heading">
-            <span>Reply Inbox</span>
+            <span id="reply-inbox-heading">Reply Inbox</span>
             <button id="capture-reply" type="button">Capture reply</button>
           </div>
           <div class="reply-form">
@@ -396,9 +397,9 @@
           <div id="reply-inbox" class="reply-inbox"></div>
         </section>
 
-        <section id="editorial-calendar-panel" class="panel editorial-panel">
+        <section id="editorial-calendar-panel" class="panel editorial-panel" tabindex="-1" aria-labelledby="editorial-calendar-heading">
           <div class="panel-heading">
-            <span>Editorial Calendar Slots</span>
+            <span id="editorial-calendar-heading">Editorial Calendar Slots</span>
             <div class="panel-actions">
               <button id="run-due-slots" type="button">Run due slots</button>
               <button id="generate-next-slot" type="button">Generate from next slot</button>
@@ -434,23 +435,23 @@
           <div id="editorial-slots" class="editorial-slots"></div>
         </section>
 
-        <section class="panel routine-panel">
+        <section class="panel routine-panel" aria-labelledby="routine-runs-heading">
           <div class="panel-heading">
-            <span>Routine Runs</span>
+            <span id="routine-runs-heading">Routine Runs</span>
           </div>
           <div id="routine-runs" class="routine-runs"></div>
         </section>
 
-        <section class="panel platform-proof-panel">
+        <section class="panel platform-proof-panel" aria-labelledby="platform-proof-heading">
           <div class="panel-heading">
-            <span>Platform Adapter Proof</span>
+            <span id="platform-proof-heading">Platform Adapter Proof</span>
           </div>
           <div id="platform-proof-list" class="platform-proof-list"></div>
         </section>
 
-        <section class="panel asset-panel">
+        <section class="panel asset-panel" aria-labelledby="asset-library-heading">
           <div class="panel-heading">
-            <span>Asset Library</span>
+            <span id="asset-library-heading">Asset Library</span>
             <div class="panel-actions">
               <button id="generate-asset" type="button">Generate asset</button>
               <button id="add-asset" type="button">Add asset</button>
@@ -505,17 +506,17 @@
           <div id="asset-library" class="asset-library"></div>
         </section>
 
-        <section class="panel package-queue-panel">
+        <section class="panel package-queue-panel" aria-labelledby="package-queue-heading">
           <div class="panel-heading">
-            <span>Post Package Queue</span>
+            <span id="package-queue-heading">Post Package Queue</span>
           </div>
           <div class="queue-filters" id="package-filters"></div>
           <div id="draft-history" class="draft-history"></div>
         </section>
 
-        <section id="schedule-calendar-panel" class="panel schedule-panel">
+        <section id="schedule-calendar-panel" class="panel schedule-panel" tabindex="-1" aria-labelledby="schedule-calendar-heading">
           <div class="panel-heading">
-            <span>Schedule Calendar</span>
+            <span id="schedule-calendar-heading">Schedule Calendar</span>
           </div>
           <div class="schedule-tools">
             <div class="segmented schedule-scope" id="schedule-scope" role="group" aria-label="Calendar scope">

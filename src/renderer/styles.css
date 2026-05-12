@@ -5,8 +5,9 @@
   --panel-2: #151d2a;
   --line: #283244;
   --text: #f4f7fb;
-  --muted: #8f9bae;
+  --muted: #a9b5c7;
   --accent: #e94b4b;
+  --focus: #7dd3fc;
   --good: #38d98a;
   --warn: #f1bd45;
   --bad: #ff6464;
@@ -43,6 +44,40 @@ button:disabled {
 }
 
 .hidden { display: none !important; }
+
+.skip-link {
+  background: #f4f7fb;
+  border: 2px solid var(--focus);
+  border-radius: 8px;
+  color: #090b10;
+  font-weight: 900;
+  left: 14px;
+  padding: 10px 14px;
+  position: fixed;
+  top: 14px;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+  z-index: 1000;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  outline: none;
+  transform: translateY(0);
+}
+
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+a:focus-visible,
+webview:focus-visible,
+[tabindex]:focus-visible {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.35);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 
 #app {
   display: grid;
@@ -89,6 +124,7 @@ h1 { font-size: 24px; line-height: 1; }
   overflow-x: hidden;
   overflow-y: auto;
   padding: 18px;
+  scroll-behavior: smooth;
 }
 
 .panel {
@@ -1053,4 +1089,15 @@ body.browser-focus .browser-shell {
   position: absolute;
   right: 0;
   top: 74px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
