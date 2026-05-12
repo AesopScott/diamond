@@ -30,6 +30,8 @@ This is the current order for finishing the remaining checklist items.
   - [x] Social account selector
   - [x] Visible active target banner
   - [x] Company/account guard before staging
+  - [x] Social account creation setup kit
+  - [x] Official signup handoff with human verification boundary
 - [x] X account/session workflow
   - [x] Account URL, login URL, compose URL, host, and browser profile fields
   - [x] Isolated browser profile path per company/platform/account

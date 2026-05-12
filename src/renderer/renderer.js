@@ -1,6 +1,7 @@
 import {
   approvalLevelForText,
   buildSlotDraftText,
+  buildSocialAccountSetupKit,
   browserProfilePath,
   canStageDraft,
   createDefaultCadencePolicy,
@@ -23,6 +24,7 @@ import {
   evaluateDiamondAccess,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
+  formatSocialAccountSetupKit,
   getDiamondGuideSections,
   getDiamondTourSteps,
   getDiamondLegalDocuments,
@@ -40,6 +42,7 @@ import {
   markPlatformProofFromStage,
   resolveComposeUrl,
   resolveLoginUrl,
+  setupStatusLabel,
   isMonitoringOnlyPlatform,
   PLATFORMS,
   summarizePostMetrics,
@@ -196,6 +199,8 @@ const els = {
   firebaseNote: document.querySelector("#firebase-note"),
   licenseStatus: document.querySelector("#license-status"),
   licenseNote: document.querySelector("#license-note"),
+  accountSetupStatus: document.querySelector("#account-setup-status"),
+  accountSetupNote: document.querySelector("#account-setup-note"),
 };
 
 hydrate();
@@ -260,6 +265,11 @@ document.querySelector("#jump-terms").addEventListener("click", () => scrollPane
 document.querySelector("#jump-privacy").addEventListener("click", () => scrollPanelIntoView("#legal-privacy"));
 document.querySelector("#copy-terms").addEventListener("click", () => copyLegalDocument("terms"));
 document.querySelector("#copy-privacy").addEventListener("click", () => copyLegalDocument("privacy"));
+document.querySelector("#build-account-setup").addEventListener("click", buildActiveAccountSetup);
+document.querySelector("#copy-account-setup").addEventListener("click", copyActiveAccountSetup);
+document.querySelector("#open-account-signup").addEventListener("click", openActiveSignup);
+document.querySelector("#mark-account-created").addEventListener("click", () => markActiveAccountSetup("created"));
+document.querySelector("#mark-account-blocked").addEventListener("click", () => markActiveAccountSetup("blocked"));
 document.querySelector("#start-tour").addEventListener("click", startGuideTour);
 document.querySelector("#guide-start-tour").addEventListener("click", startGuideTour);
 document.querySelector("#generate-tour-voiceovers").addEventListener("click", generateTourVoiceovers);
@@ -689,6 +699,7 @@ function render() {
   renderScheduleCalendar();
   renderUserGuide();
   renderLegalDocuments();
+  renderAccountSetup(account);
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
 }
@@ -768,6 +779,72 @@ function formatLegalDocument(document) {
       "",
     ]),
   ].join("\n");
+}
+
+function renderAccountSetup(account) {
+  const status = account?.setupStatus || "not_started";
+  const kit = account?.setupKit;
+  els.accountSetupStatus.textContent = setupStatusLabel(status);
+  els.accountSetupNote.textContent = kit?.summary
+    ? `${kit.summary}. Official signup: ${kit.signupUrl || "not configured"}.`
+    : "Build a setup kit before creating a new social account.";
+}
+
+async function buildActiveAccountSetup() {
+  const rows = getActiveRows();
+  const kit = buildSocialAccountSetupKit(rows);
+  rows.account.setupKit = kit;
+  rows.account.setupStatus = "kit_ready";
+  rows.account.signupUrl = kit.signupUrl;
+  rows.account.setupUpdatedAt = kit.updatedAt;
+  await window.diamond.saveState(state);
+  log(`Built ${kit.platformName} account setup kit for ${kit.displayName}.`);
+  render();
+}
+
+async function copyActiveAccountSetup() {
+  const rows = getActiveRows();
+  const kit = ensureActiveAccountSetupKit(rows);
+  await window.diamond.writeClipboard(formatSocialAccountSetupKit(kit));
+  await window.diamond.saveState(state);
+  log(`Copied ${kit.platformName} account setup kit.`);
+  render();
+}
+
+async function openActiveSignup() {
+  const rows = getActiveRows();
+  const kit = ensureActiveAccountSetupKit(rows);
+  if (!kit.signupUrl) {
+    log("Signup open refused: no official signup URL is configured for this platform.");
+    return;
+  }
+  rows.account.setupStatus = "signup_opened";
+  rows.account.setupUpdatedAt = new Date().toISOString();
+  await window.diamond.saveState(state);
+  await window.diamond.openExternal(kit.signupUrl);
+  log(`Opened official ${kit.platformName} signup page.`);
+  render();
+}
+
+async function markActiveAccountSetup(status) {
+  const { account } = getActiveRows();
+  account.setupStatus = status;
+  account.setupUpdatedAt = new Date().toISOString();
+  await window.diamond.saveState(state);
+  log(`Account setup marked ${setupStatusLabel(status).toLowerCase()} for ${account.platform}/${account.id}.`);
+  render();
+}
+
+function ensureActiveAccountSetupKit(rows = getActiveRows()) {
+  if (!rows.account.setupKit) {
+    rows.account.setupKit = buildSocialAccountSetupKit(rows);
+    rows.account.signupUrl = rows.account.setupKit.signupUrl;
+  }
+  if (!rows.account.setupStatus || rows.account.setupStatus === "not_started") {
+    rows.account.setupStatus = "kit_ready";
+  }
+  rows.account.setupUpdatedAt = new Date().toISOString();
+  return rows.account.setupKit;
 }
 
 function startGuideTour() {

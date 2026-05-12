@@ -281,6 +281,27 @@
               <p class="hint">Themes change the main app surfaces, sidebar, composer, browser, log, buttons, and accent colors.</p>
             </section>
 
+            <section class="settings-card" aria-labelledby="account-setup-heading">
+              <div class="panel-heading">
+                <span id="account-setup-heading">Social Account Setup</span>
+                <button id="build-account-setup" type="button">Build kit</button>
+              </div>
+              <div class="session-card" role="status" aria-live="polite">
+                <div>
+                  <span class="session-label">Setup status</span>
+                  <strong id="account-setup-status">Not started</strong>
+                </div>
+                <p id="account-setup-note">Build a setup kit before creating a new social account.</p>
+              </div>
+              <div class="legal-jump-actions">
+                <button id="copy-account-setup" type="button">Copy kit</button>
+                <button id="open-account-signup" type="button">Open signup</button>
+                <button id="mark-account-created" type="button">Mark created</button>
+                <button id="mark-account-blocked" type="button">Mark blocked</button>
+              </div>
+              <p class="hint">Diamond prepares the account details. Platform signup, CAPTCHA, email or phone verification, and 2FA stay human-controlled.</p>
+            </section>
+
             <section class="settings-card" aria-labelledby="firebase-heading">
               <div class="panel-heading">
                 <span id="firebase-heading">Firebase Admin</span>
