@@ -269,6 +269,18 @@
             <button id="close-settings" type="button">Close</button>
           </div>
           <div class="settings-grid">
+            <section class="settings-card" aria-labelledby="theme-heading">
+              <div class="panel-heading">
+                <span id="theme-heading">Theme</span>
+              </div>
+              <label>
+                Interface style
+                <select id="theme-select"></select>
+              </label>
+              <div id="theme-swatches" class="theme-swatches" aria-label="Theme colors"></div>
+              <p class="hint">Themes change the main app surfaces, sidebar, composer, browser, log, buttons, and accent colors.</p>
+            </section>
+
             <section class="settings-card" aria-labelledby="firebase-heading">
               <div class="panel-heading">
                 <span id="firebase-heading">Firebase Admin</span>

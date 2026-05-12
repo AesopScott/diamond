@@ -80,6 +80,18 @@ const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
 const legalDocuments = getDiamondLegalDocuments();
 const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+const DIAMOND_THEMES = Object.freeze([
+  { id: "midnight", label: "Midnight Ops", colors: ["#0d1422", "#172033", "#ef5350", "#38d98a"] },
+  { id: "signal", label: "Signal Room", colors: ["#071b1f", "#15172a", "#ff5757", "#4cc9f0"] },
+  { id: "studio", label: "Studio Console", colors: ["#17101d", "#21131a", "#ff5a4f", "#f4c95d"] },
+  { id: "broadcast", label: "Broadcast Desk", colors: ["#0b1628", "#211113", "#f04438", "#ffd166"] },
+  { id: "glass", label: "Diamond Glass", colors: ["#111827", "#142238", "#e5484d", "#8ecae6"] },
+  { id: "worldcup", label: "World Cup Pitch", colors: ["#081b16", "#1f1b10", "#2fd17c", "#f4c95d"] },
+  { id: "market", label: "Market Pulse", colors: ["#0a1a20", "#111b2a", "#00b8a9", "#ff6b6b"] },
+  { id: "champion", label: "Champion Gold", colors: ["#14110e", "#241b12", "#d4af37", "#b91c1c"] },
+  { id: "rally", label: "Rally Night", colors: ["#101018", "#171d2b", "#a855f7", "#22d3ee"] },
+  { id: "newsroom", label: "Newsroom Heat", colors: ["#10151b", "#1b2028", "#f97316", "#0ea5e9"] },
+]);
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -169,6 +181,8 @@ const els = {
   legalContent: document.querySelector("#legal-content"),
   settingsPanel: document.querySelector("#settings-panel"),
   openSettings: document.querySelector("#open-settings"),
+  themeSelect: document.querySelector("#theme-select"),
+  themeSwatches: document.querySelector("#theme-swatches"),
   tourLayer: document.querySelector("#tour-layer"),
   tourPopover: document.querySelector("#tour-popover"),
   tourProgress: document.querySelector("#tour-progress"),
@@ -185,6 +199,7 @@ const els = {
 };
 
 hydrate();
+applyTheme(state.themeId || "broadcast");
 await refreshVoiceoverStatus();
 render();
 window.addEventListener("resize", () => requestAnimationFrame(sizeWebviewToShell));
@@ -209,6 +224,7 @@ els.newBrandName.addEventListener("keydown", (event) => {
   if (event.key === "Enter") createBrandFromForm();
   if (event.key === "Escape") hideTenantForms();
 });
+els.themeSelect.addEventListener("change", saveThemeSelection);
 
 document.querySelectorAll(".mode").forEach((button) => {
   button.addEventListener("click", () => {
@@ -435,8 +451,49 @@ function hydrate() {
   setSelectIfPresent(els.company, selectedCompany);
   hydrateDependentSelectors();
   fillPlatformSelect(els.assetPlatform);
+  fillThemeSelect();
   els.draftText.value = "Join the free World Cup league, make your picks, and see where your country lands on the board.";
   syncModeButtons();
+}
+
+function fillThemeSelect() {
+  els.themeSelect.innerHTML = "";
+  DIAMOND_THEMES.forEach((theme) => {
+    const option = document.createElement("option");
+    option.value = theme.id;
+    option.textContent = theme.label;
+    els.themeSelect.append(option);
+  });
+  setSelectIfPresent(els.themeSelect, state.themeId || "broadcast");
+  renderThemeSwatches(state.themeId || "broadcast");
+}
+
+async function saveThemeSelection() {
+  state.themeId = els.themeSelect.value || "broadcast";
+  applyTheme(state.themeId);
+  renderThemeSwatches(state.themeId);
+  await window.diamond.saveState(state);
+  log(`Theme changed to ${themeLabel(state.themeId)}.`);
+}
+
+function applyTheme(themeId) {
+  const nextTheme = DIAMOND_THEMES.some((theme) => theme.id === themeId) ? themeId : "broadcast";
+  document.body.dataset.theme = nextTheme;
+  if (els.themeSelect) setSelectIfPresent(els.themeSelect, nextTheme);
+}
+
+function renderThemeSwatches(themeId) {
+  const theme = DIAMOND_THEMES.find((item) => item.id === themeId) || DIAMOND_THEMES.find((item) => item.id === "broadcast");
+  els.themeSwatches.innerHTML = "";
+  theme.colors.forEach((color) => {
+    const swatch = document.createElement("span");
+    swatch.style.setProperty("--swatch", color);
+    els.themeSwatches.append(swatch);
+  });
+}
+
+function themeLabel(themeId) {
+  return DIAMOND_THEMES.find((theme) => theme.id === themeId)?.label || themeId;
 }
 
 function hydrateDependentSelectors() {

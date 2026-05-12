@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diamond Style Mockups</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #080a0f;
+        color: #f5f7fb;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      header {
+        padding: 28px 32px 10px;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1;
+        margin: 0 0 8px;
+      }
+      header p {
+        color: #a9b5c7;
+        margin: 0;
+      }
+      .grid {
+        display: grid;
+        gap: 22px;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        padding: 24px 32px 36px;
+      }
+      .mock {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+        overflow: hidden;
+      }
+      .mock-title {
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        padding: 14px 16px;
+      }
+      .mock-title h2 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .swatches {
+        display: flex;
+        gap: 5px;
+      }
+      .swatches span {
+        background: var(--swatch);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 999px;
+        height: 18px;
+        width: 18px;
+      }
+      .screen {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        min-height: 360px;
+      }
+      .side {
+        background: var(--side);
+        border-right: 1px solid var(--line);
+        padding: 14px;
+      }
+      .brand {
+        align-items: center;
+        display: flex;
+        gap: 9px;
+        margin-bottom: 14px;
+      }
+      .gem {
+        background: linear-gradient(135deg, #fff, var(--accent), var(--secondary));
+        border-radius: 8px;
+        height: 28px;
+        transform: rotate(45deg);
+        width: 28px;
+      }
+      .brand strong {
+        display: block;
+        font-size: 15px;
+      }
+      .brand span,
+      .label,
+      .small {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .summary,
+      .side-card {
+        background: var(--sideCard);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: grid;
+        gap: 5px;
+        margin-bottom: 10px;
+        padding: 9px;
+      }
+      .label {
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .select {
+        background: rgba(0,0,0,0.24);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--text);
+        font-size: 11px;
+        padding: 8px;
+      }
+      .main {
+        display: grid;
+        gap: 11px;
+        grid-template-rows: auto 1fr auto;
+        padding: 14px;
+      }
+      .top {
+        align-items: center;
+        background: var(--top);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        padding: 11px;
+      }
+      .top h3 {
+        font-size: 16px;
+        line-height: 1.1;
+        margin: 3px 0 0;
+      }
+      .pill {
+        border: 1px solid var(--warn);
+        border-radius: 999px;
+        color: var(--warn);
+        font-size: 10px;
+        font-weight: 900;
+        padding: 7px 10px;
+        text-transform: uppercase;
+      }
+      .work {
+        display: grid;
+        gap: 11px;
+        grid-template-columns: 0.8fr 1.2fr;
+      }
+      .composer,
+      .browser,
+      .log {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 11px;
+      }
+      .composer { background: var(--composer); }
+      .browser { background: var(--browser); }
+      .log { background: var(--log); }
+      .textarea {
+        background: rgba(0,0,0,0.26);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--text);
+        font-size: 11px;
+        line-height: 1.35;
+        min-height: 78px;
+        padding: 9px;
+      }
+      .actions {
+        display: grid;
+        gap: 7px;
+        grid-template-columns: repeat(2, 1fr);
+        margin-top: 10px;
+      }
+      button {
+        background: var(--button);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--text);
+        font-size: 10px;
+        font-weight: 900;
+        padding: 8px 7px;
+      }
+      .browser-box {
+        align-items: center;
+        background: #020305;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 7px;
+        display: grid;
+        min-height: 153px;
+        padding: 12px;
+      }
+      .post {
+        background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent);
+        border: 1px solid rgba(255,255,255,0.13);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .post strong {
+        color: var(--accent);
+        display: block;
+        font-size: 15px;
+        margin-bottom: 5px;
+      }
+      .post p {
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.35;
+        margin: 0;
+      }
+      .log {
+        color: var(--muted);
+        font-family: "Cascadia Code", Consolas, monospace;
+        font-size: 10px;
+      }
+      .notes {
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+        padding: 12px 16px 16px;
+      }
+      .midnight {
+        --bg: #07090f; --side: #0d1422; --sideCard: #121a28; --top: #121a28;
+        --composer: #172033; --browser: #05070c; --log: #101827; --button: #1b2534;
+        --line: #2a3448; --text: #f4f7fb; --muted: #a9b5c7; --accent: #ef5350; --secondary: #38d98a; --warn: #f2c14e;
+      }
+      .signal {
+        --bg: #080a12; --side: #071b1f; --sideCard: #10282e; --top: #15172a;
+        --composer: #161b22; --browser: #0d1117; --log: #12201b; --button: #172638;
+        --line: #26424a; --text: #f5f8fb; --muted: #adc1c7; --accent: #ff5757; --secondary: #4cc9f0; --warn: #ffd166;
+      }
+      .studio {
+        --bg: #0b090b; --side: #17101d; --sideCard: #21131a; --top: #101827;
+        --composer: #21131a; --browser: #050505; --log: #1d1810; --button: #282038;
+        --line: #3a2933; --text: #fff7f4; --muted: #c0adb7; --accent: #ff5a4f; --secondary: #f4c95d; --warn: #f4c95d;
+      }
+      .broadcast {
+        --bg: #060708; --side: #0b1628; --sideCard: #101d33; --top: #101d33;
+        --composer: #211113; --browser: #030405; --log: #102018; --button: #1d2740;
+        --line: #26354e; --text: #f8fafc; --muted: #aeb9c8; --accent: #f04438; --secondary: #ffd166; --warn: #ffd166;
+      }
+      .glass {
+        --bg: #090d14; --side: #111827; --sideCard: #18202c; --top: #142238;
+        --composer: #18202c; --browser: #050608; --log: #1b1828; --button: #20293a;
+        --line: #2c384b; --text: #f5f9ff; --muted: #adbacb; --accent: #e5484d; --secondary: #8ecae6; --warn: #f0c75e;
+      }
+      .worldcup {
+        --bg: #06100d; --side: #081b16; --sideCard: #173229; --top: #10231e;
+        --composer: #1f1b10; --browser: #030705; --log: #101e2f; --button: #172a23;
+        --line: #2a463a; --text: #f5fff9; --muted: #acc7ba; --accent: #2fd17c; --secondary: #f4c95d; --warn: #f4c95d;
+      }
+      .market {
+        --bg: #071012; --side: #0a1a20; --sideCard: #132d32; --top: #0f2428;
+        --composer: #111b2a; --browser: #020607; --log: #102316; --button: #172b31;
+        --line: #24444b; --text: #f3fbfb; --muted: #abc1c4; --accent: #00b8a9; --secondary: #ff6b6b; --warn: #ffd166;
+      }
+      .champion {
+        --bg: #0c0a08; --side: #14110e; --sideCard: #241b12; --top: #1b1510;
+        --composer: #1f1520; --browser: #040302; --log: #142018; --button: #2b2116;
+        --line: #453521; --text: #fff8eb; --muted: #c9b899; --accent: #d4af37; --secondary: #b91c1c; --warn: #f7d774;
+      }
+      .rally {
+        --bg: #09090b; --side: #101018; --sideCard: #202032; --top: #16151f;
+        --composer: #171d2b; --browser: #030304; --log: #1c1728; --button: #25253a;
+        --line: #34344e; --text: #fbfbff; --muted: #bbb9cf; --accent: #a855f7; --secondary: #22d3ee; --warn: #facc15;
+      }
+      .newsroom {
+        --bg: #0a0d10; --side: #10151b; --sideCard: #1d242b; --top: #151a1f;
+        --composer: #1b2028; --browser: #030405; --log: #182018; --button: #232b35;
+        --line: #303944; --text: #f7fafc; --muted: #b6c0ca; --accent: #f97316; --secondary: #0ea5e9; --warn: #facc15;
+      }
+      @media (max-width: 760px) {
+        .grid { grid-template-columns: 1fr; padding: 18px; }
+        .screen { grid-template-columns: 1fr; }
+        .side { border-right: 0; border-bottom: 1px solid var(--line); }
+        .work { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Diamond Style Mockups</h1>
+      <p>Ten palette directions with separated panel colors and a little more visual character.</p>
+    </header>
+    <main class="grid">
+      <article class="mock midnight">
+        <div class="mock-title"><h2>1. Midnight Ops</h2><div class="swatches"><span style="--swatch:#0d1422"></span><span style="--swatch:#172033"></span><span style="--swatch:#ef5350"></span><span style="--swatch:#38d98a"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>World Cup Board</strong><p>Dark, disciplined, and closest to the current app.</p></div></div></div></div><div class="log">[12:41] Composer text inserted.</div></section>
+        </div>
+        <div class="notes">Best when you want minimal change, better contrast, and cleaner panel separation.</div>
+      </article>
+      <article class="mock signal">
+        <div class="mock-title"><h2>2. Signal Room</h2><div class="swatches"><span style="--swatch:#071b1f"></span><span style="--swatch:#15172a"></span><span style="--swatch:#ff5757"></span><span style="--swatch:#4cc9f0"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Signal Live</strong><p>Teal, cyan, and red zoning makes controls pop apart.</p></div></div></div></div><div class="log">[12:41] License permits active brand/platform.</div></section>
+        </div>
+        <div class="notes">Best for a tech-forward operating room feel with very clear separation.</div>
+      </article>
+      <article class="mock studio">
+        <div class="mock-title"><h2>3. Studio Console</h2><div class="swatches"><span style="--swatch:#17101d"></span><span style="--swatch:#21131a"></span><span style="--swatch:#ff5a4f"></span><span style="--swatch:#f4c95d"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Campaign Studio</strong><p>Warmer, more creative, and more editorial.</p></div></div></div></div><div class="log">[12:41] Asset attached.</div></section>
+        </div>
+        <div class="notes">Best if Diamond should feel like a creative social studio more than a developer dashboard.</div>
+      </article>
+      <article class="mock broadcast">
+        <div class="mock-title"><h2>4. Broadcast Desk</h2><div class="swatches"><span style="--swatch:#0b1628"></span><span style="--swatch:#211113"></span><span style="--swatch:#f04438"></span><span style="--swatch:#ffd166"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Matchday Desk</strong><p>Sports-media energy with scoreboard warmth.</p></div></div></div></div><div class="log">[12:41] World Cup slot ready.</div></section>
+        </div>
+        <div class="notes">My favorite for The Card: sports, media, and campaign work all read naturally here.</div>
+      </article>
+      <article class="mock glass">
+        <div class="mock-title"><h2>5. Diamond Glass</h2><div class="swatches"><span style="--swatch:#111827"></span><span style="--swatch:#142238"></span><span style="--swatch:#e5484d"></span><span style="--swatch:#8ecae6"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Premium Console</strong><p>Cooler, calmer, and more polished SaaS.</p></div></div></div></div><div class="log">[12:41] Settings opened.</div></section>
+        </div>
+        <div class="notes">Best if you want Diamond to feel premium and quiet without losing contrast.</div>
+      </article>
+      <article class="mock worldcup">
+        <div class="mock-title"><h2>6. World Cup Pitch</h2><div class="swatches"><span style="--swatch:#081b16"></span><span style="--swatch:#1f1b10"></span><span style="--swatch:#2fd17c"></span><span style="--swatch:#f4c95d"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Pitch Ready</strong><p>Green pitch surfaces with gold matchday emphasis.</p></div></div></div></div><div class="log">[12:41] Country leaderboard queued.</div></section>
+        </div>
+        <div class="notes">Best when the World Cup campaign should feel immediately soccer-specific without going cartoonish.</div>
+      </article>
+      <article class="mock market">
+        <div class="mock-title"><h2>7. Market Pulse</h2><div class="swatches"><span style="--swatch:#0a1a20"></span><span style="--swatch:#111b2a"></span><span style="--swatch:#00b8a9"></span><span style="--swatch:#ff6b6b"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Market Pulse</strong><p>Prediction-market energy with teal confidence and coral risk.</p></div></div></div></div><div class="log">[12:41] Odds-style post approved.</div></section>
+        </div>
+        <div class="notes">Best if Diamond should lean into analytics, live-market language, and sharper product signals.</div>
+      </article>
+      <article class="mock champion">
+        <div class="mock-title"><h2>8. Champion Gold</h2><div class="swatches"><span style="--swatch:#14110e"></span><span style="--swatch:#241b12"></span><span style="--swatch:#d4af37"></span><span style="--swatch:#b91c1c"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Prize Board</strong><p>Trophy gold, restrained black, and red pressure points.</p></div></div></div></div><div class="log">[12:41] Prize card attached.</div></section>
+        </div>
+        <div class="notes">Best if prize moments, winners, and leaderboard status need to feel premium.</div>
+      </article>
+      <article class="mock rally">
+        <div class="mock-title"><h2>9. Rally Night</h2><div class="swatches"><span style="--swatch:#101018"></span><span style="--swatch:#171d2b"></span><span style="--swatch:#a855f7"></span><span style="--swatch:#22d3ee"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Fan Rally</strong><p>More electric, more creator-friendly, still usable.</p></div></div></div></div><div class="log">[12:41] Influencer draft generated.</div></section>
+        </div>
+        <div class="notes">Best if you want more visual energy for campaigns and social creators.</div>
+      </article>
+      <article class="mock newsroom">
+        <div class="mock-title"><h2>10. Newsroom Heat</h2><div class="swatches"><span style="--swatch:#10151b"></span><span style="--swatch:#1b2028"></span><span style="--swatch:#f97316"></span><span style="--swatch:#0ea5e9"></span></div></div>
+        <div class="screen">
+          <aside class="side"><div class="brand"><div class="gem"></div><div><strong>Diamond</strong><span>Social command center</span></div></div><div class="summary"><span class="label">Active workspace</span><strong>thecard.bet / The Card</strong><span class="small">World Cup 2026 / X</span></div><div class="side-card"><span class="label">Tenant</span><div class="select">thecard.bet</div><div class="select">The Card</div></div></aside>
+          <section class="main"><div class="top"><div><span class="label">Active target</span><h3>The Card / World Cup / X</h3></div><span class="pill">Fail closed</span></div><div class="work"><div class="composer"><span class="label">Post Package</span><div class="textarea">Join the free World Cup league and see where your country lands.</div><div class="actions"><button>Evaluate</button><button>Approve</button><button>Stage</button><button>Schedule</button></div></div><div class="browser"><span class="label">Visible Browser</span><div class="browser-box"><div class="post"><strong>Breaking Slate</strong><p>Editorial, fast, and clean for daily posting operations.</p></div></div></div></div><div class="log">[12:41] Slate details updated.</div></section>
+        </div>
+        <div class="notes">Best if the product should feel like a sports desk publishing room.</div>
+      </article>
+    </main>
+  </body>
+</html>
