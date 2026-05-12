@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import {
   buildPlaywrightProfilePath,
-  createSeedWorkspace,
   stagePostWithPlaywright,
   validatePlaywrightStageInput,
-} from "../src/index.js";
+} from "../src/playwright-worker.js";
+import { createSeedWorkspace } from "../src/seed.js";
 
 const workspace = createSeedWorkspace();
 const context = workspace.context;

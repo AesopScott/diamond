@@ -48,6 +48,26 @@
             Social account
             <select id="account-select"></select>
           </label>
+          <div id="company-form" class="tenant-form hidden">
+            <label>
+              New company name
+              <input id="new-company-name" type="text" placeholder="Company name">
+            </label>
+            <div class="tenant-form-actions">
+              <button id="create-company" type="button">Create company</button>
+              <button id="cancel-company" type="button">Cancel</button>
+            </div>
+          </div>
+          <div id="brand-form" class="tenant-form hidden">
+            <label>
+              New brand name
+              <input id="new-brand-name" type="text" placeholder="Brand name">
+            </label>
+            <div class="tenant-form-actions">
+              <button id="create-brand" type="button">Create brand</button>
+              <button id="cancel-brand" type="button">Cancel</button>
+            </div>
+          </div>
           <div class="session-card" id="session-card" role="status" aria-live="polite">
             <div>
               <span class="session-label">Session</span>

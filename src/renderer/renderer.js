@@ -48,7 +48,6 @@ import {
   insertPlatformComposerText,
   openPlatformMediaPicker,
   platformProofId,
-  validatePlaywrightStageInput,
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
   buildFirestoreSyncBundle,
@@ -121,6 +120,10 @@ const els = {
   targetStatus: document.querySelector("#target-status"),
   tenantSummaryTitle: document.querySelector("#tenant-summary-title"),
   tenantSummaryDetail: document.querySelector("#tenant-summary-detail"),
+  companyForm: document.querySelector("#company-form"),
+  brandForm: document.querySelector("#brand-form"),
+  newCompanyName: document.querySelector("#new-company-name"),
+  newBrandName: document.querySelector("#new-brand-name"),
   draftText: document.querySelector("#draft-text"),
   riskCard: document.querySelector("#risk-card"),
   validationList: document.querySelector("#validation-list"),
@@ -192,8 +195,20 @@ document.querySelector("#save-state").addEventListener("click", async () => {
   await window.diamond.saveState(state);
   log("State saved.");
 });
-document.querySelector("#add-company").addEventListener("click", addCompany);
-document.querySelector("#add-brand").addEventListener("click", addBrand);
+document.querySelector("#add-company").addEventListener("click", () => showTenantForm("company"));
+document.querySelector("#add-brand").addEventListener("click", () => showTenantForm("brand"));
+document.querySelector("#create-company").addEventListener("click", createCompanyFromForm);
+document.querySelector("#create-brand").addEventListener("click", createBrandFromForm);
+document.querySelector("#cancel-company").addEventListener("click", () => hideTenantForms());
+document.querySelector("#cancel-brand").addEventListener("click", () => hideTenantForms());
+els.newCompanyName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") createCompanyFromForm();
+  if (event.key === "Escape") hideTenantForms();
+});
+els.newBrandName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") createBrandFromForm();
+  if (event.key === "Escape") hideTenantForms();
+});
 
 document.querySelectorAll(".mode").forEach((button) => {
   button.addEventListener("click", () => {
@@ -461,9 +476,29 @@ function fillPlatformSelect(select) {
   });
 }
 
-async function addCompany() {
-  const name = prompt("Company name", "");
-  if (name === null) return;
+function showTenantForm(kind) {
+  const isCompany = kind === "company";
+  els.companyForm.classList.toggle("hidden", !isCompany);
+  els.brandForm.classList.toggle("hidden", isCompany);
+  const input = isCompany ? els.newCompanyName : els.newBrandName;
+  input.value = "";
+  input.focus();
+}
+
+function hideTenantForms() {
+  els.companyForm.classList.add("hidden");
+  els.brandForm.classList.add("hidden");
+  els.newCompanyName.value = "";
+  els.newBrandName.value = "";
+}
+
+async function createCompanyFromForm() {
+  const name = els.newCompanyName.value.trim();
+  if (!name) {
+    log("Add company refused: enter a company name.");
+    els.newCompanyName.focus();
+    return;
+  }
   const company = createCompanyRecord({
     name,
     defaultApprovalPolicyId: `${normalizeBrowserProfileId(name)}-default-risk-review`,
@@ -487,18 +522,23 @@ async function addCompany() {
   fillSelect(els.company, state.companies);
   els.company.value = company.id;
   hydrateDependentSelectors();
+  hideTenantForms();
   log(`Company created: ${company.name}. Add a brand next.`);
   render();
 }
 
-async function addBrand() {
+async function createBrandFromForm() {
   const company = state.companies.find((row) => row.id === els.company.value) || state.companies[0];
   if (!company) {
     log("Add brand refused: create a company first.");
     return;
   }
-  const name = prompt("Brand name", "");
-  if (name === null) return;
+  const name = els.newBrandName.value.trim();
+  if (!name) {
+    log("Add brand refused: enter a brand name.");
+    els.newBrandName.focus();
+    return;
+  }
   const brand = createBrandRecord({ name, companyId: company.id, languages: ["en", "es"] });
   if (state.brands.some((row) => row.companyId === company.id && row.id === brand.id)) {
     log(`Brand already exists: ${brand.name}.`);
@@ -532,6 +572,7 @@ async function addBrand() {
   hydrateDependentSelectors();
   setSelectIfPresent(els.campaign, campaign.id);
   setSelectIfPresent(els.account, account.id);
+  hideTenantForms();
   log(`Brand created: ${brand.name}. A General campaign and X account shell were added.`);
   render();
 }
@@ -1372,14 +1413,6 @@ async function stageDraftWithWorker() {
     media,
     screenshotName: `worker-${activeDraft.id}-${Date.now()}`,
   };
-  const workerInputCheck = validatePlaywrightStageInput(input);
-  if (!workerInputCheck.ok) {
-    lastStageMessage = workerInputCheck.reason;
-    log(`Worker staging refused: ${workerInputCheck.reason}.`);
-    renderRiskCard();
-    return;
-  }
-
   await window.diamond.writeClipboard(activeDraft.text);
   log("Playwright worker staging started. It will attach selected media and stop before publishing.");
   let workerResult;

@@ -9,6 +9,10 @@ assert.match(html, /<a class="skip-link" href="#main-workspace">Skip to workspac
 assert.match(html, /<aside class="sidebar" aria-label="Diamond controls">/);
 assert.match(html, /class="tenant-summary" aria-live="polite"/);
 assert.match(html, /id="tenant-summary-title"/);
+assert.match(html, /id="company-form" class="tenant-form hidden"/);
+assert.match(html, /id="new-company-name"/);
+assert.match(html, /id="brand-form" class="tenant-form hidden"/);
+assert.match(html, /id="new-brand-name"/);
 assert.match(html, /<main id="main-workspace" class="workspace" tabindex="-1" aria-label="Diamond workspace">/);
 assert.match(html, /id="jump-user-guide"[^>]+aria-controls="user-guide-panel"/);
 assert.match(html, /id="open-settings"[^>]+aria-controls="settings-panel"[^>]+aria-expanded="false"/);
@@ -27,11 +31,16 @@ assert.match(css, /\.skip-link/);
 assert.match(css, /:focus-visible/);
 assert.match(css, /--muted: #a9b5c7/);
 assert.match(css, /--focus: #7dd3fc/);
+assert.match(css, /\.tenant-form/);
 assert.match(css, /\.settings-grid/);
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 assert.match(css, /scroll-behavior: auto !important/);
 
 assert.match(js, /prefersReducedMotion/);
+assert.match(js, /showTenantForm/);
+assert.match(js, /createCompanyFromForm/);
+assert.doesNotMatch(js, /prompt\("Company name"/);
+assert.doesNotMatch(js, /prompt\("Brand name"/);
 assert.match(js, /setSettingsOpen/);
 assert.match(js, /button\.role = "tab"/);
 assert.match(js, /aria-selected/);
