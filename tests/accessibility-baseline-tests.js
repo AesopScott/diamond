@@ -24,6 +24,7 @@ assert.match(html, /id="theme-swatches" class="theme-swatches" aria-label="Theme
 assert.match(html, /id="custom-theme-controls" class="custom-theme-controls hidden" aria-label="Custom theme color controls"/);
 assert.match(html, /id="custom-theme-shell" type="color"/);
 assert.match(html, /id="reset-custom-theme"/);
+assert.match(html, /id="sync-license" type="button"/);
 assert.match(html, /id="risk-card"[^>]+role="status"[^>]+aria-live="polite"/);
 assert.match(html, /id="run-log"[^>]+role="log"[^>]+aria-live="polite"/);
 assert.match(html, /id="browser-tabs"[^>]+role="tablist"[^>]+aria-label="Social browser tabs"/);
@@ -55,6 +56,7 @@ assert.match(js, /Custom Template/);
 assert.match(js, /updateCustomThemeColor/);
 assert.match(js, /applyCustomThemeVars/);
 assert.match(js, /saveThemeSelection/);
+assert.match(js, /syncLicenseFromFirebase/);
 assert.match(js, /document\.body\.dataset\.theme/);
 assert.match(js, /setSettingsOpen/);
 assert.match(js, /button\.role = "tab"/);

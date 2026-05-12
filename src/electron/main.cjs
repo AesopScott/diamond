@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
+const { fetchFirebaseLicense } = require("../firebase-license.cjs");
 
 const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
@@ -91,6 +92,7 @@ ipcMain.handle("diamond:get-firebase-admin-status", () => {
     reason: configuredPath ? exists ? "Firebase admin JSON path is configured and exists." : "Firebase admin JSON path is configured but the file was not found." : "No Firebase admin JSON path configured.",
   };
 });
+ipcMain.handle("diamond:get-firebase-license", (_event, input = {}) => fetchFirebaseLicense(input));
 ipcMain.handle("diamond:export-sync-bundle", (_event, input = {}) => {
   ensureAppDir();
   const name = String(input.name || `firestore-sync-${Date.now()}`).replace(/[^a-z0-9_.-]+/gi, "-");

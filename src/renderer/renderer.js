@@ -309,6 +309,7 @@ document.querySelector("#clear-log").addEventListener("click", () => { els.runLo
 document.querySelector("#check-firebase").addEventListener("click", checkFirebaseAdmin);
 document.querySelector("#export-sync-bundle").addEventListener("click", exportFirestoreSyncBundle);
 document.querySelector("#check-license").addEventListener("click", () => checkLicense(false));
+document.querySelector("#sync-license").addEventListener("click", syncLicenseFromFirebase);
 els.runHistory.addEventListener("click", handleRunHistoryClick);
 els.replyInbox.addEventListener("click", handleReplyInboxClick);
 els.editorialSlots.addEventListener("click", handleSlotClick);
@@ -1314,21 +1315,51 @@ function getCachedLicense() {
   return state.licenseCache;
 }
 
-function evaluateLicenseForActiveTarget(automation = false) {
+function evaluateLicenseForActiveTarget(automation = false, online = false) {
   return evaluateDiamondAccess({
     license: getCachedLicense(),
     context: getContext(),
     automation,
-    online: false,
+    online,
   });
 }
 
-function checkLicense(automation = false) {
-  const result = evaluateLicenseForActiveTarget(automation);
+function checkLicense(automation = false, online = false) {
+  const result = evaluateLicenseForActiveTarget(automation, online);
   const license = getCachedLicense();
   els.licenseStatus.textContent = result.ok ? "Ready" : "Blocked";
-  els.licenseNote.textContent = `${result.reason} User: ${license.email || license.userId || "unknown"}. Brands: ${result.brandLimit || license.brandLimit}. Platforms: ${result.platformLimit || license.platformLimit}. Automation: ${Array.isArray(result.automationPlatforms) ? result.automationPlatforms.join(", ") || "off" : result.automationPlatforms || "off"}.`;
+  els.licenseNote.textContent = `${result.reason} User: ${license.email || license.userId || "unknown"}. Plan: ${license.planId || "custom"}. Brands: ${result.brandLimit || license.brandLimit}. Platforms: ${result.platformLimit || license.platformLimit}. Automation: ${Array.isArray(result.automationPlatforms) ? result.automationPlatforms.join(", ") || "off" : result.automationPlatforms || "off"}.`;
   log(`License check: ${result.reason}`);
+  return result;
+}
+
+async function syncLicenseFromFirebase() {
+  const cached = getCachedLicense();
+  els.licenseStatus.textContent = "Syncing";
+  els.licenseNote.textContent = `Checking Firebase license at ${cached.firebasePath || "the default Diamond license path"}...`;
+  const result = await window.diamond.getFirebaseLicense({
+    userId: cached.userId,
+    email: cached.email,
+    firebasePath: cached.firebasePath,
+  });
+  if (!result.ok) {
+    els.licenseStatus.textContent = "Offline";
+    els.licenseNote.textContent = `${result.reason} Continuing with cached license if it remains inside the seven-day grace window.`;
+    log(`Firebase license sync failed: ${result.reason}`);
+    checkLicense(false, false);
+    return result;
+  }
+  state.licenseCache = createDiamondLicense({
+    ...result.license,
+    source: "firebase",
+    firebasePath: result.firebasePath || result.license.firebasePath,
+    lastVerifiedAt: result.license.lastVerifiedAt || new Date().toISOString(),
+  });
+  await window.diamond.saveState(state);
+  const check = checkLicense(false, true);
+  els.licenseStatus.textContent = check.ok ? "Synced" : "Blocked";
+  log(`Firebase license synced from ${state.licenseCache.firebasePath}.`);
+  render();
   return result;
 }
 

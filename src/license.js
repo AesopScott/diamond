@@ -1,9 +1,34 @@
 export const LICENSE_GRACE_DAYS = 7;
+export const DIAMOND_LICENSE_MODEL_VERSION = "2026-05-12";
+
+export function buildDiamondLicenseModel(input = {}) {
+  return {
+    product: "diamond",
+    version: input.version || DIAMOND_LICENSE_MODEL_VERSION,
+    billingInterval: "monthly",
+    sourceOfTruth: "firebase",
+    purchaseSystem: "mojo-ai-studio",
+    offlineGraceDays: LICENSE_GRACE_DAYS,
+    entitlements: {
+      brandLimit: count(input.brandLimit, 1),
+      platformLimit: count(input.platformLimit, 1),
+      automationDefault: false,
+      automationPlatforms: normalizeList(input.automationPlatforms),
+    },
+    firebase: {
+      collectionPath: "products/diamond/licenses",
+      documentKey: "userId or email slug",
+    },
+  };
+}
 
 export function createDiamondLicense(input = {}) {
+  const model = buildDiamondLicenseModel(input);
   return {
     id: input.id || `license-${Date.now()}`,
     product: "diamond",
+    modelVersion: input.modelVersion || model.version,
+    planId: clean(input.planId || "custom-monthly"),
     userId: clean(input.userId),
     email: clean(input.email),
     role: input.role || "user",
@@ -13,7 +38,9 @@ export function createDiamondLicense(input = {}) {
     platformLimit: count(input.platformLimit, 1),
     platforms: normalizeList(input.platforms),
     automationPlatforms: normalizeList(input.automationPlatforms),
+    automationDefault: false,
     billingInterval: input.billingInterval || "monthly",
+    mojoSubscriptionId: clean(input.mojoSubscriptionId),
     source: input.source || "mojo-ai-studio",
     firebasePath: input.firebasePath || licenseFirebasePath(input.userId || input.email || "unknown"),
     lastVerifiedAt: input.lastVerifiedAt || new Date().toISOString(),
@@ -94,6 +121,8 @@ export function buildLicensePortalRecord(license = {}) {
     path: record.firebasePath,
     data: {
       product: record.product,
+      modelVersion: record.modelVersion,
+      planId: record.planId,
       userId: record.userId,
       email: record.email,
       role: record.role,
@@ -103,11 +132,21 @@ export function buildLicensePortalRecord(license = {}) {
       platformLimit: record.platformLimit,
       platforms: record.platforms,
       automationPlatforms: record.automationPlatforms,
+      automationDefault: record.automationDefault,
       billingInterval: record.billingInterval,
+      mojoSubscriptionId: record.mojoSubscriptionId,
       source: record.source,
       lastVerifiedAt: record.lastVerifiedAt,
       expiresAt: record.expiresAt,
       updatedAt: record.updatedAt,
+      entitlements: {
+        brandLimit: record.brandLimit,
+        brands: record.brands,
+        platformLimit: record.platformLimit,
+        platforms: record.platforms,
+        automationPlatforms: record.automationPlatforms,
+        automationDefault: record.automationDefault,
+      },
     },
   };
 }

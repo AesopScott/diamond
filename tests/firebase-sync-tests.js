@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildFirestoreSyncBundle,
+  createDiamondLicense,
   createSeedWorkspace,
   resolveFirebaseAdminConfig,
   summarizeFirestoreSyncBundle,
@@ -29,6 +30,7 @@ workspace.postRuns = [{ id: "run-1", context: workspace.context, metrics: { impr
 workspace.socialReplies = [{ id: "reply-1", context: workspace.context }];
 workspace.socialResponseDrafts = [{ id: "response-1", context: workspace.context }];
 workspace.postMemory = [{ id: "memory-1", context: workspace.context }];
+workspace.licenseCache = createDiamondLicense({ userId: "scott", brands: ["the-card"], platforms: ["x"] });
 
 const bundle = buildFirestoreSyncBundle(workspace);
 const summary = summarizeFirestoreSyncBundle(bundle);
@@ -39,6 +41,8 @@ assert.equal(summary.metrics, 1);
 assert.equal(summary.socialReplies, 1);
 assert.equal(summary.socialResponseDrafts, 1);
 assert.equal(summary.postMemory, 1);
+assert.equal(summary.licensePortal, 1);
 assert.equal(bundle.collections.metrics[0].runId, "run-1");
+assert.equal(bundle.collections.licensePortal[0].path, "products/diamond/licenses/scott");
 
 console.log("All Diamond Firebase sync tests passed.");

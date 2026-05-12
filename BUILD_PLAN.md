@@ -223,6 +223,8 @@ This is the current order for finishing the remaining checklist items.
   - [x] Per-user monthly licensing by brand count and social platform access count
   - [x] Per-platform automation license add-ons default off
   - [x] Firebase license portal record shape
+  - [x] Firebase license document sync from Electron main process
+  - [x] Renderer license cache refresh from Firebase
   - [x] Mojo AI Studio as license purchase/update source
   - [x] Seven-day offline grace window
   - [x] Dev/admin license role support in Firebase

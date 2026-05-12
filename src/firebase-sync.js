@@ -1,3 +1,5 @@
+import { buildLicensePortalRecord } from "./license.js";
+
 export function resolveFirebaseAdminConfig(input = {}) {
   const env = input.env || {};
   const files = Array.isArray(input.files) ? input.files : [];
@@ -33,6 +35,7 @@ export function buildFirestoreSyncBundle(workspace = {}) {
       socialReplies: scopedRows(workspace.socialReplies),
       socialResponseDrafts: scopedRows(workspace.socialResponseDrafts),
       postMemory: scopedRows(workspace.postMemory),
+      licensePortal: workspace.licenseCache ? [buildLicensePortalRecord(workspace.licenseCache)] : [],
     },
   };
 }

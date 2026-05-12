@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildLicensePortalRecord,
+  buildDiamondLicenseModel,
   canStageDraft,
   createDiamondLicense,
   createPostDraft,
@@ -9,6 +10,19 @@ import {
   evaluateDiamondLicense,
   licenseFirebasePath,
 } from "../src/index.js";
+
+const model = buildDiamondLicenseModel({
+  brandLimit: 3,
+  platformLimit: 4,
+  automationPlatforms: ["x"],
+});
+assert.equal(model.product, "diamond");
+assert.equal(model.sourceOfTruth, "firebase");
+assert.equal(model.purchaseSystem, "mojo-ai-studio");
+assert.equal(model.entitlements.brandLimit, 3);
+assert.equal(model.entitlements.platformLimit, 4);
+assert.equal(model.entitlements.automationDefault, false);
+assert.equal(model.offlineGraceDays, 7);
 
 const license = createDiamondLicense({
   userId: "scott",
@@ -124,10 +138,12 @@ assert.match(wrongProduct.reason, /different product/);
 const portal = buildLicensePortalRecord(license);
 assert.equal(portal.path, licenseFirebasePath("scott"));
 assert.equal(portal.data.product, "diamond");
+assert.equal(portal.data.modelVersion, "2026-05-12");
 assert.equal(portal.data.source, "mojo-ai-studio");
 assert.equal(portal.data.brandLimit, 2);
 assert.equal(portal.data.platformLimit, 2);
 assert.deepEqual(portal.data.automationPlatforms, ["x"]);
+assert.equal(portal.data.entitlements.automationDefault, false);
 
 const workspace = createSeedWorkspace();
 const draft = createPostDraft({
