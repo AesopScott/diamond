@@ -10,11 +10,10 @@ This is the current order for finishing the remaining checklist items.
 
 1. Founder/investor and campaign image templates.
 2. Spanish UI labels needed for operator review.
-3. Configurable routine due window.
-4. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-5. Reddit monitoring capture workflow.
-6. Expert checklist review and Scott workflow signoff.
-7. Decide whether `auto_publish` ever becomes available.
+3. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
+4. Reddit monitoring capture workflow.
+5. Expert checklist review and Scott workflow signoff.
+6. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -128,7 +127,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Per-slot routine run records
   - [x] Skipped slot reasons
   - [x] Draft-to-slot linking
-  - [ ] Configurable routine due window
+  - [x] Configurable routine due window
   - [x] Routine trigger callable from Polaris
 - [x] Routine failure tests
   - [x] Missing tenant/account fields
@@ -458,7 +457,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Run confidence proof phase | Partial | App shell, browser sizing, staging, screenshots, and tests are proven; repeated X staging across three separate app sessions remains open. |
 | P0 | Build `social-x` skill | Built | X-specific compose URL, session flow, composer insertion, media helper, and run capture are in place. |
 | P0 | Build `x-daily-post` routine | Built | Generate one post package from the next planned editorial slot. |
-| P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, and show ready/skipped calendar states. |
+| P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, show ready/skipped calendar states, and use a campaign-configurable due window. |
 | P0 | Build Playwright staging worker | Deferred | Embedded webview staging fills composer, captures screenshots, and stops before publish; external Playwright worker remains optional. |
 | P0 | Build draft/approval queue | Built | Package queue supports evaluate, approve, stage, schedule, copy, load, remove, posted, and abandoned states. |
 | P1 | Add reply capture and classification | Built | Operators can capture replies, classify them, generate response drafts, approve safe responses, ignore spam, or escalate sensitive replies. |

@@ -12,6 +12,7 @@ export function createDefaultCadencePolicy(input = {}) {
     quietHoursEnd: numberOr(input.quietHoursEnd, 7),
     cooldownMinutes: numberOr(input.cooldownMinutes, 45),
     duplicateLookbackDays: numberOr(input.duplicateLookbackDays, 14),
+    routineDueWindowMinutes: numberOr(input.routineDueWindowMinutes, 15),
     doNotEngageTerms: Array.isArray(input.doNotEngageTerms) ? input.doNotEngageTerms : [
       "lawsuit",
       "subpoena",

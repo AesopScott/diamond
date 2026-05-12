@@ -1,4 +1,5 @@
 import { buildSlotDraftText } from "./content-generation.js";
+import { createDefaultCadencePolicy } from "./cadence.js";
 import { createPostDraft } from "./draft.js";
 import { validateRoutineSlot } from "./failure-controls.js";
 import { buildFirestoreSyncBundle, summarizeFirestoreSyncBundle } from "./firebase-sync.js";
@@ -8,7 +9,7 @@ export function triggerDiamondRoutine(workspace = {}, input = {}) {
   const context = input.context || next.context || {};
   const routine = input.routine || "run-due-slots";
   const now = input.now || new Date().toISOString();
-  const dueWindowMs = Number.isFinite(input.dueWindowMs) ? input.dueWindowMs : 15 * 60 * 1000;
+  const dueWindowMs = resolveDueWindowMs(next, context, input);
   const slots = matchingSlots(next, context, routine, now, dueWindowMs);
   const generated = [];
   const skipped = [];
@@ -126,6 +127,19 @@ function matchingSlots(workspace, context, routine, now, dueWindowMs) {
     const planned = new Date(slot.plannedAt).getTime();
     return Number.isNaN(planned) || planned <= dueCutoff;
   });
+}
+
+function resolveDueWindowMs(workspace, context, input = {}) {
+  if (Number.isFinite(input.dueWindowMs)) return input.dueWindowMs;
+  if (Number.isFinite(input.dueWindowMinutes)) return input.dueWindowMinutes * 60 * 1000;
+  const policy = createDefaultCadencePolicy(findCadencePolicy(workspace, context));
+  return policy.routineDueWindowMinutes * 60 * 1000;
+}
+
+function findCadencePolicy(workspace, context) {
+  return (workspace.cadencePolicies || []).find((policy) => policy.companyId === context.companyId
+    && policy.brandId === context.brandId
+    && policy.campaignId === context.campaignId) || {};
 }
 
 function recordRoutineRun(workspace, context, input) {

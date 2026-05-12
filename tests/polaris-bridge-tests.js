@@ -32,6 +32,26 @@ const futureRun = triggerDiamondRoutine(future, {
 assert.equal(futureRun.result.generatedCount, 0);
 assert.equal(futureRun.result.skippedCount, 1);
 
+const configuredWindow = createSeedWorkspace();
+configuredWindow.editorialSlots[0].plannedAt = "2026-05-11T12:45:00.000Z";
+configuredWindow.cadencePolicies[0].routineDueWindowMinutes = 60;
+const configuredWindowRun = triggerDiamondRoutine(configuredWindow, {
+  routine: "run-due-slots",
+  context: configuredWindow.context,
+  now: "2026-05-11T12:05:00.000Z",
+});
+assert.equal(configuredWindowRun.result.generatedCount, 1);
+
+const inputWindow = createSeedWorkspace();
+inputWindow.editorialSlots[0].plannedAt = "2026-05-11T13:00:00.000Z";
+const inputWindowRun = triggerDiamondRoutine(inputWindow, {
+  routine: "run-due-slots",
+  context: inputWindow.context,
+  now: "2026-05-11T12:05:00.000Z",
+  dueWindowMinutes: 60,
+});
+assert.equal(inputWindowRun.result.generatedCount, 1);
+
 const forced = triggerDiamondRoutine(future, {
   routine: "generate-next-slot",
   context: future.context,

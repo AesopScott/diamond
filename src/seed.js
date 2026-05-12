@@ -196,6 +196,7 @@ export function createSeedWorkspace() {
         quietHoursEnd: 7,
         cooldownMinutes: 45,
         duplicateLookbackDays: 14,
+        routineDueWindowMinutes: 15,
         doNotEngageTerms: [
           "lawsuit",
           "subpoena",

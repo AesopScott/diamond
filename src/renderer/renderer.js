@@ -98,6 +98,7 @@ const els = {
   cadenceQuietEnd: document.querySelector("#cadence-quiet-end"),
   cadenceCooldown: document.querySelector("#cadence-cooldown"),
   cadenceDuplicateDays: document.querySelector("#cadence-duplicate-days"),
+  cadenceRoutineWindow: document.querySelector("#cadence-routine-window"),
   cadenceDoNotEngage: document.querySelector("#cadence-do-not-engage"),
   cadenceEscalation: document.querySelector("#cadence-escalation"),
   brandVoice: document.querySelector("#brand-voice"),
@@ -823,6 +824,8 @@ function getCadencePolicy(companyId, brandId, campaignId) {
   if (!policy) {
     policy = createDefaultCadencePolicy({ companyId, brandId, campaignId });
     state.cadencePolicies.push(policy);
+  } else {
+    Object.assign(policy, createDefaultCadencePolicy(policy));
   }
   return policy;
 }
@@ -894,6 +897,7 @@ function renderCadencePolicy() {
   els.cadenceQuietEnd.value = cadencePolicy.quietHoursEnd ?? 7;
   els.cadenceCooldown.value = cadencePolicy.cooldownMinutes ?? 45;
   els.cadenceDuplicateDays.value = cadencePolicy.duplicateLookbackDays ?? 14;
+  els.cadenceRoutineWindow.value = cadencePolicy.routineDueWindowMinutes ?? 15;
   els.cadenceDoNotEngage.value = (cadencePolicy.doNotEngageTerms || []).join("\n");
   els.cadenceEscalation.value = (cadencePolicy.escalationTerms || []).join("\n");
 }
@@ -1022,6 +1026,7 @@ async function saveCadencePolicy() {
   cadencePolicy.quietHoursEnd = numberFromInput(els.cadenceQuietEnd.value, 7);
   cadencePolicy.cooldownMinutes = numberFromInput(els.cadenceCooldown.value, 45);
   cadencePolicy.duplicateLookbackDays = numberFromInput(els.cadenceDuplicateDays.value, 14);
+  cadencePolicy.routineDueWindowMinutes = numberFromInput(els.cadenceRoutineWindow.value, 15);
   cadencePolicy.doNotEngageTerms = linesFrom(els.cadenceDoNotEngage.value);
   cadencePolicy.escalationTerms = linesFrom(els.cadenceEscalation.value);
   cadencePolicy.updatedAt = new Date().toISOString();
@@ -2201,11 +2206,11 @@ async function runDueSlots() {
   if (!slots.length) {
     const skipped = recordRoutineRun({
       status: "skipped",
-      note: "No due editorial slots are ready for the active target.",
+      note: `No editorial slots are ready inside the ${routineDueWindowMinutes()} minute due window.`,
     });
     await window.diamond.saveState(state);
     renderRoutineRuns();
-    log(`Routine run ${skipped.id}: no due slots were ready.`);
+    log(`Routine run ${skipped.id}: no due slots were ready inside the ${routineDueWindowMinutes()} minute window.`);
     return;
   }
 
@@ -2270,7 +2275,12 @@ function dueRoutineSlots() {
 function isSlotDue(slot) {
   const plannedAt = new Date(slot.plannedAt);
   if (Number.isNaN(plannedAt.getTime())) return true;
-  return plannedAt.getTime() <= Date.now() + 15 * 60 * 1000;
+  return plannedAt.getTime() <= Date.now() + routineDueWindowMinutes() * 60 * 1000;
+}
+
+function routineDueWindowMinutes() {
+  const { cadencePolicy } = getActiveRows();
+  return numberFromInput(cadencePolicy.routineDueWindowMinutes, 15);
 }
 
 function routineReadiness(slot) {

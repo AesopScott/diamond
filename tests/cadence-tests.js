@@ -18,9 +18,12 @@ const policy = createDefaultCadencePolicy({
   quietHoursEnd: 6,
   cooldownMinutes: 45,
   duplicateLookbackDays: 14,
+  routineDueWindowMinutes: 30,
   doNotEngageTerms: ["lawsuit"],
   escalationTerms: ["attorney"],
 });
+assert.equal(policy.routineDueWindowMinutes, 30);
+assert.equal(createDefaultCadencePolicy({}).routineDueWindowMinutes, 15);
 const draft = createPostDraft({
   context,
   text: "Join the free World Cup league at thecard.bet.",
