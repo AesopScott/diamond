@@ -215,51 +215,10 @@
 
         <section class="panel" aria-labelledby="validation-heading">
           <div class="panel-heading">
-            <span id="validation-heading">Validation</span>
+            <span id="validation-heading">Preflight Status</span>
           </div>
+          <p class="hint">Live checks for the selected target before Diamond stages anything.</p>
           <ul id="validation-list" class="validation-list" aria-live="polite"></ul>
-        </section>
-
-        <section class="panel" aria-labelledby="firebase-heading">
-          <div class="panel-heading">
-            <span id="firebase-heading">Firebase Admin</span>
-            <button id="check-firebase" type="button">Check</button>
-          </div>
-          <div class="session-card" role="status" aria-live="polite">
-            <div>
-              <span class="session-label">Admin JSON</span>
-              <strong id="firebase-status">Unknown</strong>
-            </div>
-            <p id="firebase-note">Firebase admin status has not been checked.</p>
-          </div>
-          <button id="export-sync-bundle" type="button">Export sync bundle</button>
-          <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="license-heading">
-          <div class="panel-heading">
-            <span id="license-heading">License</span>
-            <button id="check-license" type="button">Check</button>
-          </div>
-          <div class="session-card" role="status" aria-live="polite">
-            <div>
-              <span class="session-label">Diamond license</span>
-              <strong id="license-status">Unknown</strong>
-            </div>
-            <p id="license-note">License has not been checked.</p>
-          </div>
-          <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="legal-drafts-sidebar-heading">
-          <div class="panel-heading">
-            <span id="legal-drafts-sidebar-heading">Legal Drafts</span>
-          </div>
-          <div class="legal-jump-actions">
-            <button id="jump-terms" type="button" aria-controls="legal-terms">Terms</button>
-            <button id="jump-privacy" type="button" aria-controls="legal-privacy">Privacy</button>
-          </div>
-          <p class="hint">Draft legal copy for product review. Counsel review is still required before public launch.</p>
         </section>
       </aside>
 
@@ -270,6 +229,7 @@
             <h2 id="active-target">No target selected</h2>
           </div>
           <div class="topbar-actions">
+            <button id="open-settings" type="button" aria-controls="settings-panel" aria-expanded="false">Settings</button>
             <button id="jump-user-guide" type="button" aria-controls="user-guide-panel">User Guide</button>
             <button id="start-tour" type="button">Start Tour</button>
             <button id="jump-editorial-calendar" type="button" aria-controls="editorial-calendar-panel">Editorial Calendar</button>
@@ -277,6 +237,67 @@
             <div class="status-pill" id="target-status" role="status" aria-live="polite">Fail closed</div>
           </div>
         </header>
+
+        <section id="settings-panel" class="panel settings-panel hidden" tabindex="-1" aria-labelledby="settings-heading">
+          <div class="panel-heading">
+            <span id="settings-heading">Settings</span>
+            <button id="close-settings" type="button">Close</button>
+          </div>
+          <div class="settings-grid">
+            <section class="settings-card" aria-labelledby="firebase-heading">
+              <div class="panel-heading">
+                <span id="firebase-heading">Firebase Admin</span>
+                <button id="check-firebase" type="button">Check</button>
+              </div>
+              <div class="session-card" role="status" aria-live="polite">
+                <div>
+                  <span class="session-label">Admin JSON</span>
+                  <strong id="firebase-status">Unknown</strong>
+                </div>
+                <p id="firebase-note">Firebase admin status has not been checked.</p>
+              </div>
+              <button id="export-sync-bundle" type="button">Export sync bundle</button>
+              <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
+            </section>
+
+            <section class="settings-card" aria-labelledby="license-heading">
+              <div class="panel-heading">
+                <span id="license-heading">License</span>
+                <button id="check-license" type="button">Check</button>
+              </div>
+              <div class="session-card" role="status" aria-live="polite">
+                <div>
+                  <span class="session-label">Diamond license</span>
+                  <strong id="license-status">Unknown</strong>
+                </div>
+                <p id="license-note">License has not been checked.</p>
+              </div>
+              <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
+            </section>
+
+            <section class="settings-card" aria-labelledby="legal-drafts-settings-heading">
+              <div class="panel-heading">
+                <span id="legal-drafts-settings-heading">Legal Drafts</span>
+              </div>
+              <div class="legal-jump-actions">
+                <button id="jump-terms" type="button" aria-controls="legal-terms">Terms</button>
+                <button id="jump-privacy" type="button" aria-controls="legal-privacy">Privacy</button>
+              </div>
+              <p class="hint">Draft legal copy for product review. Counsel review is still required before public launch.</p>
+            </section>
+          </div>
+
+          <section id="legal-panel" class="legal-panel" tabindex="-1" aria-labelledby="legal-panel-heading">
+            <div class="panel-heading">
+              <span id="legal-panel-heading">Legal Drafts</span>
+              <div class="panel-actions">
+                <button id="copy-terms" type="button">Copy terms</button>
+                <button id="copy-privacy" type="button">Copy privacy</button>
+              </div>
+            </div>
+            <div id="legal-content" class="legal-content"></div>
+          </section>
+        </section>
 
         <section class="grid">
           <section class="composer panel" aria-labelledby="post-package-heading">
@@ -348,17 +369,6 @@
           <div class="voiceover-note">
             Voiceover generation is designed for ElevenLabs and stays key-free in the renderer. Add an ElevenLabs voice ID when the API generation worker is built.
           </div>
-        </section>
-
-        <section id="legal-panel" class="panel legal-panel" tabindex="-1" aria-labelledby="legal-panel-heading">
-          <div class="panel-heading">
-            <span id="legal-panel-heading">Legal Drafts</span>
-            <div class="panel-actions">
-              <button id="copy-terms" type="button">Copy terms</button>
-              <button id="copy-privacy" type="button">Copy privacy</button>
-            </div>
-          </div>
-          <div id="legal-content" class="legal-content"></div>
         </section>
 
         <section class="panel run-history-panel" aria-labelledby="post-runs-heading">

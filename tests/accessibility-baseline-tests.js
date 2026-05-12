@@ -9,8 +9,10 @@ assert.match(html, /<a class="skip-link" href="#main-workspace">Skip to workspac
 assert.match(html, /<aside class="sidebar" aria-label="Diamond controls">/);
 assert.match(html, /<main id="main-workspace" class="workspace" tabindex="-1" aria-label="Diamond workspace">/);
 assert.match(html, /id="jump-user-guide"[^>]+aria-controls="user-guide-panel"/);
+assert.match(html, /id="open-settings"[^>]+aria-controls="settings-panel"[^>]+aria-expanded="false"/);
 assert.match(html, /id="jump-editorial-calendar"[^>]+aria-controls="editorial-calendar-panel"/);
 assert.match(html, /id="jump-schedule-calendar"[^>]+aria-controls="schedule-calendar-panel"/);
+assert.match(html, /id="settings-panel"[^>]+tabindex="-1"[^>]+aria-labelledby="settings-heading"/);
 assert.match(html, /id="risk-card"[^>]+role="status"[^>]+aria-live="polite"/);
 assert.match(html, /id="run-log"[^>]+role="log"[^>]+aria-live="polite"/);
 assert.match(html, /id="browser-tabs"[^>]+role="tablist"[^>]+aria-label="Social browser tabs"/);
@@ -23,10 +25,12 @@ assert.match(css, /\.skip-link/);
 assert.match(css, /:focus-visible/);
 assert.match(css, /--muted: #a9b5c7/);
 assert.match(css, /--focus: #7dd3fc/);
+assert.match(css, /\.settings-grid/);
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 assert.match(css, /scroll-behavior: auto !important/);
 
 assert.match(js, /prefersReducedMotion/);
+assert.match(js, /setSettingsOpen/);
 assert.match(js, /button\.role = "tab"/);
 assert.match(js, /aria-selected/);
 assert.match(js, /target\.focus\(\{ preventScroll: true \}\)/);

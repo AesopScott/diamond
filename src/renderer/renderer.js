@@ -162,6 +162,8 @@ const els = {
   scheduleCalendar: document.querySelector("#schedule-calendar"),
   guideContent: document.querySelector("#guide-content"),
   legalContent: document.querySelector("#legal-content"),
+  settingsPanel: document.querySelector("#settings-panel"),
+  openSettings: document.querySelector("#open-settings"),
   tourLayer: document.querySelector("#tour-layer"),
   tourPopover: document.querySelector("#tour-popover"),
   tourProgress: document.querySelector("#tour-progress"),
@@ -219,6 +221,8 @@ document.querySelector("#run-due-slots").addEventListener("click", runDueSlots);
 document.querySelector("#add-asset").addEventListener("click", addAsset);
 document.querySelector("#generate-asset").addEventListener("click", generateAssetFromTemplate);
 document.querySelector("#jump-user-guide").addEventListener("click", () => scrollPanelIntoView("#user-guide-panel"));
+document.querySelector("#open-settings").addEventListener("click", () => setSettingsOpen(true));
+document.querySelector("#close-settings").addEventListener("click", () => setSettingsOpen(false));
 document.querySelector("#jump-terms").addEventListener("click", () => scrollPanelIntoView("#legal-terms"));
 document.querySelector("#jump-privacy").addEventListener("click", () => scrollPanelIntoView("#legal-privacy"));
 document.querySelector("#copy-terms").addEventListener("click", () => copyLegalDocument("terms"));
@@ -3239,12 +3243,21 @@ function log(message) {
 function scrollPanelIntoView(selector) {
   const target = document.querySelector(selector);
   if (!target) return;
+  if (target.closest("#settings-panel")) setSettingsOpen(true, false);
   target.scrollIntoView({
     behavior: prefersReducedMotion ? "auto" : "smooth",
     block: "start",
   });
   if (typeof target.focus === "function") {
     target.focus({ preventScroll: true });
+  }
+}
+
+function setSettingsOpen(open, focusPanel = true) {
+  els.settingsPanel.classList.toggle("hidden", !open);
+  els.openSettings.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open && focusPanel && typeof els.settingsPanel.focus === "function") {
+    els.settingsPanel.focus({ preventScroll: true });
   }
 }
 
