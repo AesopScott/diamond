@@ -114,6 +114,36 @@ h1, h2, p { margin: 0; }
 h1 { font-size: 24px; line-height: 1; }
 .brandmark p, .hint, label, .eyebrow { color: var(--muted); }
 
+.tenant-summary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 10px;
+}
+
+.tenant-summary span {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tenant-summary strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.tenant-summary p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .workspace {
   display: flex;
   flex-direction: column;

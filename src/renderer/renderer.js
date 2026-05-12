@@ -119,6 +119,8 @@ const els = {
   strategyReferences: document.querySelector("#strategy-references"),
   activeTarget: document.querySelector("#active-target"),
   targetStatus: document.querySelector("#target-status"),
+  tenantSummaryTitle: document.querySelector("#tenant-summary-title"),
+  tenantSummaryDetail: document.querySelector("#tenant-summary-detail"),
   draftText: document.querySelector("#draft-text"),
   riskCard: document.querySelector("#risk-card"),
   validationList: document.querySelector("#validation-list"),
@@ -315,6 +317,11 @@ function ensureWorkspaceData(workspace) {
   const seed = createSeedWorkspace();
   const next = structuredClone(workspace);
   let changed = false;
+  next.companies ||= [];
+  next.brands ||= [];
+  next.campaigns ||= [];
+  next.socialAccounts ||= [];
+  next.approvalPolicies ||= [];
   next.brandLibraries ||= [];
   next.claimLibraries ||= [];
   next.contentStrategies ||= [];
@@ -327,6 +334,30 @@ function ensureWorkspaceData(workspace) {
   next.socialResponseDrafts ||= [];
   next.platformProofs ||= [];
   next.licenseCache ||= createLocalDevLicense(next.context || seed.context);
+  seed.companies.forEach((company) => {
+    if (!next.companies.some((row) => row.id === company.id)) {
+      next.companies.push(company);
+      changed = true;
+    }
+  });
+  seed.brands.forEach((brand) => {
+    if (!next.brands.some((row) => row.companyId === brand.companyId && row.id === brand.id)) {
+      next.brands.push(brand);
+      changed = true;
+    }
+  });
+  seed.campaigns.forEach((campaign) => {
+    if (!next.campaigns.some((row) => row.companyId === campaign.companyId && row.brandId === campaign.brandId && row.id === campaign.id)) {
+      next.campaigns.push(campaign);
+      changed = true;
+    }
+  });
+  seed.approvalPolicies.forEach((policy) => {
+    if (!next.approvalPolicies.some((row) => row.id === policy.id && row.companyId === policy.companyId)) {
+      next.approvalPolicies.push(policy);
+      changed = true;
+    }
+  });
   seed.brandLibraries.forEach((library) => {
     if (!next.brandLibraries.some((row) => row.companyId === library.companyId && row.brandId === library.brandId)) {
       next.brandLibraries.push(library);
@@ -536,6 +567,7 @@ function render() {
   const { company, brand, campaign, account } = getActiveRows();
   const context = getContext();
   els.activeTarget.textContent = `${company.name} / ${brand.name} / ${campaign.name} / ${platformLabel(account.platform)}`;
+  renderTenantSummary(company, brand, campaign, account);
   els.targetStatus.textContent = activeMode === "auto_publish" ? "Auto locked" : "Fail closed";
   renderAccountSettings(account);
   renderCadencePolicy();
@@ -561,6 +593,11 @@ function render() {
   renderLegalDocuments();
   syncModeButtons();
   requestAnimationFrame(sizeWebviewToShell);
+}
+
+function renderTenantSummary(company, brand, campaign, account) {
+  els.tenantSummaryTitle.textContent = `${company.name || company.id} / ${brand.name || brand.id}`;
+  els.tenantSummaryDetail.textContent = `${campaign.name || campaign.id} / ${platformLabel(account.platform)} / ${account.id}`;
 }
 
 function renderUserGuide() {

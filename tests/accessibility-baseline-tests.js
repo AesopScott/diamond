@@ -7,6 +7,8 @@ const js = readFileSync(new URL("../src/renderer/renderer.js", import.meta.url),
 
 assert.match(html, /<a class="skip-link" href="#main-workspace">Skip to workspace<\/a>/);
 assert.match(html, /<aside class="sidebar" aria-label="Diamond controls">/);
+assert.match(html, /class="tenant-summary" aria-live="polite"/);
+assert.match(html, /id="tenant-summary-title"/);
 assert.match(html, /<main id="main-workspace" class="workspace" tabindex="-1" aria-label="Diamond workspace">/);
 assert.match(html, /id="jump-user-guide"[^>]+aria-controls="user-guide-panel"/);
 assert.match(html, /id="open-settings"[^>]+aria-controls="settings-panel"[^>]+aria-expanded="false"/);
