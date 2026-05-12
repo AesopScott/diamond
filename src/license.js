@@ -1,5 +1,6 @@
 export const LICENSE_GRACE_DAYS = 7;
 export const DIAMOND_LICENSE_MODEL_VERSION = "2026-05-12";
+export const TEMPORARY_UNLIMITED_LICENSE_PLAN = "temporary-unlimited-until-shop";
 
 export function buildDiamondLicenseModel(input = {}) {
   return {
@@ -47,6 +48,27 @@ export function createDiamondLicense(input = {}) {
     expiresAt: input.expiresAt || null,
     updatedAt: input.updatedAt || new Date().toISOString(),
   };
+}
+
+export function createTemporaryUnlimitedDiamondLicense(input = {}) {
+  return createDiamondLicense({
+    id: input.id || "license-temporary-unlimited",
+    userId: input.userId || "temporary-unlimited",
+    email: input.email || "unlimited@diamond.local",
+    role: "dev",
+    status: "active",
+    planId: TEMPORARY_UNLIMITED_LICENSE_PLAN,
+    brandLimit: 0,
+    brands: input.brands || [],
+    platformLimit: 0,
+    platforms: input.platforms || [],
+    automationPlatforms: input.automationPlatforms || input.platforms || [],
+    billingInterval: "monthly",
+    source: "temporary-shop-bypass",
+    firebasePath: input.firebasePath || licenseFirebasePath(input.userId || "temporary-unlimited"),
+    lastVerifiedAt: input.lastVerifiedAt || new Date().toISOString(),
+    updatedAt: input.updatedAt || new Date().toISOString(),
+  });
 }
 
 export function evaluateDiamondLicense(license = {}, input = {}) {

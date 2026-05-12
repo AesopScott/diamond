@@ -57,6 +57,7 @@ assert.match(js, /updateCustomThemeColor/);
 assert.match(js, /applyCustomThemeVars/);
 assert.match(js, /saveThemeSelection/);
 assert.match(js, /syncLicenseFromFirebase/);
+assert.match(js, /TEMPORARY_UNLIMITED_LICENSE_ENABLED/);
 assert.match(js, /document\.body\.dataset\.theme/);
 assert.match(js, /setSettingsOpen/);
 assert.match(js, /button\.role = "tab"/);

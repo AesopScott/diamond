@@ -4,6 +4,7 @@ import {
   buildDiamondLicenseModel,
   canStageDraft,
   createDiamondLicense,
+  createTemporaryUnlimitedDiamondLicense,
   createPostDraft,
   createSeedWorkspace,
   evaluateDiamondAccess,
@@ -23,6 +24,23 @@ assert.equal(model.entitlements.brandLimit, 3);
 assert.equal(model.entitlements.platformLimit, 4);
 assert.equal(model.entitlements.automationDefault, false);
 assert.equal(model.offlineGraceDays, 7);
+
+const temporaryUnlimited = createTemporaryUnlimitedDiamondLicense({
+  userId: "scott",
+  brands: ["the-card"],
+  platforms: ["x"],
+});
+const temporaryCheck = evaluateDiamondLicense(temporaryUnlimited, {
+  requestedBrands: ["the-card", "diamond", "another-brand"],
+  requestedPlatforms: ["x", "instagram", "tiktok", "linkedin"],
+  requestedAutomationPlatforms: ["x", "instagram", "tiktok", "linkedin"],
+});
+assert.equal(temporaryUnlimited.planId, "temporary-unlimited-until-shop");
+assert.equal(temporaryUnlimited.source, "temporary-shop-bypass");
+assert.equal(temporaryCheck.ok, true);
+assert.equal(temporaryCheck.brandLimit, "unlimited");
+assert.equal(temporaryCheck.platformLimit, "unlimited");
+assert.equal(temporaryCheck.automationPlatforms, "unlimited");
 
 const license = createDiamondLicense({
   userId: "scott",

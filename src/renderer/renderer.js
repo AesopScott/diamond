@@ -6,6 +6,7 @@ import {
   canStageDraft,
   createDefaultCadencePolicy,
   createDiamondLicense,
+  createTemporaryUnlimitedDiamondLicense,
   createPostDraft,
   createSeedWorkspace,
   createTenantContext,
@@ -61,6 +62,8 @@ import {
   validateSessionForStaging,
   validateTemplateForRender,
 } from "../index.js";
+
+const TEMPORARY_UNLIMITED_LICENSE_ENABLED = true;
 
 const state = await loadInitialState();
 let activeMode = state.context?.postingMode || "stage_for_review";
@@ -1295,22 +1298,19 @@ function renderValidation(context) {
 }
 
 function createLocalDevLicense(context) {
-  return createDiamondLicense({
+  return createTemporaryUnlimitedDiamondLicense({
     userId: "local-dev",
     email: "dev@thecard.bet",
-    role: "dev",
-    status: "active",
-    brandLimit: 0,
     brands: [context.brandId],
-    platformLimit: 0,
     platforms: [context.platform],
     automationPlatforms: [context.platform],
-    lastVerifiedAt: new Date().toISOString(),
-    source: "firebase-dev-seed",
   });
 }
 
 function getCachedLicense() {
+  if (TEMPORARY_UNLIMITED_LICENSE_ENABLED && state.licenseCache?.planId !== "temporary-unlimited-until-shop") {
+    state.licenseCache = createLocalDevLicense(getContext());
+  }
   state.licenseCache ||= createLocalDevLicense(getContext());
   return state.licenseCache;
 }
@@ -1328,7 +1328,8 @@ function checkLicense(automation = false, online = false) {
   const result = evaluateLicenseForActiveTarget(automation, online);
   const license = getCachedLicense();
   els.licenseStatus.textContent = result.ok ? "Ready" : "Blocked";
-  els.licenseNote.textContent = `${result.reason} User: ${license.email || license.userId || "unknown"}. Plan: ${license.planId || "custom"}. Brands: ${result.brandLimit || license.brandLimit}. Platforms: ${result.platformLimit || license.platformLimit}. Automation: ${Array.isArray(result.automationPlatforms) ? result.automationPlatforms.join(", ") || "off" : result.automationPlatforms || "off"}.`;
+  const temporary = license.planId === "temporary-unlimited-until-shop" ? " Temporary unlimited license is active until the shop is live." : "";
+  els.licenseNote.textContent = `${result.reason} User: ${license.email || license.userId || "unknown"}. Plan: ${license.planId || "custom"}. Brands: ${result.brandLimit || license.brandLimit}. Platforms: ${result.platformLimit || license.platformLimit}. Automation: ${Array.isArray(result.automationPlatforms) ? result.automationPlatforms.join(", ") || "off" : result.automationPlatforms || "off"}.${temporary}`;
   log(`License check: ${result.reason}`);
   return result;
 }
