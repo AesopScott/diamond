@@ -54,8 +54,8 @@ This is the current order for finishing the remaining checklist items.
   - [x] Insert draft text into X composer when possible
   - [x] Stop before publish
   - [x] Screenshot run capture
-  - [ ] Full media attachment automation
-  - [ ] Playwright worker outside the embedded browser
+  - [x] Full media attachment automation
+  - [x] Playwright worker outside the embedded browser
 - [x] Post package queue
   - [x] Queue list
   - [x] Status filters
@@ -458,7 +458,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build `social-x` skill | Built | X-specific compose URL, session flow, composer insertion, media helper, and run capture are in place. |
 | P0 | Build `x-daily-post` routine | Built | Generate one post package from the next planned editorial slot. |
 | P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, show ready/skipped calendar states, and use a campaign-configurable due window. |
-| P0 | Build Playwright staging worker | Deferred | Embedded webview staging fills composer, captures screenshots, and stops before publish; external Playwright worker remains optional. |
+| P0 | Build Playwright staging worker | Built | External Playwright worker can launch a company-scoped profile, fill the composer, attach media with `setInputFiles`, capture a screenshot, record proof, and stop before publish. |
 | P0 | Build draft/approval queue | Built | Package queue supports evaluate, approve, stage, schedule, copy, load, remove, posted, and abandoned states. |
 | P1 | Add reply capture and classification | Built | Operators can capture replies, classify them, generate response drafts, approve safe responses, ignore spam, or escalate sensitive replies. |
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |

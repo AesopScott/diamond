@@ -201,6 +201,17 @@ ipcMain.handle("diamond:pick-media", async () => {
   });
   return result.canceled ? [] : result.filePaths;
 });
+ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
+  ensureAppDir();
+  const { stagePostWithPlaywright } = await import(pathToFileURL(path.join(PROJECT_ROOT, "src", "playwright-worker.js")).href);
+  return stagePostWithPlaywright({
+    ...input,
+    appDir: APP_DIR,
+    screenshotsDir: path.join(APP_DIR, "screenshots"),
+    headless: false,
+    keepOpen: false,
+  });
+});
 
 function redactPath(value) {
   const input = String(value || "");

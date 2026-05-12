@@ -48,6 +48,7 @@ import {
   insertPlatformComposerText,
   openPlatformMediaPicker,
   platformProofId,
+  validatePlaywrightStageInput,
   buildGeneratedAssetRecord,
   renderWorldCupAssetSvg,
   buildFirestoreSyncBundle,
@@ -201,6 +202,7 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelector("#evaluate-draft").addEventListener("click", evaluateDraft);
 document.querySelector("#approve-draft").addEventListener("click", approveDraft);
 document.querySelector("#stage-draft").addEventListener("click", stageDraft);
+document.querySelector("#stage-worker").addEventListener("click", stageDraftWithWorker);
 document.querySelector("#assist-media").addEventListener("click", assistMediaUpload);
 document.querySelector("#capture-run").addEventListener("click", captureCurrentRun);
 document.querySelector("#schedule-draft").addEventListener("click", scheduleActiveDraft);
@@ -1268,32 +1270,15 @@ function approveDraft() {
 
 async function stageDraft() {
   if (!activeDraft) evaluateDraft();
-  const session = inferAndSaveSession();
-  const context = getContext();
-  const sessionCheck = validateSessionForStaging(session, context);
-  const licenseCheck = evaluateLicenseForActiveTarget(false);
-  const cadenceCheck = validateCadenceForStaging({
-    policy: getActiveRows().cadencePolicy,
-    context,
-    draft: activeDraft,
-    runs: state.postRuns || [],
-    memory: state.postMemory || [],
-  });
-  const check = canStageDraft(activeDraft, { sessionCheck, licenseCheck, cadenceCheck });
-  if (!check.ok) {
-    lastStageMessage = check.reason;
-    log(`Staging refused: ${check.reason}.`);
+  const readiness = stageReadiness();
+  if (!readiness.ok) {
+    lastStageMessage = readiness.reason;
+    log(`Staging refused: ${readiness.reason}.`);
     renderRiskCard();
     return;
   }
 
   const { account } = getActiveRows();
-  if (isMonitoringOnlyPlatform(account.platform)) {
-    lastStageMessage = `${platformLabel(account.platform)} is configured as monitoring-only. Draft and capture replies, but do not stage posts there yet.`;
-    log(`Staging refused: ${lastStageMessage}`);
-    renderRiskCard();
-    return;
-  }
   const composeUrl = resolveComposeUrl(account);
   lastStageMessage = null;
   await window.diamond.writeClipboard(activeDraft.text);
@@ -1325,6 +1310,100 @@ async function stageDraft() {
   renderScheduleCalendar();
   renderEditorialSlots();
   renderPlatformProofs();
+}
+
+async function stageDraftWithWorker() {
+  if (!activeDraft) evaluateDraft();
+  const readiness = stageReadiness();
+  if (!readiness.ok) {
+    lastStageMessage = readiness.reason;
+    log(`Worker staging refused: ${readiness.reason}.`);
+    renderRiskCard();
+    return;
+  }
+  const { account } = getActiveRows();
+  const composeUrl = resolveComposeUrl(account);
+  const input = {
+    context: getContext(),
+    account,
+    composeUrl,
+    text: activeDraft.text,
+    media,
+    screenshotName: `worker-${activeDraft.id}-${Date.now()}`,
+  };
+  const workerInputCheck = validatePlaywrightStageInput(input);
+  if (!workerInputCheck.ok) {
+    lastStageMessage = workerInputCheck.reason;
+    log(`Worker staging refused: ${workerInputCheck.reason}.`);
+    renderRiskCard();
+    return;
+  }
+
+  await window.diamond.writeClipboard(activeDraft.text);
+  log("Playwright worker staging started. It will attach selected media and stop before publishing.");
+  let workerResult;
+  try {
+    workerResult = await window.diamond.stageWithPlaywright(input);
+  } catch (error) {
+    workerResult = {
+      ok: false,
+      status: "needs_manual_finish",
+      reason: error.message || "Playwright worker failed to start.",
+      fillResult: { ok: false, reason: error.message || "Playwright worker failed to start." },
+      mediaResult: { ok: false, reason: error.message || "Playwright worker failed to start." },
+    };
+  }
+  activeDraft.status = workerResult.ok ? "staged" : "needs_manual_finish";
+  activeDraft.stagedAt = new Date().toISOString();
+  activeDraft.updatedAt = activeDraft.stagedAt;
+  activeDraft.stageUrl = workerResult.currentUrl || composeUrl;
+  activeDraft.media = media;
+  activeDraft.screenshotPath = workerResult.screenshotPath || activeDraft.screenshotPath;
+  syncScheduleForDraft(activeDraft, {
+    status: activeDraft.status,
+    stagedAt: activeDraft.stagedAt,
+  });
+  syncSlotForDraft(activeDraft, { status: activeDraft.status, stagedAt: activeDraft.stagedAt });
+  await recordStageProof(account, workerResult.fillResult, workerResult.mediaResult);
+  await capturePostRun({
+    status: workerResult.status,
+    note: `Playwright worker: ${workerResult.reason}`,
+    screenshotPath: workerResult.screenshotPath,
+    platformUrl: workerResult.currentUrl,
+  });
+  lastStageMessage = workerResult.reason;
+  await window.diamond.saveState(state);
+  log(workerResult.ok
+    ? `Playwright worker staged the draft and attached ${media.length} media file(s). Review before publishing.`
+    : `Playwright worker needs manual finish: ${workerResult.reason}`);
+  renderRiskCard();
+  renderPackageFilters();
+  renderDraftHistory();
+  renderScheduleCalendar();
+  renderEditorialSlots();
+  renderPlatformProofs();
+}
+
+function stageReadiness() {
+  if (!activeDraft) return { ok: false, reason: "No active draft." };
+  const session = inferAndSaveSession();
+  const context = getContext();
+  const sessionCheck = validateSessionForStaging(session, context);
+  const licenseCheck = evaluateLicenseForActiveTarget(false);
+  const cadenceCheck = validateCadenceForStaging({
+    policy: getActiveRows().cadencePolicy,
+    context,
+    draft: activeDraft,
+    runs: state.postRuns || [],
+    memory: state.postMemory || [],
+  });
+  const check = canStageDraft(activeDraft, { sessionCheck, licenseCheck, cadenceCheck });
+  if (!check.ok) return check;
+  const { account } = getActiveRows();
+  if (isMonitoringOnlyPlatform(account.platform)) {
+    return { ok: false, reason: `${platformLabel(account.platform)} is configured as monitoring-only. Draft and capture replies, but do not stage posts there yet.` };
+  }
+  return { ok: true, reason: "Draft is ready for staging." };
 }
 
 async function assistMediaUpload() {
@@ -1521,12 +1600,12 @@ function getActiveRun() {
   return (state.postRuns || [])[0] || null;
 }
 
-async function capturePostRun({ status, note }) {
+async function capturePostRun({ status, note, screenshotPath: providedScreenshotPath, platformUrl }) {
   state.postRuns ||= [];
   const context = getContext();
   const currentUrl = typeof els.webview.getURL === "function" ? els.webview.getURL() : els.webview.src;
   const runId = `run-${Date.now()}`;
-  const screenshotPath = await captureBrowserScreenshot(runId);
+  const screenshotPath = providedScreenshotPath || await captureBrowserScreenshot(runId);
   const run = {
     id: runId,
     draftId: activeDraft.id,
@@ -1535,7 +1614,7 @@ async function capturePostRun({ status, note }) {
     note,
     text: activeDraft.text,
     media: [...(activeDraft.media || media)],
-    platformUrl: currentUrl,
+    platformUrl: platformUrl || currentUrl,
     screenshotPath,
     metrics: createPostMetrics(),
     createdAt: new Date().toISOString(),

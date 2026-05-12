@@ -10,6 +10,7 @@ export * from "./license.js";
 export * from "./metrics.js";
 export * from "./platform-browser-adapter.js";
 export * from "./platform-proof.js";
+export * from "./playwright-worker.js";
 export * from "./polaris-bridge.js";
 export * from "./quality.js";
 export * from "./risk.js";
