@@ -377,13 +377,47 @@ textarea {
   gap: 7px;
 }
 
-.theme-swatches span {
+.theme-swatches button {
   background: var(--swatch);
   border: 1px solid rgba(255,255,255,0.22);
   border-radius: 999px;
   display: block;
   height: 22px;
+  padding: 0;
   width: 22px;
+}
+
+.theme-swatches button:hover,
+.theme-swatches button:focus-visible {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.18);
+}
+
+.custom-theme-controls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.custom-theme-controls label {
+  color: var(--muted);
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 5px;
+}
+
+.custom-theme-controls input[type="color"] {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  height: 38px;
+  padding: 4px;
+  width: 100%;
+}
+
+.custom-theme-controls button {
+  grid-column: 1 / -1;
 }
 
 .session-card {

@@ -230,6 +230,9 @@ This is the current order for finishing the remaining checklist items.
   - [x] Keyboard navigation pass
   - [x] Screen reader labels and form semantics
   - [x] Color contrast and reduced-motion pass
+  - [x] Selectable preset theme swatches
+  - [x] Custom four-color theme template
+  - [x] Persisted custom theme controls
 - [ ] Expert review and workflow signoff
   - [ ] Formal expert checklist pass
   - [ ] Scott workflow signoff

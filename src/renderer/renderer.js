@@ -94,7 +94,10 @@ const DIAMOND_THEMES = Object.freeze([
   { id: "champion", label: "Champion Gold", colors: ["#14110e", "#241b12", "#d4af37", "#b91c1c"] },
   { id: "rally", label: "Rally Night", colors: ["#101018", "#171d2b", "#a855f7", "#22d3ee"] },
   { id: "newsroom", label: "Newsroom Heat", colors: ["#10151b", "#1b2028", "#f97316", "#0ea5e9"] },
+  { id: "custom", label: "Custom Template", colors: ["#10151b", "#1b2028", "#f97316", "#0ea5e9"], custom: true },
 ]);
+const CUSTOM_THEME_DEFAULTS = Object.freeze(["#10151b", "#1b2028", "#f97316", "#0ea5e9"]);
+const CUSTOM_THEME_LABELS = Object.freeze(["Shell", "Panels", "Accent", "Support"]);
 
 const els = {
   company: document.querySelector("#company-select"),
@@ -186,6 +189,13 @@ const els = {
   openSettings: document.querySelector("#open-settings"),
   themeSelect: document.querySelector("#theme-select"),
   themeSwatches: document.querySelector("#theme-swatches"),
+  customThemeControls: document.querySelector("#custom-theme-controls"),
+  customThemeInputs: [
+    document.querySelector("#custom-theme-shell"),
+    document.querySelector("#custom-theme-panel"),
+    document.querySelector("#custom-theme-accent"),
+    document.querySelector("#custom-theme-support"),
+  ],
   tourLayer: document.querySelector("#tour-layer"),
   tourPopover: document.querySelector("#tour-popover"),
   tourProgress: document.querySelector("#tour-progress"),
@@ -230,6 +240,10 @@ els.newBrandName.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideTenantForms();
 });
 els.themeSelect.addEventListener("change", saveThemeSelection);
+els.customThemeInputs.forEach((input, index) => {
+  input.addEventListener("input", () => updateCustomThemeColor(index, input.value));
+});
+document.querySelector("#reset-custom-theme").addEventListener("click", resetCustomTheme);
 
 document.querySelectorAll(".mode").forEach((button) => {
   button.addEventListener("click", () => {
@@ -476,12 +490,14 @@ function fillThemeSelect() {
   });
   setSelectIfPresent(els.themeSelect, state.themeId || "broadcast");
   renderThemeSwatches(state.themeId || "broadcast");
+  renderCustomThemeControls(state.themeId || "broadcast");
 }
 
 async function saveThemeSelection() {
   state.themeId = els.themeSelect.value || "broadcast";
   applyTheme(state.themeId);
   renderThemeSwatches(state.themeId);
+  renderCustomThemeControls(state.themeId);
   await window.diamond.saveState(state);
   log(`Theme changed to ${themeLabel(state.themeId)}.`);
 }
@@ -490,20 +506,143 @@ function applyTheme(themeId) {
   const nextTheme = DIAMOND_THEMES.some((theme) => theme.id === themeId) ? themeId : "broadcast";
   document.body.dataset.theme = nextTheme;
   if (els.themeSelect) setSelectIfPresent(els.themeSelect, nextTheme);
+  if (nextTheme === "custom") {
+    applyCustomThemeVars(getCustomThemeColors());
+  } else {
+    clearCustomThemeVars();
+  }
 }
 
 function renderThemeSwatches(themeId) {
   const theme = DIAMOND_THEMES.find((item) => item.id === themeId) || DIAMOND_THEMES.find((item) => item.id === "broadcast");
+  const colors = theme.id === "custom" ? getCustomThemeColors() : theme.colors;
   els.themeSwatches.innerHTML = "";
-  theme.colors.forEach((color) => {
-    const swatch = document.createElement("span");
+  colors.forEach((color, index) => {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.dataset.customColorIndex = String(index);
+    swatch.setAttribute("aria-label", `${CUSTOM_THEME_LABELS[index]} color ${color}`);
+    swatch.title = theme.id === "custom" ? `Edit ${CUSTOM_THEME_LABELS[index]}` : CUSTOM_THEME_LABELS[index];
     swatch.style.setProperty("--swatch", color);
+    swatch.addEventListener("click", () => handleThemeSwatchClick(theme.id, index));
     els.themeSwatches.append(swatch);
   });
 }
 
 function themeLabel(themeId) {
   return DIAMOND_THEMES.find((theme) => theme.id === themeId)?.label || themeId;
+}
+
+function handleThemeSwatchClick(themeId, index) {
+  if (themeId !== "custom") {
+    state.customThemeColors = getThemeColors(themeId);
+    state.themeId = "custom";
+    applyTheme("custom");
+    renderThemeSwatches("custom");
+    renderCustomThemeControls("custom");
+    void window.diamond.saveState(state);
+    log(`Started a custom theme from ${themeLabel(themeId)}.`);
+    return;
+  }
+  els.customThemeInputs[index]?.click();
+}
+
+async function updateCustomThemeColor(index, value) {
+  const colors = getCustomThemeColors();
+  colors[index] = normalizeThemeColor(value, CUSTOM_THEME_DEFAULTS[index]);
+  state.customThemeColors = colors;
+  state.themeId = "custom";
+  applyTheme("custom");
+  renderThemeSwatches("custom");
+  renderCustomThemeControls("custom");
+  await window.diamond.saveState(state);
+}
+
+async function resetCustomTheme() {
+  state.customThemeColors = [...CUSTOM_THEME_DEFAULTS];
+  state.themeId = "custom";
+  applyTheme("custom");
+  renderThemeSwatches("custom");
+  renderCustomThemeControls("custom");
+  await window.diamond.saveState(state);
+  log("Custom theme reset.");
+}
+
+function renderCustomThemeControls(themeId) {
+  const isCustom = themeId === "custom";
+  els.customThemeControls.classList.toggle("hidden", !isCustom);
+  const colors = getCustomThemeColors();
+  els.customThemeInputs.forEach((input, index) => {
+    input.value = colors[index];
+  });
+}
+
+function getCustomThemeColors() {
+  const colors = Array.isArray(state.customThemeColors) ? state.customThemeColors : [];
+  return CUSTOM_THEME_DEFAULTS.map((fallback, index) => normalizeThemeColor(colors[index], fallback));
+}
+
+function getThemeColors(themeId) {
+  const theme = DIAMOND_THEMES.find((item) => item.id === themeId);
+  return theme?.colors?.map((color, index) => normalizeThemeColor(color, CUSTOM_THEME_DEFAULTS[index])) || [...CUSTOM_THEME_DEFAULTS];
+}
+
+function normalizeThemeColor(value, fallback) {
+  const raw = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(raw) ? raw.toLowerCase() : fallback;
+}
+
+function applyCustomThemeVars(colors) {
+  const [shell, panel, accent, support] = colors;
+  const vars = {
+    "--bg": mixHex(shell, "#000000", 0.24),
+    "--panel": mixHex(panel, "#000000", 0.1),
+    "--panel-2": mixHex(panel, "#ffffff", 0.07),
+    "--sidebar": shell,
+    "--composer-panel": mixHex(panel, "#000000", 0.02),
+    "--browser-panel": mixHex(shell, "#000000", 0.18),
+    "--browser-shell": mixHex(shell, "#000000", 0.42),
+    "--log-panel": mixHex(panel, "#000000", 0.16),
+    "--settings-card": mixHex(panel, "#ffffff", 0.04),
+    "--input-bg": mixHex(shell, "#000000", 0.2),
+    "--button-bg": mixHex(panel, "#ffffff", 0.12),
+    "--line": mixHex(panel, "#ffffff", 0.28),
+    "--text": "#f8fafc",
+    "--muted": "#b7c3d4",
+    "--accent": accent,
+    "--accent-soft": hexToRgba(accent, 0.18),
+    "--accent-line": hexToRgba(accent, 0.45),
+    "--secondary": support,
+    "--focus": support,
+    "--good": mixHex(support, "#5cff9a", 0.55),
+    "--warn": "#facc15",
+    "--bad": "#ff6464",
+  };
+  Object.entries(vars).forEach(([name, value]) => document.body.style.setProperty(name, value));
+}
+
+function clearCustomThemeVars() {
+  [
+    "--bg", "--panel", "--panel-2", "--sidebar", "--composer-panel", "--browser-panel", "--browser-shell", "--log-panel",
+    "--settings-card", "--input-bg", "--button-bg", "--line", "--text", "--muted", "--accent", "--accent-soft",
+    "--accent-line", "--secondary", "--focus", "--good", "--warn", "--bad",
+  ].forEach((name) => document.body.style.removeProperty(name));
+}
+
+function mixHex(left, right, amount) {
+  const a = hexParts(left);
+  const b = hexParts(right);
+  return "#" + a.map((value, index) => Math.round(value + (b[index] - value) * amount).toString(16).padStart(2, "0")).join("");
+}
+
+function hexToRgba(hex, alpha) {
+  const [r, g, b] = hexParts(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function hexParts(hex) {
+  const raw = normalizeThemeColor(hex, "#000000").slice(1);
+  return [raw.slice(0, 2), raw.slice(2, 4), raw.slice(4, 6)].map((part) => parseInt(part, 16));
 }
 
 function hydrateDependentSelectors() {
