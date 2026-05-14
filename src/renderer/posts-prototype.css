@@ -26,6 +26,11 @@ button, a {
   font: inherit;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .hidden {
   display: none !important;
 }

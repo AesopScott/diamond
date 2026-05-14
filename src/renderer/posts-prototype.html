@@ -38,13 +38,13 @@
           </header>
 
           <section class="prototype-toolbar" aria-label="Post filters">
-            <button type="button" class="filter-pill">All</button>
-            <button type="button" class="filter-pill">All tags</button>
-            <button type="button" class="filter-pill">Created date</button>
-            <button type="button" class="filter-pill">Newest first</button>
+            <button type="button" class="filter-pill" disabled title="Filtering lands after the default shell flip.">All</button>
+            <button type="button" class="filter-pill" disabled title="Tag filtering lands after the default shell flip.">All tags</button>
+            <button type="button" class="filter-pill" disabled title="Date filtering lands after the default shell flip.">Created date</button>
+            <button type="button" class="filter-pill" disabled title="Sort controls land after the default shell flip.">Newest first</button>
             <div class="view-toggle" aria-label="View mode">
-              <button type="button" class="active">Board</button>
-              <button type="button">List</button>
+              <button type="button" class="active" disabled title="Board view is currently active.">Board</button>
+              <button type="button" disabled title="List view lands after the default shell flip.">List</button>
             </div>
           </section>
 
@@ -76,9 +76,9 @@
                   <option>Claude Prompt</option>
                 </select>
               </label>
-              <button class="media-button" type="button">+ Media</button>
+              <button id="detail-add-media" class="media-button" type="button">+ Media</button>
               <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>
-              <button class="round-add" type="button" aria-label="Add platform">+</button>
+              <button id="detail-add-platform" class="round-add" type="button" aria-label="Add platform">+</button>
               <label class="tag-input">
                 Post tags
                 <input id="post-tags" type="text" placeholder="+ Post tags">
@@ -98,12 +98,12 @@
               <h1 id="calendar-heading">Calendar</h1>
               <p>Review scheduled posts, missed windows, and completed work.</p>
             </div>
-            <button class="create-button" type="button">Schedule</button>
+            <button id="calendar-create-schedule" class="create-button" type="button">Schedule</button>
           </header>
           <section class="prototype-toolbar" aria-label="Calendar filters">
-            <button type="button" class="filter-pill">All platforms</button>
-            <button type="button" class="filter-pill">This week</button>
-            <button type="button" class="filter-pill">Campaign</button>
+            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">All platforms</button>
+            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">This week</button>
+            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">Campaign</button>
           </section>
           <section id="calendar-board" class="calendar-board" aria-label="Scheduled post calendar"></section>
         </section>
@@ -114,13 +114,13 @@
               <h1 id="analytics-heading">Analytics</h1>
               <p>Track publishing output, campaign funnel health, platform readiness, and operational blockers.</p>
             </div>
-            <button class="create-button" type="button">Export</button>
+            <button id="analytics-export" class="create-button" type="button">Export</button>
           </header>
           <section class="prototype-toolbar" aria-label="Analytics filters">
-            <button type="button" class="filter-pill">World Cup</button>
-            <button type="button" class="filter-pill">All platforms</button>
-            <button type="button" class="filter-pill">Last 7 days</button>
-            <button type="button" class="filter-pill">Funnel</button>
+            <button type="button" class="filter-pill" disabled title="Analytics filters land after the default shell flip.">World Cup</button>
+            <button type="button" class="filter-pill" disabled title="Analytics filters land after the default shell flip.">All platforms</button>
+            <button type="button" class="filter-pill" disabled title="Analytics filters land after the default shell flip.">Last 7 days</button>
+            <button type="button" class="filter-pill" disabled title="Analytics filters land after the default shell flip.">Funnel</button>
           </section>
           <section id="analytics-workspace" class="analytics-workspace" aria-label="Analytics workspace"></section>
         </section>
@@ -130,13 +130,13 @@
               <h1 id="templates-heading">Templates</h1>
               <p>Manage reusable campaign formats, creative assets, safe zones, and platform-specific template needs.</p>
             </div>
-            <button class="create-button" type="button">Add template</button>
+            <button class="create-button" type="button" disabled title="Template creation lands after the default shell flip.">Add template</button>
           </header>
           <section class="prototype-toolbar" aria-label="Template filters">
-            <button type="button" class="filter-pill">All templates</button>
-            <button type="button" class="filter-pill">Assets</button>
-            <button type="button" class="filter-pill">World Cup</button>
-            <button type="button" class="filter-pill">Needs media</button>
+            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">All templates</button>
+            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">Assets</button>
+            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">World Cup</button>
+            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">Needs media</button>
           </section>
           <section id="templates-workspace" class="templates-workspace" aria-label="Template and asset workspace"></section>
         </section>
@@ -150,10 +150,10 @@
           </header>
           <section id="account-scope-strip" class="account-scope-strip" aria-label="Active account scope"></section>
           <section class="prototype-toolbar" aria-label="Account filters">
-            <button type="button" class="filter-pill">All platforms</button>
-            <button type="button" class="filter-pill">Needs login</button>
-            <button type="button" class="filter-pill">Ready</button>
-            <button type="button" class="filter-pill">Monitoring</button>
+            <button type="button" class="filter-pill" disabled title="Account filters land after the default shell flip.">All platforms</button>
+            <button type="button" class="filter-pill" disabled title="Account filters land after the default shell flip.">Needs login</button>
+            <button type="button" class="filter-pill" disabled title="Account filters land after the default shell flip.">Ready</button>
+            <button type="button" class="filter-pill" disabled title="Account filters land after the default shell flip.">Monitoring</button>
           </section>
           <section class="accounts-layout" aria-label="Social account workspace">
             <div>
@@ -176,10 +176,10 @@
             </div>
           </header>
           <section class="prototype-toolbar" aria-label="Brand filters">
-            <button type="button" class="filter-pill">Active company</button>
-            <button type="button" class="filter-pill">Campaigns</button>
-            <button type="button" class="filter-pill">Claim rules</button>
-            <button type="button" class="filter-pill">Voice</button>
+            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Active company</button>
+            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Campaigns</button>
+            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Claim rules</button>
+            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Voice</button>
           </section>
           <section id="brand-workspace" class="brand-workspace" aria-label="Brand strategy workspace"></section>
         </section>
@@ -192,10 +192,10 @@
             <button id="settings-sync" class="create-button" type="button">Sync</button>
           </header>
           <section class="prototype-toolbar" aria-label="Settings filters">
-            <button type="button" class="filter-pill">License</button>
-            <button type="button" class="filter-pill">Firebase</button>
-            <button type="button" class="filter-pill">Legal</button>
-            <button type="button" class="filter-pill">Accessibility</button>
+            <button type="button" class="filter-pill" disabled title="Settings filters land after the default shell flip.">License</button>
+            <button type="button" class="filter-pill" disabled title="Settings filters land after the default shell flip.">Firebase</button>
+            <button type="button" class="filter-pill" disabled title="Settings filters land after the default shell flip.">Legal</button>
+            <button type="button" class="filter-pill" disabled title="Settings filters land after the default shell flip.">Accessibility</button>
           </section>
           <section id="settings-workspace" class="settings-workspace" aria-label="Settings workspace"></section>
         </section>

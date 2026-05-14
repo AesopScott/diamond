@@ -61,11 +61,12 @@ The new shell becomes the default only after these flows are working inside it:
    - Keep the visible browser out of the main post board.
    - Put advanced validation and run logs in the drawer.
 
-8. Manual verification pass.
+8. Manual verification pass. First pass built: static shell buttons now either have handler contracts or are visibly disabled, and `tests/production-shell-verification-tests.js` keeps that gate in `npm test`.
    - Verify X, Facebook, and TikTok logged-in sessions still survive app restarts.
    - Verify the embedded browser can use the full visible window.
    - Verify every visible button either works or is clearly disabled.
    - Verify smaller screens do not clip button text.
+   - Header actions for scheduling and analytics export now route to real work; post-detail media/platform controls are wired.
 
 9. Flip the default.
    - Make the Diamond-style shell the default renderer.

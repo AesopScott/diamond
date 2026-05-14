@@ -261,6 +261,12 @@ function wirePrototypeControls() {
   document.querySelector("#operator-toggle")?.addEventListener("click", toggleOperatorDrawer);
   document.querySelector("#operator-close")?.addEventListener("click", closeOperatorDrawer);
   document.querySelector("#create-post").addEventListener("click", openCreateDetail);
+  document.querySelector("#calendar-create-schedule")?.addEventListener("click", () => {
+    showPrototypeView("posts-view");
+    document.querySelectorAll("#prototype-nav a").forEach((item) => item.classList.toggle("active", item.dataset.view === "posts-view"));
+    openCreateDetail();
+  });
+  document.querySelector("#analytics-export")?.addEventListener("click", () => runSettingsAction("export-sync"));
   document.querySelector("#add-social-account")?.addEventListener("click", addSocialAccount);
   document.querySelector("#add-company-record")?.addEventListener("click", addCompanyRecord);
   document.querySelector("#add-brand-record")?.addEventListener("click", addBrandRecord);
@@ -273,6 +279,8 @@ function wirePrototypeControls() {
   });
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
+  document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
+  document.querySelector("#detail-add-platform")?.addEventListener("click", addPlatformToActivePackage);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
@@ -1920,6 +1928,50 @@ async function handlePlatformDraftAction(event) {
   updatePostPackageFromDrafts(draft.postPackageId);
   await saveProductionState();
   await refreshProductionViews();
+  reopenActiveDetail();
+}
+
+async function attachMediaToActiveDrafts() {
+  if (!activePostPackageId) return;
+  const files = await window.diamond?.pickMedia?.();
+  if (!files?.length) return;
+  const now = new Date().toISOString();
+  prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId)
+    .forEach((draft) => {
+      draft.media = [...(draft.media || []), ...files];
+      draft.updatedAt = now;
+    });
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+async function addPlatformToActivePackage() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const platform = normalizeId(promptForText("Platform", "linkedin"));
+  if (!platform) return;
+  if (prototypeModel.platformDrafts.some((draft) => draft.postPackageId === activePostPackageId && draft.platform === platform)) return;
+  const now = new Date().toISOString();
+  const draft = createPlatformDraft({
+    id: `${postPackage.id}-${platform}`,
+    postPackage,
+    context: {
+      ...postPackage.context,
+      platform,
+      socialAccountId: socialAccountIdForPlatform(platform),
+    },
+    platform,
+    socialAccountId: socialAccountIdForPlatform(platform),
+    text: platformCopy(postPackage.ideaText || "", platform),
+    status: "draft",
+    createdAt: now,
+    updatedAt: now,
+  });
+  prototypeModel.platformDrafts.push(draft);
+  updatePostPackageFromDrafts(postPackage.id);
+  await saveProductionState();
   reopenActiveDetail();
 }
 
