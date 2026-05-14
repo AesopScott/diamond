@@ -11,6 +11,7 @@ import {
   derivePostPackagesFromWorkspace,
   evaluateDiamondLicense,
   getDiamondLegalDocuments,
+  migrateWorkspaceState,
   resolveFirebaseAdminConfig,
   resolveComposeUrl,
   resolveLoginUrl,
@@ -19,9 +20,10 @@ import {
   buildFirestoreSyncBundle,
 } from "../index.js";
 
-const state = await loadPrototypeState();
-let prototypeModel = derivePostPackagesFromWorkspace(state);
+const state = await loadProductionState();
+let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
+let activePostPackageId = null;
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -32,20 +34,60 @@ renderAnalytics();
 renderOperatorDrawer();
 wirePrototypeControls();
 
-async function loadPrototypeState() {
+async function loadProductionState() {
   const saved = await window.diamond?.getState?.();
-  if (hasPostData(saved)) return saved;
+  if (saved && typeof saved === "object") return hydrateSavedWorkspace(saved);
   return buildSampleWorkspace();
 }
 
-function hasPostData(workspace) {
-  return Boolean(
-    workspace
-    && ((workspace.drafts || []).length
-      || (workspace.scheduledPosts || []).length
-      || (workspace.postRuns || []).length
-      || (workspace.postPackages || []).length),
-  );
+function hydrateSavedWorkspace(saved) {
+  const defaults = createSeedWorkspace();
+  const workspace = migrateWorkspaceState({
+    ...defaults,
+    ...saved,
+    companies: saved.companies?.length ? saved.companies : defaults.companies,
+    brands: saved.brands?.length ? saved.brands : defaults.brands,
+    campaigns: saved.campaigns?.length ? saved.campaigns : defaults.campaigns,
+    socialAccounts: saved.socialAccounts?.length ? saved.socialAccounts : defaults.socialAccounts,
+    contentStrategies: saved.contentStrategies?.length ? saved.contentStrategies : defaults.contentStrategies,
+    editorialSlots: saved.editorialSlots?.length ? saved.editorialSlots : defaults.editorialSlots,
+    assetLibrary: saved.assetLibrary?.length ? saved.assetLibrary : defaults.assetLibrary,
+    socialTemplates: saved.socialTemplates?.length ? saved.socialTemplates : defaults.socialTemplates,
+    brandLibraries: saved.brandLibraries?.length ? saved.brandLibraries : defaults.brandLibraries,
+    claimLibraries: saved.claimLibraries?.length ? saved.claimLibraries : defaults.claimLibraries,
+    approvalPolicies: saved.approvalPolicies?.length ? saved.approvalPolicies : defaults.approvalPolicies,
+    cadencePolicies: saved.cadencePolicies?.length ? saved.cadencePolicies : defaults.cadencePolicies,
+    drafts: saved.drafts || [],
+    scheduledPosts: saved.scheduledPosts || [],
+    postRuns: saved.postRuns || [],
+    postPackages: saved.postPackages || [],
+    platformDrafts: saved.platformDrafts || [],
+    context: saved.context || defaults.context,
+  });
+  return workspace;
+}
+
+function buildProductionPostModel(workspace) {
+  if ((workspace.postPackages || []).length || (workspace.platformDrafts || []).length) {
+    return {
+      postPackages: workspace.postPackages || [],
+      platformDrafts: workspace.platformDrafts || [],
+    };
+  }
+  return derivePostPackagesFromWorkspace(workspace);
+}
+
+async function saveProductionState() {
+  state.postPackages = prototypeModel.postPackages;
+  state.platformDrafts = prototypeModel.platformDrafts;
+  board = buildPostBoardView(prototypeModel);
+  await window.diamond?.saveState?.(state);
+}
+
+async function refreshProductionBoard() {
+  prototypeModel = buildProductionPostModel(state);
+  board = buildPostBoardView(prototypeModel);
+  renderBoard(board);
 }
 
 function buildSampleWorkspace() {
@@ -209,8 +251,8 @@ function wirePrototypeControls() {
     if (!card) return;
     openPackageDetail(card.dataset.packageId);
   });
-  document.querySelector("#idea-text").addEventListener("input", updatePreviewCopy);
-  document.querySelector("#post-tags").addEventListener("input", updatePreviewTags);
+  document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
+  document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
   document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
@@ -1011,22 +1053,30 @@ function formatAutomation(value) {
 
 function openCreateDetail() {
   const context = state.context;
+  const now = new Date().toISOString();
   const postPackage = createPostPackage({
-    id: `prototype-new-${Date.now()}`,
+    id: `package-${Date.now()}`,
     context,
     ideaText: "Write the core post idea here, then generate platform versions.",
     tags: ["draft"],
-    source: "prototype-create",
+    source: "diamond-shell",
+    createdAt: now,
+    updatedAt: now,
   });
   const platforms = ["linkedin", "x"];
   const drafts = platforms.map((platform) => createPlatformDraft({
+    id: `${postPackage.id}-${platform}`,
     postPackage,
     context,
     platform,
     socialAccountId: socialAccountIdForPlatform(platform),
     text: platformCopy(postPackage.ideaText, platform),
     status: "draft",
+    createdAt: now,
+    updatedAt: now,
   }));
+  upsertPostPackage(postPackage, drafts);
+  saveProductionState();
   openDetail(postPackage, drafts);
 }
 
@@ -1045,6 +1095,7 @@ function openPackageDetail(packageId) {
 }
 
 function openDetail(postPackage, drafts) {
+  activePostPackageId = postPackage.id;
   document.querySelector("#posts-board").classList.add("hidden");
   document.querySelector(".prototype-toolbar").classList.add("hidden");
   document.querySelector("#post-detail").classList.remove("hidden");
@@ -1086,6 +1137,16 @@ function renderPlatformPreviews(drafts) {
   `).join("");
 }
 
+function handleIdeaInput() {
+  updatePreviewCopy();
+  persistActiveDetail();
+}
+
+function handleTagsInput() {
+  updatePreviewTags();
+  persistActiveDetail();
+}
+
 function updatePreviewCopy() {
   const idea = document.querySelector("#idea-text").value;
   document.querySelectorAll("[data-preview-platform]").forEach((preview) => {
@@ -1102,6 +1163,44 @@ function updatePreviewCopy() {
 function updatePreviewTags() {
   const value = document.querySelector("#post-tags").value;
   document.querySelector("#detail-status").title = `Tags: ${value || "none"}`;
+}
+
+function persistActiveDetail() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const idea = document.querySelector("#idea-text").value;
+  const tags = document.querySelector("#post-tags").value.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+  const updatedAt = new Date().toISOString();
+  postPackage.ideaText = idea;
+  postPackage.title = idea.length > 64 ? `${idea.slice(0, 61)}...` : idea;
+  postPackage.tags = [...new Set(tags)];
+  postPackage.updatedAt = updatedAt;
+  prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId)
+    .forEach((draft) => {
+      draft.text = platformCopy(idea, draft.platform);
+      draft.updatedAt = updatedAt;
+    });
+  saveProductionState();
+}
+
+function upsertPostPackage(postPackage, drafts) {
+  const packageIndex = prototypeModel.postPackages.findIndex((item) => item.id === postPackage.id);
+  if (packageIndex >= 0) {
+    prototypeModel.postPackages[packageIndex] = postPackage;
+  } else {
+    prototypeModel.postPackages.unshift(postPackage);
+  }
+  drafts.forEach((draft) => {
+    const draftIndex = prototypeModel.platformDrafts.findIndex((item) => item.id === draft.id);
+    if (draftIndex >= 0) {
+      prototypeModel.platformDrafts[draftIndex] = draft;
+    } else {
+      prototypeModel.platformDrafts.unshift(draft);
+    }
+  });
+  postPackage.platformDraftIds = drafts.map((draft) => draft.id);
 }
 
 function platformCopy(idea, platform) {

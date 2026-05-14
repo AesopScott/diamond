@@ -73,10 +73,16 @@ assert.match(css, /\.operator-action/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
 assert.match(js, /buildPostBoardView/);
-assert.match(js, /loadPrototypeState/);
+assert.match(js, /loadProductionState/);
+assert.match(js, /hydrateSavedWorkspace/);
+assert.match(js, /buildProductionPostModel/);
+assert.match(js, /saveProductionState/);
 assert.match(js, /buildSampleWorkspace/);
 assert.match(js, /renderBoard/);
 assert.match(js, /openCreateDetail/);
+assert.match(js, /source: "diamond-shell"/);
+assert.match(js, /upsertPostPackage/);
+assert.match(js, /persistActiveDetail/);
 assert.match(js, /openPackageDetail/);
 assert.match(js, /renderPlatformPreviews/);
 assert.match(js, /handlePrototypeNav/);

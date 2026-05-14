@@ -81,4 +81,13 @@ const publishedColumn = board.find((column) => column.id === "published");
 assert.equal(publishedColumn.count, 1);
 assert.equal(publishedColumn.posts[0].platforms[0], "x");
 
+const persistedBoard = buildPostBoardView({
+  postPackages: [postPackage],
+  platformDrafts: [xDraft],
+});
+const draftColumn = persistedBoard.find((column) => column.id === "draft");
+assert.equal(draftColumn.count, 1);
+assert.equal(draftColumn.posts[0].id, "world-cup-idea");
+assert.deepEqual(draftColumn.posts[0].platforms, ["x"]);
+
 console.log("All Diamond post package tests passed.");

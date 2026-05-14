@@ -33,7 +33,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Preserve `posts-prototype.html` as a reference until the production shell is verified.
    - Keep archive files in `docs/archive/diamond-current-ui-2026-05-14/`.
 
-3. Wire Posts first.
+3. Wire Posts first. First pass built: the Levercast shell now hydrates saved app state, prefers persisted `postPackages/platformDrafts`, and saves newly created packages through `window.diamond.saveState`.
    - Use existing post package helpers.
    - Replace prototype sample state with persisted app state.
    - Ensure board cards open real package detail.
