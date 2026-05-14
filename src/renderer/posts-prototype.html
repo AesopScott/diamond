@@ -106,7 +106,22 @@
         </section>
 
         <section id="analytics-view" class="prototype-view placeholder-view hidden"><h1>Analytics</h1><p>Analytics page placeholder.</p></section>
-        <section id="templates-view" class="prototype-view placeholder-view hidden"><h1>Templates</h1><p>Templates page placeholder.</p></section>
+        <section id="templates-view" class="prototype-view hidden" aria-labelledby="templates-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="templates-heading">Templates</h1>
+              <p>Manage reusable campaign formats, creative assets, safe zones, and platform-specific template needs.</p>
+            </div>
+            <button class="create-button" type="button">Add template</button>
+          </header>
+          <section class="prototype-toolbar" aria-label="Template filters">
+            <button type="button" class="filter-pill">All templates</button>
+            <button type="button" class="filter-pill">Assets</button>
+            <button type="button" class="filter-pill">World Cup</button>
+            <button type="button" class="filter-pill">Needs media</button>
+          </section>
+          <section id="templates-workspace" class="templates-workspace" aria-label="Template and asset workspace"></section>
+        </section>
         <section id="accounts-view" class="prototype-view hidden" aria-labelledby="accounts-heading">
           <header class="prototype-header">
             <div>

@@ -136,7 +136,7 @@ platformDrafts
 6. Move schedule/calendar into a dedicated Calendar page. Prototype built in `src/renderer/posts-prototype.html`.
 7. Move account setup, sessions, and proof into Accounts. Prototype built in `src/renderer/posts-prototype.html`.
 8. Move brand/company/campaign strategy into Brands. Prototype built in `src/renderer/posts-prototype.html`.
-9. Move templates/assets into Templates.
+9. Move templates/assets into Templates. Prototype built in `src/renderer/posts-prototype.html`.
 10. Move license, Firebase, legal, theme, and accessibility into Settings.
 11. Add Analytics page.
 12. Move advanced operator panels into an explicit drawer or page.

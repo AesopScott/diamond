@@ -817,6 +817,116 @@ textarea {
   margin: 0;
 }
 
+.templates-workspace {
+  display: grid;
+  gap: 22px;
+}
+
+.template-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.template-summary article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.template-summary strong {
+  display: block;
+  font-size: 18px;
+  margin-top: 6px;
+}
+
+.template-columns {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+}
+
+.template-column {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  min-height: 520px;
+  padding: 14px;
+}
+
+.template-column > header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.template-column h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.template-list {
+  display: grid;
+  gap: 10px;
+}
+
+.template-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 13px;
+}
+
+.template-card header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.template-card header span {
+  background: var(--pill);
+  border-radius: 999px;
+  color: #dfdfe4;
+  font-size: 11px;
+  font-weight: 1000;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.template-card p {
+  color: #dedee3;
+  font-weight: 750;
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+
+.template-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.template-card dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 1000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.template-card dd {
+  color: #d8d8dc;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .placeholder-view {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -860,6 +970,8 @@ textarea {
   .account-scope-strip,
   .brand-workspace,
   .brand-panels,
+  .template-summary,
+  .template-columns,
   .account-meta,
   .account-actions {
     grid-template-columns: 1fr;

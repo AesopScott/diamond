@@ -7,6 +7,8 @@ const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.met
 
 assert.match(html, /Diamond Posts Prototype/);
 assert.match(html, /id="posts-board"/);
+assert.match(html, /id="templates-view"/);
+assert.match(html, /id="templates-workspace"/);
 assert.match(html, /id="calendar-view"/);
 assert.match(html, /id="calendar-board"/);
 assert.match(html, /id="accounts-view"/);
@@ -46,6 +48,9 @@ assert.match(css, /\.session-pill/);
 assert.match(css, /\.brand-workspace/);
 assert.match(css, /\.brand-identity-card/);
 assert.match(css, /\.brand-panel/);
+assert.match(css, /\.templates-workspace/);
+assert.match(css, /\.template-summary/);
+assert.match(css, /\.template-card/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
 assert.match(js, /buildPostBoardView/);
@@ -67,5 +72,9 @@ assert.match(js, /brandName/);
 assert.match(js, /buildSocialAccountSetupKit/);
 assert.match(js, /renderBrands/);
 assert.match(js, /renderBrandPanel/);
+assert.match(js, /renderTemplates/);
+assert.match(js, /renderTemplateCard/);
+assert.match(js, /renderAssetCard/);
+assert.match(js, /renderCreativeNeedCard/);
 
 console.log("All Diamond posts prototype tests passed.");

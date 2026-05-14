@@ -17,6 +17,7 @@ renderBoard(board);
 renderCalendar();
 renderAccounts();
 renderBrands();
+renderTemplates();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -177,6 +178,7 @@ function showPrototypeView(viewId) {
   });
   if (viewId === "posts-view") renderBoard(board);
   if (viewId === "calendar-view") renderCalendar();
+  if (viewId === "templates-view") renderTemplates();
   if (viewId === "accounts-view") renderAccounts();
   if (viewId === "brands-view") renderBrands();
 }
@@ -399,6 +401,111 @@ function renderBrandPanel(title, items = []) {
         <span class="count">${list.length}</span>
       </header>
       ${list.length ? `<ul>${list.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>No ${escapeHtml(title.toLowerCase())} set.</p>`}
+    </article>
+  `;
+}
+
+function renderTemplates() {
+  const target = document.querySelector("#templates-workspace");
+  if (!target) return;
+  const templates = state.socialTemplates || [];
+  const assets = state.assetLibrary || [];
+  const slots = state.editorialSlots || [];
+  target.innerHTML = `
+    <aside class="template-summary" aria-label="Template summary">
+      <article>
+        <span class="eyebrow">Company</span>
+        <strong>${escapeHtml(companyName(state.context?.companyId))}</strong>
+      </article>
+      <article>
+        <span class="eyebrow">Brand</span>
+        <strong>${escapeHtml(brandName(state.context?.brandId))}</strong>
+      </article>
+      <article>
+        <span class="eyebrow">Templates</span>
+        <strong>${templates.length}</strong>
+      </article>
+      <article>
+        <span class="eyebrow">Assets</span>
+        <strong>${assets.length}</strong>
+      </article>
+    </aside>
+    <section class="template-columns" aria-label="Reusable template columns">
+      <article class="template-column">
+        <header>
+          <h2>Social templates</h2>
+          <span class="count">${templates.length}</span>
+        </header>
+        <div class="template-list">
+          ${templates.map(renderTemplateCard).join("") || `<div class="empty-column">No templates</div>`}
+        </div>
+      </article>
+      <article class="template-column">
+        <header>
+          <h2>Asset library</h2>
+          <span class="count">${assets.length}</span>
+        </header>
+        <div class="template-list">
+          ${assets.map(renderAssetCard).join("") || `<div class="empty-column">No assets</div>`}
+        </div>
+      </article>
+      <article class="template-column">
+        <header>
+          <h2>Creative needs</h2>
+          <span class="count">${slots.length}</span>
+        </header>
+        <div class="template-list">
+          ${slots.map(renderCreativeNeedCard).join("") || `<div class="empty-column">No creative needs</div>`}
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderTemplateCard(template) {
+  return `
+    <article class="template-card">
+      <header>
+        <strong>${escapeHtml(titleCase(template.type || "template"))}</strong>
+        <span>${escapeHtml(platformLabel(template.platform))}</span>
+      </header>
+      <p>${escapeHtml(template.notes || "Reusable social template.")}</p>
+      <dl>
+        <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(template.campaignId))}</dd></div>
+        <div><dt>Safe zone</dt><dd>${escapeHtml(template.safeZone || "Not set")}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderAssetCard(asset) {
+  return `
+    <article class="template-card asset-card">
+      <header>
+        <strong>${escapeHtml(titleCase(asset.type || "asset"))}</strong>
+        <span>${escapeHtml(asset.language || "en")}</span>
+      </header>
+      <p>${escapeHtml(asset.altText || asset.notes || "Creative asset.")}</p>
+      <dl>
+        <div><dt>File</dt><dd>${escapeHtml(asset.filePath || "Not linked")}</dd></div>
+        <div><dt>Safe zone</dt><dd>${escapeHtml(asset.safeZone || "Not set")}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderCreativeNeedCard(slot) {
+  return `
+    <article class="template-card">
+      <header>
+        <strong>${escapeHtml(platformLabel(slot.platform))}</strong>
+        <span>${escapeHtml(titleCase(slot.status || "planned"))}</span>
+      </header>
+      <p>${escapeHtml(slot.assetNeed || slot.topic || "Creative needed.")}</p>
+      <dl>
+        <div><dt>Topic</dt><dd>${escapeHtml(slot.topic || "No topic")}</dd></div>
+        <div><dt>Language</dt><dd>${escapeHtml(slot.language || "en")}</dd></div>
+      </dl>
     </article>
   `;
 }
