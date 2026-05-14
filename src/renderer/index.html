@@ -3,654 +3,112 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Diamond</title>
-    <link rel="stylesheet" href="./styles.css">
+    <title>Diamond Shell Switch</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080808;
+        --surface: #111113;
+        --line: #29292f;
+        --text: #f4f4f5;
+        --muted: #a4a4aa;
+        --accent: #f5f5f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        align-items: center;
+        background: var(--bg);
+        color: var(--text);
+        display: grid;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      main {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin: auto;
+        max-width: 680px;
+        padding: 28px;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 30px;
+        letter-spacing: 0;
+        line-height: 1.1;
+        margin: 0;
+      }
+
+      p {
+        color: var(--muted);
+        font-weight: 750;
+        line-height: 1.45;
+        margin: 12px 0 0;
+      }
+
+      nav {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 24px;
+      }
+
+      a {
+        background: #19191d;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        display: grid;
+        font-weight: 900;
+        gap: 6px;
+        min-height: 92px;
+        padding: 16px;
+        text-decoration: none;
+      }
+
+      a:hover,
+      a:focus-visible {
+        border-color: var(--accent);
+        outline: none;
+      }
+
+      a span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 750;
+        line-height: 1.35;
+      }
+
+      @media (max-width: 680px) {
+        nav {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
-    <a class="skip-link" href="#main-workspace">Skip to workspace</a>
-    <div id="app">
-      <aside class="sidebar" aria-label="Diamond controls">
-        <div class="brandmark">
-          <span class="stone"></span>
-          <div>
-            <h1>Diamond</h1>
-            <p>Social command center</p>
-          </div>
-        </div>
-        <div class="tenant-summary" aria-live="polite">
-          <span>Active workspace</span>
-          <strong id="tenant-summary-title">No company selected</strong>
-          <p id="tenant-summary-detail">Choose a brand, campaign, and account.</p>
-        </div>
-
-        <section class="panel" aria-labelledby="tenant-heading">
-          <div class="panel-heading">
-            <span id="tenant-heading">Tenant</span>
-            <div class="panel-actions">
-              <button id="add-company" type="button" aria-label="Add company">Add company</button>
-              <button id="add-brand" type="button" aria-label="Add brand">Add brand</button>
-              <button id="save-state" type="button" aria-label="Save tenant selection">Save</button>
-            </div>
-          </div>
-          <label>
-            Company
-            <select id="company-select"></select>
-          </label>
-          <label>
-            Brand
-            <select id="brand-select"></select>
-          </label>
-          <label>
-            Campaign
-            <select id="campaign-select"></select>
-          </label>
-          <label>
-            Social account
-            <select id="account-select"></select>
-          </label>
-          <div id="company-form" class="tenant-form hidden">
-            <label>
-              New company name
-              <input id="new-company-name" type="text" placeholder="Company name">
-            </label>
-            <div class="tenant-form-actions">
-              <button id="create-company" type="button">Create company</button>
-              <button id="cancel-company" type="button">Cancel</button>
-            </div>
-          </div>
-          <div id="brand-form" class="tenant-form hidden">
-            <label>
-              New brand name
-              <input id="new-brand-name" type="text" placeholder="Brand name">
-            </label>
-            <div class="tenant-form-actions">
-              <button id="create-brand" type="button">Create brand</button>
-              <button id="cancel-brand" type="button">Cancel</button>
-            </div>
-          </div>
-          <div class="session-card" id="session-card" role="status" aria-live="polite">
-            <div>
-              <span class="session-label">Session</span>
-              <strong id="session-status">Unknown</strong>
-            </div>
-            <p id="session-note">Session has not been checked yet.</p>
-          </div>
-        </section>
-
-        <section class="panel" aria-labelledby="account-settings-heading">
-          <div class="panel-heading">
-            <span id="account-settings-heading">Account Settings</span>
-            <button id="save-account" type="button" aria-label="Update account settings">Update</button>
-          </div>
-          <label>
-            Handle / page
-            <input id="account-handle" type="text" placeholder="@youraccount">
-          </label>
-          <label>
-            Account URL
-            <input id="account-url" type="url" placeholder="https://x.com/youraccount">
-          </label>
-          <label>
-            Login URL
-            <input id="account-login-url" type="url" placeholder="https://x.com/i/flow/login">
-          </label>
-          <label>
-            Compose URL
-            <input id="account-compose-url" type="url" placeholder="https://x.com/compose/post">
-          </label>
-          <label>
-            Expected host
-            <input id="account-host" type="text" placeholder="x.com">
-          </label>
-          <label>
-            Browser profile ID
-            <input id="account-profile" type="text" placeholder="company-brand-platform-account">
-          </label>
-          <p class="hint">Diamond stores the browser session for this profile, not your password.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="brand-claims-heading">
-          <div class="panel-heading">
-            <span id="brand-claims-heading">Brand + Claims</span>
-            <button id="save-brand-rules" type="button">Save rules</button>
-          </div>
-          <label>
-            Brand voice
-            <textarea id="brand-voice" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Approved phrases
-            <textarea id="approved-phrases" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Banned phrases
-            <textarea id="banned-phrases" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Claim review terms
-            <textarea id="review-claims" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Blocked claims
-            <textarea id="blocked-claims" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Prize language
-            <textarea id="prize-language" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Free-to-play language
-            <textarea id="free-play-language" rows="3" spellcheck="true"></textarea>
-          </label>
-        </section>
-
-        <section class="panel" aria-labelledby="campaign-strategy-heading">
-          <div class="panel-heading">
-            <span id="campaign-strategy-heading">Campaign Strategy</span>
-            <button id="save-strategy" type="button">Save</button>
-          </div>
-          <label>
-            Goals
-            <textarea id="strategy-goals" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Audience
-            <textarea id="strategy-audience" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Content pillars
-            <textarea id="strategy-pillars" rows="4" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Primary CTA
-            <textarea id="strategy-cta" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Primary CTA Spanish
-            <textarea id="strategy-cta-es" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Offer
-            <textarea id="strategy-offer" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Offer Spanish
-            <textarea id="strategy-offer-es" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Reference accounts
-            <textarea id="strategy-references" rows="3" spellcheck="true"></textarea>
-          </label>
-        </section>
-
-        <section class="panel" aria-labelledby="mode-heading">
-          <div class="panel-heading">
-            <span id="mode-heading">Mode</span>
-          </div>
-          <div class="segmented" role="group" aria-label="Posting mode">
-            <button class="mode active" data-mode="draft_only" type="button">Draft</button>
-            <button class="mode" data-mode="stage_for_review" type="button">Stage</button>
-            <button class="mode" data-mode="auto_publish" type="button">Auto</button>
-          </div>
-          <p class="hint">Auto is disabled until proof, tests, and workflow signoff are complete.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="cadence-heading">
-          <div class="panel-heading">
-            <span id="cadence-heading">Cadence Guardrails</span>
-            <button id="save-cadence" type="button">Save</button>
-          </div>
-          <label>
-            Max posts per day
-            <input id="cadence-max-posts" type="number" min="0" step="1">
-          </label>
-          <label>
-            Max replies per hour
-            <input id="cadence-max-replies" type="number" min="0" step="1">
-          </label>
-          <label>
-            Quiet start hour
-            <input id="cadence-quiet-start" type="number" min="0" max="23" step="1">
-          </label>
-          <label>
-            Quiet end hour
-            <input id="cadence-quiet-end" type="number" min="0" max="23" step="1">
-          </label>
-          <label>
-            Cooldown minutes
-            <input id="cadence-cooldown" type="number" min="0" step="1">
-          </label>
-          <label>
-            Duplicate lookback days
-            <input id="cadence-duplicate-days" type="number" min="0" step="1">
-          </label>
-          <label>
-            Routine due window minutes
-            <input id="cadence-routine-window" type="number" min="0" step="1">
-          </label>
-          <label>
-            Do-not-engage terms
-            <textarea id="cadence-do-not-engage" rows="3" spellcheck="true"></textarea>
-          </label>
-          <label>
-            Escalation terms
-            <textarea id="cadence-escalation" rows="3" spellcheck="true"></textarea>
-          </label>
-        </section>
-
-        <section class="panel" aria-labelledby="validation-heading">
-          <div class="panel-heading">
-            <span id="validation-heading">Preflight Status</span>
-          </div>
-          <p class="hint">Live checks for the selected target before Diamond stages anything.</p>
-          <ul id="validation-list" class="validation-list" aria-live="polite"></ul>
-        </section>
-      </aside>
-
-      <main id="main-workspace" class="workspace" tabindex="-1" aria-label="Diamond workspace">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Active target</p>
-            <h2 id="active-target">No target selected</h2>
-          </div>
-          <div class="topbar-actions">
-            <button id="open-settings" type="button" aria-controls="settings-panel" aria-expanded="false">Settings</button>
-            <button id="jump-user-guide" type="button" aria-controls="user-guide-panel">User Guide</button>
-            <button id="start-tour" type="button">Start Tour</button>
-            <button id="jump-editorial-calendar" type="button" aria-controls="editorial-calendar-panel">Editorial Calendar</button>
-            <button id="jump-schedule-calendar" type="button" aria-controls="schedule-calendar-panel">Schedule Calendar</button>
-            <div class="status-pill" id="target-status" role="status" aria-live="polite">Fail closed</div>
-          </div>
-        </header>
-
-        <section id="settings-panel" class="panel settings-panel hidden" tabindex="-1" aria-labelledby="settings-heading">
-          <div class="panel-heading">
-            <span id="settings-heading">Settings</span>
-            <button id="close-settings" type="button">Close</button>
-          </div>
-          <div class="settings-grid">
-            <section class="settings-card" aria-labelledby="theme-heading">
-              <div class="panel-heading">
-                <span id="theme-heading">Theme</span>
-              </div>
-              <label>
-                Interface style
-                <select id="theme-select"></select>
-              </label>
-              <div id="theme-swatches" class="theme-swatches" aria-label="Theme colors"></div>
-              <div id="custom-theme-controls" class="custom-theme-controls hidden" aria-label="Custom theme color controls">
-                <label>
-                  Shell
-                  <input id="custom-theme-shell" type="color" value="#10151b">
-                </label>
-                <label>
-                  Panels
-                  <input id="custom-theme-panel" type="color" value="#1b2028">
-                </label>
-                <label>
-                  Accent
-                  <input id="custom-theme-accent" type="color" value="#f97316">
-                </label>
-                <label>
-                  Support
-                  <input id="custom-theme-support" type="color" value="#0ea5e9">
-                </label>
-                <button id="reset-custom-theme" type="button">Reset custom</button>
-              </div>
-              <p class="hint">Themes change the main app surfaces, sidebar, composer, browser, log, buttons, and accent colors.</p>
-            </section>
-
-            <section class="settings-card" aria-labelledby="account-setup-heading">
-              <div class="panel-heading">
-                <span id="account-setup-heading">Social Account Setup</span>
-                <button id="build-account-setup" type="button">Build kit</button>
-              </div>
-              <div class="session-card" role="status" aria-live="polite">
-                <div>
-                  <span class="session-label">Setup status</span>
-                  <strong id="account-setup-status">Not started</strong>
-                </div>
-                <p id="account-setup-note">Build a setup kit before creating a new social account.</p>
-              </div>
-              <div class="legal-jump-actions">
-                <button id="copy-account-setup" type="button">Copy kit</button>
-                <button id="open-account-signup" type="button">Open signup</button>
-                <button id="mark-account-created" type="button">Mark created</button>
-                <button id="mark-account-blocked" type="button">Mark blocked</button>
-              </div>
-              <p class="hint">Diamond prepares the account details. Platform signup, CAPTCHA, email or phone verification, and 2FA stay human-controlled.</p>
-            </section>
-
-            <section class="settings-card" aria-labelledby="firebase-heading">
-              <div class="panel-heading">
-                <span id="firebase-heading">Firebase Admin</span>
-                <button id="check-firebase" type="button">Check</button>
-              </div>
-              <div class="session-card" role="status" aria-live="polite">
-                <div>
-                  <span class="session-label">Admin JSON</span>
-                  <strong id="firebase-status">Unknown</strong>
-                </div>
-                <p id="firebase-note">Firebase admin status has not been checked.</p>
-              </div>
-              <button id="export-sync-bundle" type="button">Export sync bundle</button>
-              <p class="hint">Service account JSON stays in the Electron main process. The renderer only sees redacted status.</p>
-            </section>
-
-            <section class="settings-card" aria-labelledby="license-heading">
-              <div class="panel-heading">
-                <span id="license-heading">License</span>
-                <div class="panel-actions">
-                  <button id="check-license" type="button">Check</button>
-                  <button id="sync-license" type="button">Sync Firebase</button>
-                </div>
-              </div>
-              <div class="session-card" role="status" aria-live="polite">
-                <div>
-                  <span class="session-label">Diamond license</span>
-                  <strong id="license-status">Unknown</strong>
-                </div>
-                <p id="license-note">License has not been checked.</p>
-              </div>
-              <p class="hint">Diamond licenses are project-specific. Brand, platform, and automation entitlements come from Firebase via Mojo AI Studio.</p>
-            </section>
-
-            <section class="settings-card" aria-labelledby="legal-drafts-settings-heading">
-              <div class="panel-heading">
-                <span id="legal-drafts-settings-heading">Legal Drafts</span>
-              </div>
-              <div class="legal-jump-actions">
-                <button id="jump-terms" type="button" aria-controls="legal-terms">Terms</button>
-                <button id="jump-privacy" type="button" aria-controls="legal-privacy">Privacy</button>
-              </div>
-              <p class="hint">Draft legal copy for product review. Counsel review is still required before public launch.</p>
-            </section>
-          </div>
-
-          <section id="legal-panel" class="legal-panel" tabindex="-1" aria-labelledby="legal-panel-heading">
-            <div class="panel-heading">
-              <span id="legal-panel-heading">Legal Drafts</span>
-              <div class="panel-actions">
-                <button id="copy-terms" type="button">Copy terms</button>
-                <button id="copy-privacy" type="button">Copy privacy</button>
-              </div>
-            </div>
-            <div id="legal-content" class="legal-content"></div>
-          </section>
-        </section>
-
-        <section class="grid">
-          <section class="composer panel" aria-labelledby="post-package-heading">
-            <div class="panel-heading">
-              <span id="post-package-heading">Post Package</span>
-              <button id="pick-media" type="button">Add media</button>
-            </div>
-            <label>
-              Draft text
-              <textarea id="draft-text" rows="9" spellcheck="true"></textarea>
-            </label>
-            <div class="media-row" id="media-row"></div>
-            <div class="draft-actions">
-              <button id="evaluate-draft" type="button"><span>1</span>Evaluate</button>
-              <button id="approve-draft" type="button"><span>2</span>Approve</button>
-              <button id="stage-draft" type="button"><span>3</span>Stage in browser</button>
-              <button id="assist-media" type="button"><span>4</span>Upload media</button>
-              <button id="capture-run" type="button"><span>5</span>Capture run</button>
-              <button id="schedule-draft" type="button"><span>6</span>Schedule post</button>
-              <button id="mark-posted" type="button"><span>7</span>Mark posted</button>
-              <button id="mark-abandoned" type="button"><span>8</span>Mark abandoned</button>
-              <button id="stage-worker" type="button"><span>9</span>Worker stage</button>
-            </div>
-            <div id="risk-card" class="risk-card" role="status" aria-live="polite"></div>
-          </section>
-
-          <section class="browser panel" aria-labelledby="browser-heading">
-            <div class="panel-heading">
-              <span id="browser-heading">Visible Social Browser</span>
-              <div class="browser-actions">
-                <button id="open-account" type="button">Open account</button>
-                <button id="open-login" type="button">Open login</button>
-                <button id="focus-browser" type="button">Focus browser</button>
-                <button id="exit-focus" class="hidden" type="button">Exit focus</button>
-                <button id="fit-browser" type="button">Fit browser</button>
-                <button id="zoom-out" type="button" title="Zoom browser out">Zoom -</button>
-                <button id="zoom-in" type="button" title="Zoom browser in">Zoom +</button>
-                <button id="check-session" type="button">Check session</button>
-                <button id="mark-ready" type="button">Mark ready</button>
-                <button id="reload-webview" type="button">Reload</button>
-              </div>
-            </div>
-            <div class="browser-tabs" id="browser-tabs" role="tablist" aria-label="Social browser tabs"></div>
-            <div class="browser-shell">
-              <webview id="social-webview" aria-label="Visible social browser" partition="persist:diamond-placeholder" src="about:blank" allowpopups></webview>
-            </div>
-          </section>
-        </section>
-
-        <section class="panel log-panel" aria-labelledby="run-log-heading">
-          <div class="panel-heading">
-            <span id="run-log-heading">Run Log</span>
-            <button id="clear-log" type="button">Clear</button>
-          </div>
-          <div id="run-log" class="run-log" role="log" aria-live="polite" aria-label="Run log entries"></div>
-        </section>
-
-        <section id="user-guide-panel" class="panel guide-panel" tabindex="-1" aria-labelledby="user-guide-heading">
-          <div class="panel-heading">
-            <span id="user-guide-heading">User Guide</span>
-            <div class="panel-actions">
-              <button id="generate-tour-voiceovers" type="button">Generate voiceovers</button>
-              <button id="copy-tour-script" type="button">Copy voiceover script</button>
-              <button id="copy-elevenlabs-request" type="button">Copy ElevenLabs request</button>
-              <button id="guide-start-tour" type="button">Start tour</button>
-            </div>
-          </div>
-          <div id="guide-content" class="guide-content"></div>
-          <div class="voiceover-note">
-            Voiceover generation is designed for ElevenLabs and stays key-free in the renderer. Add an ElevenLabs voice ID when the API generation worker is built.
-          </div>
-        </section>
-
-        <section class="panel run-history-panel" aria-labelledby="post-runs-heading">
-          <div class="panel-heading">
-            <span id="post-runs-heading">Post Runs</span>
-          </div>
-          <div id="run-history" class="run-history"></div>
-        </section>
-
-        <section class="panel reply-panel" aria-labelledby="reply-inbox-heading">
-          <div class="panel-heading">
-            <span id="reply-inbox-heading">Reply Inbox</span>
-            <button id="capture-reply" type="button">Capture reply</button>
-          </div>
-          <div class="reply-form">
-            <label>
-              Author
-              <input id="reply-author" type="text" placeholder="@person">
-            </label>
-            <label>
-              Source URL
-              <input id="reply-url" type="url" placeholder="https://x.com/...">
-            </label>
-            <label>
-              Owner
-              <input id="reply-owner" type="text" placeholder="Social, Support, Founder">
-            </label>
-            <label>
-              Triage notes
-              <input id="reply-notes" type="text" placeholder="Context, concern, or handoff note">
-            </label>
-            <label>
-              Reply/comment text
-              <textarea id="reply-text" rows="4" spellcheck="true"></textarea>
-            </label>
-            <label>
-              Response draft
-              <textarea id="reply-response" rows="4" spellcheck="true"></textarea>
-            </label>
-          </div>
-          <div id="reply-inbox" class="reply-inbox"></div>
-        </section>
-
-        <section id="editorial-calendar-panel" class="panel editorial-panel" tabindex="-1" aria-labelledby="editorial-calendar-heading">
-          <div class="panel-heading">
-            <span id="editorial-calendar-heading">Editorial Calendar Slots</span>
-            <div class="panel-actions">
-              <button id="run-due-slots" type="button">Run due slots</button>
-              <button id="generate-next-slot" type="button">Generate from next slot</button>
-              <button id="add-editorial-slot" type="button">Add slot</button>
-            </div>
-          </div>
-          <div class="slot-form">
-            <label>
-              Topic
-              <input id="slot-topic" type="text" placeholder="World Cup country leaderboard push">
-            </label>
-            <label>
-              Date/time
-              <input id="slot-time" type="datetime-local">
-            </label>
-            <label>
-              Language
-              <select id="slot-language">
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-              </select>
-            </label>
-            <label>
-              Asset need
-              <input id="slot-asset" type="text" placeholder="leaderboard card, country flags, no asset">
-            </label>
-            <label>
-              Approval deadline
-              <input id="slot-deadline" type="datetime-local">
-            </label>
-          </div>
-          <div class="queue-filters" id="slot-filters"></div>
-          <div id="editorial-slots" class="editorial-slots"></div>
-        </section>
-
-        <section class="panel routine-panel" aria-labelledby="routine-runs-heading">
-          <div class="panel-heading">
-            <span id="routine-runs-heading">Routine Runs</span>
-          </div>
-          <div id="routine-runs" class="routine-runs"></div>
-        </section>
-
-        <section class="panel platform-proof-panel" aria-labelledby="platform-proof-heading">
-          <div class="panel-heading">
-            <span id="platform-proof-heading">Platform Adapter Proof</span>
-          </div>
-          <div id="platform-proof-list" class="platform-proof-list"></div>
-        </section>
-
-        <section class="panel asset-panel" aria-labelledby="asset-library-heading">
-          <div class="panel-heading">
-            <span id="asset-library-heading">Asset Library</span>
-            <div class="panel-actions">
-              <button id="generate-asset" type="button">Generate asset</button>
-              <button id="add-asset" type="button">Add asset</button>
-            </div>
-          </div>
-          <div class="asset-form">
-            <label>
-              File path
-              <input id="asset-path" type="text" placeholder="C:\path\to\image.png">
-            </label>
-            <label>
-              Type
-              <select id="asset-type">
-                <option value="leaderboard">Leaderboard</option>
-                <option value="prize">Prize</option>
-                <option value="country">Country</option>
-                <option value="founder">Founder</option>
-                <option value="campaign">Campaign</option>
-              </select>
-            </label>
-            <label>
-              Language
-              <select id="asset-language">
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-              </select>
-            </label>
-            <label>
-              Platform
-              <select id="asset-platform">
-                <option value="x">X</option>
-              </select>
-            </label>
-            <label>
-              Alt text
-              <input id="asset-alt" type="text" placeholder="Describe the image for accessibility">
-            </label>
-            <label>
-              Safe zone
-              <input id="asset-safe-zone" type="text" placeholder="Center 80%, avoid bottom crop">
-            </label>
-            <label>
-              Notes
-              <input id="asset-notes" type="text" placeholder="Usage notes">
-            </label>
-            <label class="checkbox-label">
-              <input id="asset-do-not-use" type="checkbox">
-              Do not use
-            </label>
-          </div>
-          <div class="queue-filters" id="asset-filters"></div>
-          <div id="asset-library" class="asset-library"></div>
-        </section>
-
-        <section class="panel package-queue-panel" aria-labelledby="package-queue-heading">
-          <div class="panel-heading">
-            <span id="package-queue-heading">Post Package Queue</span>
-          </div>
-          <div class="queue-filters" id="package-filters"></div>
-          <div id="draft-history" class="draft-history"></div>
-        </section>
-
-        <section id="schedule-calendar-panel" class="panel schedule-panel" tabindex="-1" aria-labelledby="schedule-calendar-heading">
-          <div class="panel-heading">
-            <span id="schedule-calendar-heading">Schedule Calendar</span>
-          </div>
-          <div class="schedule-tools">
-            <div class="segmented schedule-scope" id="schedule-scope" role="group" aria-label="Calendar scope">
-              <button class="active" data-schedule-scope="target" type="button">Target</button>
-              <button data-schedule-scope="company" type="button">Company</button>
-              <button data-schedule-scope="all" type="button">All</button>
-            </div>
-            <label>
-              Status
-              <select id="schedule-status-filter">
-                <option value="open">Open</option>
-                <option value="overdue">Overdue</option>
-                <option value="ready-today">Ready today</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="staged">Staged</option>
-                <option value="posted">Posted</option>
-                <option value="all">All</option>
-              </select>
-            </label>
-          </div>
-          <div id="schedule-detail" class="schedule-detail"></div>
-          <div id="schedule-calendar" class="schedule-calendar"></div>
-        </section>
-      </main>
-    </div>
-    <div id="tour-layer" class="tour-layer hidden" aria-live="polite">
-      <div id="tour-popover" class="tour-popover" role="dialog" aria-modal="false" aria-labelledby="tour-title">
-        <div class="tour-progress" id="tour-progress"></div>
-        <h3 id="tour-title"></h3>
-        <p id="tour-body"></p>
-        <div class="tour-voice" id="tour-voice"></div>
-        <div class="tour-actions">
-          <button id="tour-play-voiceover" type="button">Play voiceover</button>
-          <button id="tour-prev" type="button">Back</button>
-          <button id="tour-next" type="button">Next</button>
-          <button id="tour-close" type="button">Close</button>
-        </div>
-      </div>
-    </div>
-    <script type="module" src="./renderer.js"></script>
+    <main aria-labelledby="shell-heading">
+      <h1 id="shell-heading">Diamond shell switch</h1>
+      <p>Loading your selected Diamond shell. The legacy shell remains available while the Levercast-style shell is wired into production.</p>
+      <nav aria-label="Diamond shell routes">
+        <a href="./legacy-shell.html" data-shell-link="legacy">
+          Legacy shell
+          <span>Current working renderer with full browser staging controls.</span>
+        </a>
+        <a href="./posts-prototype.html" data-shell-link="levercast">
+          Levercast shell
+          <span>New posts-first prototype shell for production integration.</span>
+        </a>
+      </nav>
+    </main>
+    <script type="module" src="./shell-switch.js"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const html = readFileSync(new URL("../src/renderer/index.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../src/renderer/legacy-shell.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/renderer/styles.css", import.meta.url), "utf8");
 const js = readFileSync(new URL("../src/renderer/renderer.js", import.meta.url), "utf8");
 

@@ -23,7 +23,7 @@ The new shell becomes the default only after these flows are working inside it:
 
 ## Integration Sequence
 
-1. Add a shell switch.
+1. Add a shell switch. Built with `src/renderer/index.html`, `src/renderer/shell-switch.js`, and `src/renderer/legacy-shell.html`.
    - Keep the existing `src/renderer/index.html` reachable as the legacy shell.
    - Add a route or query flag for the new shell.
    - Default to the legacy shell until the wiring steps below are done.
