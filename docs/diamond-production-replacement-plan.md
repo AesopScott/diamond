@@ -68,7 +68,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Verify smaller screens do not clip button text.
    - Header actions for scheduling and analytics export now route to real work; post-detail media/platform controls are wired.
 
-9. Flip the default.
+9. Flip the default. Built: `src/renderer/shell-switch.js` now defaults to the Diamond shell while preserving explicit `?shell=legacy` rollback.
    - Make the Diamond-style shell the default renderer.
    - Keep `legacy` available for one release.
    - Remove legacy only after the user confirms the new shell is doing the real work.
@@ -77,13 +77,11 @@ The new shell becomes the default only after these flows are working inside it:
 
 Rollback should not require Git surgery.
 
-- Before default flip: switch the shell flag back to legacy.
-- After default flip: open the legacy route and continue working.
+- Open `index.html?shell=legacy` to force the legacy route and store it as the selected shell.
+- Open `index.html?shell=diamond` to return to the Diamond default if legacy was stored locally.
 - Full restore remains possible from the archive or Git commit `98f71a9`.
 
 ## Immediate Next Build
 
-Build the shell switch and legacy route first.
-
-This is the smallest production-facing move because it lets the new shell enter the app without risking the currently working renderer.
+Run a user-facing smoke pass on the Diamond default shell and decide whether to keep legacy for one release or remove it after confirmation.
 

@@ -12,10 +12,11 @@ assert.match(indexHtml, /href="\.\/posts-prototype\.html"/);
 assert.match(indexHtml, /src="\.\/shell-switch\.js"/);
 
 assert.match(switchJs, /diamond\.shell/);
+assert.match(switchJs, /DEFAULT_SHELL = "diamond"/);
 assert.match(switchJs, /legacy: "\.\/legacy-shell\.html"/);
 assert.match(switchJs, /diamond: "\.\/posts-prototype\.html"/);
 assert.match(switchJs, /params\.get\("shell"\)/);
-assert.match(switchJs, /selectedShell = requestedShell \|\| storedShell \|\| "legacy"/);
+assert.match(switchJs, /selectedShell = requestedShell \|\| storedShell \|\| DEFAULT_SHELL/);
 assert.match(switchJs, /window\.location\.replace\(SHELL_ROUTES\[selectedShell\]\)/);
 
 assert.match(legacyHtml, /<title>Diamond<\/title>/);

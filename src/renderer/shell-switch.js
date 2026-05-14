@@ -1,4 +1,5 @@
 const SHELL_STORAGE_KEY = "diamond.shell";
+const DEFAULT_SHELL = "diamond";
 const SHELL_ROUTES = {
   legacy: "./legacy-shell.html",
   diamond: "./posts-prototype.html",
@@ -7,7 +8,7 @@ const SHELL_ROUTES = {
 const params = new URLSearchParams(window.location.search);
 const requestedShell = normalizeShell(params.get("shell"));
 const storedShell = normalizeShell(window.localStorage.getItem(SHELL_STORAGE_KEY));
-const selectedShell = requestedShell || storedShell || "legacy";
+const selectedShell = requestedShell || storedShell || DEFAULT_SHELL;
 
 if (requestedShell) {
   window.localStorage.setItem(SHELL_STORAGE_KEY, requestedShell);
