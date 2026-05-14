@@ -12,6 +12,8 @@ assert.match(html, /id="calendar-board"/);
 assert.match(html, /id="accounts-view"/);
 assert.match(html, /id="accounts-grid"/);
 assert.match(html, /id="account-detail"/);
+assert.match(html, /id="brands-view"/);
+assert.match(html, /id="brand-workspace"/);
 assert.match(html, /id="prototype-nav"/);
 assert.match(html, /id="post-detail"/);
 assert.match(html, /id="idea-text"/);
@@ -39,6 +41,9 @@ assert.match(css, /\.accounts-layout/);
 assert.match(css, /\.account-card/);
 assert.match(css, /\.account-detail-card/);
 assert.match(css, /\.session-pill/);
+assert.match(css, /\.brand-workspace/);
+assert.match(css, /\.brand-identity-card/);
+assert.match(css, /\.brand-panel/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
 assert.match(js, /buildPostBoardView/);
@@ -55,5 +60,7 @@ assert.match(js, /renderAccounts/);
 assert.match(js, /renderAccountCard/);
 assert.match(js, /renderAccountDetail/);
 assert.match(js, /buildSocialAccountSetupKit/);
+assert.match(js, /renderBrands/);
+assert.match(js, /renderBrandPanel/);
 
 console.log("All Diamond posts prototype tests passed.");

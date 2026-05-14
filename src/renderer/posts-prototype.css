@@ -688,6 +688,115 @@ textarea {
   padding-left: 20px;
 }
 
+.brand-workspace {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+}
+
+.brand-overview {
+  display: grid;
+  gap: 16px;
+}
+
+.brand-identity-card,
+.strategy-card,
+.brand-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.brand-identity-card h2 {
+  font-size: 30px;
+  line-height: 1.1;
+  margin: 6px 0 18px;
+}
+
+.brand-facts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.brand-facts div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.brand-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 5px;
+}
+
+.brand-facts dd {
+  font-weight: 900;
+  margin: 0;
+}
+
+.strategy-card h3 {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.strategy-card p {
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0 0 18px;
+}
+
+.strategy-card p:last-child {
+  margin-bottom: 0;
+}
+
+.brand-panels {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.brand-panel {
+  min-height: 180px;
+}
+
+.brand-panel header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.brand-panel h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.brand-panel ul {
+  color: #dedee3;
+  display: grid;
+  font-weight: 700;
+  gap: 9px;
+  line-height: 1.4;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.brand-panel p {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0;
+}
+
 .placeholder-view {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -728,6 +837,8 @@ textarea {
   }
 
   .accounts-layout,
+  .brand-workspace,
+  .brand-panels,
   .account-meta,
   .account-actions {
     grid-template-columns: 1fr;

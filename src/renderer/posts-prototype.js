@@ -16,6 +16,7 @@ let board = buildPostBoardView(prototypeModel);
 renderBoard(board);
 renderCalendar();
 renderAccounts();
+renderBrands();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -177,6 +178,7 @@ function showPrototypeView(viewId) {
   if (viewId === "posts-view") renderBoard(board);
   if (viewId === "calendar-view") renderCalendar();
   if (viewId === "accounts-view") renderAccounts();
+  if (viewId === "brands-view") renderBrands();
 }
 
 function renderCalendar() {
@@ -299,6 +301,62 @@ function renderAccountDetail(account) {
           ${kit.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
         </ul>
       </section>
+    </article>
+  `;
+}
+
+function renderBrands() {
+  const target = document.querySelector("#brand-workspace");
+  if (!target) return;
+  const company = (state.companies || [])[0] || {};
+  const brand = (state.brands || [])[0] || {};
+  const campaign = (state.campaigns || [])[0] || {};
+  const strategy = (state.contentStrategies || [])[0] || {};
+  const library = (state.brandLibraries || [])[0] || {};
+  const claims = (state.claimLibraries || [])[0] || {};
+  target.innerHTML = `
+    <aside class="brand-overview" aria-label="Brand overview">
+      <article class="brand-identity-card">
+        <span class="eyebrow">Company</span>
+        <h2>${escapeHtml(company.name || company.id || "Company")}</h2>
+        <dl class="brand-facts">
+          <div><dt>Brand</dt><dd>${escapeHtml(brand.name || brand.id || "Unassigned")}</dd></div>
+          <div><dt>Campaign</dt><dd>${escapeHtml(campaign.name || campaign.id || "No campaign")}</dd></div>
+          <div><dt>Status</dt><dd>${escapeHtml(titleCase(campaign.status || "draft"))}</dd></div>
+          <div><dt>Languages</dt><dd>${escapeHtml((brand.languages || []).join(", ") || "English")}</dd></div>
+        </dl>
+      </article>
+      <article class="strategy-card">
+        <h3>Primary CTA</h3>
+        <p>${escapeHtml(strategy.cta || "No CTA set.")}</p>
+        <h3>Offer</h3>
+        <p>${escapeHtml(strategy.offer || "No offer set.")}</p>
+      </article>
+    </aside>
+    <section class="brand-panels" aria-label="Brand operating rules">
+      ${renderBrandPanel("Goals", strategy.goals)}
+      ${renderBrandPanel("Audience", strategy.audience)}
+      ${renderBrandPanel("Pillars", strategy.pillars)}
+      ${renderBrandPanel("Voice", [library.voice])}
+      ${renderBrandPanel("Approved phrases", library.approvedPhrases)}
+      ${renderBrandPanel("Banned phrases", library.bannedPhrases)}
+      ${renderBrandPanel("Prize language", claims.prizeLanguage)}
+      ${renderBrandPanel("Requires review", claims.requiresReviewClaims)}
+      ${renderBrandPanel("Blocked claims", claims.blockedClaims)}
+      ${renderBrandPanel("Reference accounts", strategy.referenceAccounts)}
+    </section>
+  `;
+}
+
+function renderBrandPanel(title, items = []) {
+  const list = (items || []).filter(Boolean);
+  return `
+    <article class="brand-panel">
+      <header>
+        <h3>${escapeHtml(title)}</h3>
+        <span class="count">${list.length}</span>
+      </header>
+      ${list.length ? `<ul>${list.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>No ${escapeHtml(title.toLowerCase())} set.</p>`}
     </article>
   `;
 }

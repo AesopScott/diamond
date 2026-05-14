@@ -129,7 +129,22 @@
             <div id="account-detail" class="account-detail"></div>
           </section>
         </section>
-        <section id="brands-view" class="prototype-view placeholder-view hidden"><h1>Brands</h1><p>Brands page placeholder.</p></section>
+        <section id="brands-view" class="prototype-view hidden" aria-labelledby="brands-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="brands-heading">Brands</h1>
+              <p>Keep company identity, campaign strategy, voice, and claim rules in one place.</p>
+            </div>
+            <button class="create-button" type="button">Add brand</button>
+          </header>
+          <section class="prototype-toolbar" aria-label="Brand filters">
+            <button type="button" class="filter-pill">Active company</button>
+            <button type="button" class="filter-pill">Campaigns</button>
+            <button type="button" class="filter-pill">Claim rules</button>
+            <button type="button" class="filter-pill">Voice</button>
+          </section>
+          <section id="brand-workspace" class="brand-workspace" aria-label="Brand strategy workspace"></section>
+        </section>
         <section id="settings-view" class="prototype-view placeholder-view hidden"><h1>Settings</h1><p>Settings page placeholder.</p></section>
       </main>
     </div>
