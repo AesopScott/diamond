@@ -161,7 +161,22 @@
           </section>
           <section id="brand-workspace" class="brand-workspace" aria-label="Brand strategy workspace"></section>
         </section>
-        <section id="settings-view" class="prototype-view placeholder-view hidden"><h1>Settings</h1><p>Settings page placeholder.</p></section>
+        <section id="settings-view" class="prototype-view hidden" aria-labelledby="settings-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="settings-heading">Settings</h1>
+              <p>Manage licensing, Firebase, legal drafts, theme, accessibility, and routine timing.</p>
+            </div>
+            <button class="create-button" type="button">Sync</button>
+          </header>
+          <section class="prototype-toolbar" aria-label="Settings filters">
+            <button type="button" class="filter-pill">License</button>
+            <button type="button" class="filter-pill">Firebase</button>
+            <button type="button" class="filter-pill">Legal</button>
+            <button type="button" class="filter-pill">Accessibility</button>
+          </section>
+          <section id="settings-workspace" class="settings-workspace" aria-label="Settings workspace"></section>
+        </section>
       </main>
     </div>
 

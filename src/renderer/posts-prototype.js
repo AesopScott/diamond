@@ -1,13 +1,20 @@
 import {
   buildSocialAccountSetupKit,
+  buildDiamondLicenseModel,
   buildPostBoardView,
+  createTemporaryUnlimitedDiamondLicense,
   createPlatformDraft,
   createPostDraft,
   createPostPackage,
   createSeedWorkspace,
   derivePostPackagesFromWorkspace,
+  evaluateDiamondLicense,
+  getDiamondLegalDocuments,
+  resolveFirebaseAdminConfig,
   resolveComposeUrl,
   resolveLoginUrl,
+  summarizeFirestoreSyncBundle,
+  buildFirestoreSyncBundle,
 } from "../index.js";
 
 const state = await loadPrototypeState();
@@ -18,6 +25,7 @@ renderCalendar();
 renderAccounts();
 renderBrands();
 renderTemplates();
+renderSettings();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -114,6 +122,18 @@ function buildSampleWorkspace() {
       reddit: 1,
     }[account.platform] || 0,
   }));
+  workspace.licenseCache = createTemporaryUnlimitedDiamondLicense({
+    userId: "scott",
+    brands: [workspace.context.brandId],
+    platforms: workspace.socialAccounts.map((account) => account.platform),
+  });
+  workspace.themeId = "custom";
+  workspace.accessibility = {
+    keyboardNavigation: "baseline",
+    screenReaderLabels: "baseline",
+    colorContrast: "needs full audit",
+    reducedMotion: "planned",
+  };
   return workspace;
 }
 
@@ -181,6 +201,7 @@ function showPrototypeView(viewId) {
   if (viewId === "templates-view") renderTemplates();
   if (viewId === "accounts-view") renderAccounts();
   if (viewId === "brands-view") renderBrands();
+  if (viewId === "settings-view") renderSettings();
 }
 
 function renderCalendar() {
@@ -508,6 +529,112 @@ function renderCreativeNeedCard(slot) {
       </dl>
     </article>
   `;
+}
+
+function renderSettings() {
+  const target = document.querySelector("#settings-workspace");
+  if (!target) return;
+  const license = state.licenseCache || createTemporaryUnlimitedDiamondLicense({
+    userId: "scott",
+    brands: [state.context?.brandId].filter(Boolean),
+    platforms: (state.socialAccounts || []).map((account) => account.platform),
+  });
+  const licenseCheck = evaluateDiamondLicense(license, {
+    requestedBrands: [state.context?.brandId].filter(Boolean),
+    requestedPlatforms: [state.context?.platform].filter(Boolean),
+  });
+  const model = buildDiamondLicenseModel();
+  const firebase = resolveFirebaseAdminConfig({
+    env: {},
+    projectId: "diamond-local-preview",
+    files: ["C:/Users/scott/Code/diamond/firebase-admin.json"],
+  });
+  const legalDocuments = getDiamondLegalDocuments();
+  const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
+  const cadencePolicy = (state.cadencePolicies || [])[0] || {};
+  target.innerHTML = `
+    <section class="settings-grid">
+      ${renderSettingsPanel("License", [
+        ["Status", licenseCheck.ok ? "Ready" : "Blocked"],
+        ["Plan", license.planId || "custom"],
+        ["Role", license.role || "user"],
+        ["Brands", String(licenseCheck.brandLimit || license.brandLimit || "0")],
+        ["Platforms", String(licenseCheck.platformLimit || license.platformLimit || "0")],
+        ["Automation", formatAutomation(licenseCheck.automationPlatforms || license.automationPlatforms)],
+        ["Firebase path", license.firebasePath || model.firebase.collectionPath],
+      ])}
+      ${renderSettingsPanel("Firebase", [
+        ["Status", firebase.ok ? "Configured" : "Not configured"],
+        ["Admin JSON", firebase.redactedPath || "Missing"],
+        ["Project", firebase.projectId || "Missing"],
+        ["Source", firebase.source],
+        ["License collection", model.firebase.collectionPath],
+      ])}
+      ${renderSettingsPanel("Routine timing", [
+        ["Due window", `${cadencePolicy.routineDueWindowMinutes ?? 15} minutes`],
+        ["Max posts/day", String(cadencePolicy.maxPostsPerDay ?? "Not set")],
+        ["Max replies/hour", String(cadencePolicy.maxRepliesPerHour ?? "Not set")],
+        ["Cooldown", `${cadencePolicy.cooldownMinutes ?? 0} minutes`],
+      ])}
+      ${renderSettingsPanel("Theme", [
+        ["Selected", titleCase(state.themeId || "broadcast")],
+        ["Shell color", "#080808"],
+        ["Panel color", "#111113"],
+        ["Accent color", "#f5f5f7"],
+        ["Custom swatches", "4 editable dots"],
+      ])}
+      ${renderSettingsPanel("Accessibility", [
+        ["Keyboard navigation", state.accessibility?.keyboardNavigation || "baseline"],
+        ["Screen reader labels", state.accessibility?.screenReaderLabels || "baseline"],
+        ["Color contrast", state.accessibility?.colorContrast || "planned"],
+        ["Reduced motion", state.accessibility?.reducedMotion || "planned"],
+      ])}
+      ${renderSettingsPanel("Firestore sync", Object.entries(syncSummary).map(([key, value]) => [titleCase(key), String(value)]))}
+    </section>
+    <section class="legal-settings" aria-label="Legal drafts">
+      <header>
+        <h2>Legal drafts</h2>
+        <span class="count">${legalDocuments.length}</span>
+      </header>
+      <div class="legal-list">
+        ${legalDocuments.map(renderLegalCard).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderSettingsPanel(title, rows) {
+  return `
+    <article class="settings-panel">
+      <header>
+        <h2>${escapeHtml(title)}</h2>
+      </header>
+      <dl>
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+      </dl>
+    </article>
+  `;
+}
+
+function renderLegalCard(document) {
+  return `
+    <article class="legal-card">
+      <header>
+        <strong>${escapeHtml(document.title)}</strong>
+        <span>${escapeHtml(titleCase(document.status))}</span>
+      </header>
+      <p>${escapeHtml(document.summary)}</p>
+      <dl>
+        <div><dt>Updated</dt><dd>${escapeHtml(document.updatedAt)}</dd></div>
+        <div><dt>Sections</dt><dd>${escapeHtml((document.sections || []).length)}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function formatAutomation(value) {
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "off";
+  return String(value || "off");
 }
 
 function openCreateDetail() {
