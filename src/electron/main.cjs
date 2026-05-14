@@ -9,15 +9,21 @@ const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
 const SYNC_DIR = path.join(APP_DIR, "sync");
 const TOUR_AUDIO_DIR = path.join(APP_DIR, "tour-audio");
+const CHROMIUM_CACHE_DIR = path.join(APP_DIR, "chromium-cache");
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
 
 loadLocalEnv();
+app.setPath("userData", APP_DIR);
+app.commandLine.appendSwitch("disk-cache-dir", CHROMIUM_CACHE_DIR);
+app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
+repairVolatileChromiumStorage();
 
 function ensureAppDir() {
   fs.mkdirSync(APP_DIR, { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "browser-profiles"), { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "screenshots"), { recursive: true });
   fs.mkdirSync(path.join(APP_DIR, "generated-assets"), { recursive: true });
+  fs.mkdirSync(CHROMIUM_CACHE_DIR, { recursive: true });
   fs.mkdirSync(SYNC_DIR, { recursive: true });
   fs.mkdirSync(TOUR_AUDIO_DIR, { recursive: true });
 }
@@ -34,6 +40,26 @@ function writeState(state) {
   ensureAppDir();
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2), "utf8");
   return state;
+}
+
+function repairVolatileChromiumStorage() {
+  [
+    CHROMIUM_CACHE_DIR,
+    path.join(APP_DIR, "Cache"),
+    path.join(APP_DIR, "Code Cache"),
+    path.join(APP_DIR, "DawnCache"),
+    path.join(APP_DIR, "GPUCache"),
+    path.join(APP_DIR, "Service Worker", "Database"),
+    path.join(APP_DIR, "Service Worker", "ScriptCache"),
+    path.join(APP_DIR, "QuotaManager"),
+    path.join(APP_DIR, "QuotaManager-journal"),
+  ].forEach((target) => {
+    try {
+      fs.rmSync(target, { recursive: true, force: true });
+    } catch {
+      // Cache repair is best-effort. Never block the app over disposable Chromium storage.
+    }
+  });
 }
 
 function createWindow() {
@@ -79,6 +105,7 @@ ipcMain.handle("diamond:get-paths", () => ({
   screenshotsDir: path.join(APP_DIR, "screenshots"),
   generatedAssetsDir: path.join(APP_DIR, "generated-assets"),
   syncDir: SYNC_DIR,
+  chromiumCacheDir: CHROMIUM_CACHE_DIR,
 }));
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
