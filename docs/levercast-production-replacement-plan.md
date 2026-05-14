@@ -38,6 +38,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Replace prototype sample state with persisted app state.
    - Ensure board cards open real package detail.
    - Keep platform-specific drafts editable.
+   - First action pass built: platform drafts can be evaluated, approved, scheduled, staged, marked posted, or abandoned from the Levercast post detail.
 
 4. Wire Accounts and Brands next.
    - Make company, brand, campaign, and social account state persistent.

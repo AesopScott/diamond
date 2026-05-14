@@ -10,6 +10,8 @@ import {
   createSeedWorkspace,
   derivePostPackagesFromWorkspace,
   evaluateDiamondLicense,
+  evaluateDraftQuality,
+  evaluateDraftRisk,
   getDiamondLegalDocuments,
   migrateWorkspaceState,
   resolveFirebaseAdminConfig,
@@ -253,6 +255,8 @@ function wirePrototypeControls() {
   });
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
+  document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
+  document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
@@ -293,6 +297,15 @@ function showPrototypeView(viewId) {
   if (viewId === "accounts-view") renderAccounts();
   if (viewId === "brands-view") renderBrands();
   if (viewId === "settings-view") renderSettings();
+}
+
+async function refreshProductionViews() {
+  board = buildPostBoardView(prototypeModel);
+  renderCalendar();
+  renderSettings();
+  renderAnalytics();
+  renderOperatorDrawer();
+  await window.diamond?.saveState?.(state);
 }
 
 function renderCalendar() {
@@ -1118,13 +1131,25 @@ function renderPlatformButtons(drafts) {
 function renderPlatformPreviews(drafts) {
   const target = document.querySelector("#platform-previews");
   target.innerHTML = drafts.map((draft) => `
-    <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}">
+    <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}">
       <header>
-        <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
+        <div>
+          <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
+          <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(titleCase(draft.status || "draft"))}</em>
+        </div>
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
-      <textarea rows="${draft.platform === "x" ? 4 : 7}">${escapeHtml(draft.text)}</textarea>
+      <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       <button type="button" class="media-button">+ Media</button>
+      <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
+        <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
+        <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">Approve</button>
+        <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">Schedule</button>
+        <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">Stage</button>
+        <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">Mark posted</button>
+        <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">Abandon</button>
+      </div>
+      ${renderDraftEvaluation(draft)}
       <div class="social-preview">
         <div class="avatar"></div>
         <div>
@@ -1135,6 +1160,205 @@ function renderPlatformPreviews(drafts) {
       </div>
     </article>
   `).join("");
+}
+
+function renderDraftEvaluation(draft) {
+  const details = [
+    draft.approvalLevel ? `Approval: ${titleCase(draft.approvalLevel)}` : "",
+    Number.isFinite(Number(draft.qualityScore)) ? `Quality: ${draft.qualityScore}/${draft.qualityGate || "unknown"}` : "",
+    draft.scheduledAt ? `Scheduled: ${formatDateTime(draft.scheduledAt)}` : "",
+    draft.publishedAt ? `Posted: ${formatDateTime(draft.publishedAt)}` : "",
+    draft.stageNote || "",
+  ].filter(Boolean);
+  if (!details.length && !draft.riskFlags?.length && !draft.qualityDetails?.length) return "";
+  return `
+    <div class="platform-evaluation">
+      ${details.map((detail) => `<span>${escapeHtml(detail)}</span>`).join("")}
+      ${draft.riskFlags?.length ? `<span>Risk: ${escapeHtml(draft.riskFlags.join(", "))}</span>` : ""}
+      ${draft.qualityDetails?.length ? `<p>${escapeHtml(draft.qualityDetails.slice(0, 2).join(" "))}</p>` : ""}
+    </div>
+  `;
+}
+
+async function handlePlatformDraftAction(event) {
+  const button = event.target.closest("[data-platform-action]");
+  if (!button) return;
+  const draft = prototypeModel.platformDrafts.find((item) => item.id === button.dataset.platformDraftId);
+  if (!draft) return;
+  const action = button.dataset.platformAction;
+  if (action === "evaluate") evaluatePlatformDraft(draft);
+  if (action === "approve") approvePlatformDraft(draft);
+  if (action === "schedule") schedulePlatformDraft(draft);
+  if (action === "stage") stagePlatformDraft(draft);
+  if (action === "posted") markPlatformDraftPosted(draft);
+  if (action === "abandoned") markPlatformDraftAbandoned(draft);
+  updatePostPackageFromDrafts(draft.postPackageId);
+  await saveProductionState();
+  await refreshProductionViews();
+  reopenActiveDetail();
+}
+
+function handlePlatformDraftTextInput(event) {
+  const textarea = event.target.closest("[data-draft-text]");
+  if (!textarea) return;
+  const draft = prototypeModel.platformDrafts.find((item) => item.id === textarea.dataset.draftText);
+  if (!draft) return;
+  draft.text = textarea.value;
+  draft.updatedAt = new Date().toISOString();
+  const preview = textarea.closest("[data-platform-draft-id]");
+  const counter = preview?.querySelector("header > span");
+  if (counter && draft.charLimit) counter.textContent = `${draft.text.length}/${draft.charLimit}`;
+  const socialText = preview?.querySelector(".social-preview > p");
+  if (socialText) socialText.textContent = draft.text;
+  saveProductionState();
+}
+
+function evaluatePlatformDraft(draft) {
+  const policy = approvalPolicyFor(draft);
+  const brandLibrary = brandLibraryFor(draft);
+  const claimLibrary = claimLibraryFor(draft);
+  const strategy = strategyFor(draft);
+  const risk = evaluateDraftRisk({
+    text: draft.text,
+    policy,
+    brandLibrary,
+    claimLibrary,
+  });
+  const quality = evaluateDraftQuality({
+    draft: {
+      ...draft,
+      approvalLevel: risk.level,
+      riskFlags: risk.flags,
+      language: draft.language || "en",
+    },
+    strategy,
+    memory: state.postMemory || [],
+    assets: state.assetLibrary || [],
+  });
+  draft.approvalLevel = risk.level;
+  draft.riskFlags = risk.flags;
+  draft.riskDetails = risk.details || [];
+  draft.qualityScore = quality.score;
+  draft.qualityGate = quality.level;
+  draft.qualityDetails = quality.details || [];
+  draft.repeatedMemoryId = quality.repeatedMemoryId || null;
+  draft.status = risk.level === "blocked" || quality.level === "hold"
+    ? "blocked"
+    : risk.level === "review_required" || quality.level === "review" ? "needs_review" : "draft";
+  draft.evaluatedAt = new Date().toISOString();
+  draft.updatedAt = draft.evaluatedAt;
+}
+
+function approvePlatformDraft(draft) {
+  if (!draft.approvalLevel) evaluatePlatformDraft(draft);
+  if (draft.status === "blocked") {
+    draft.stageNote = "Approval blocked until risk or quality issues are fixed.";
+    draft.updatedAt = new Date().toISOString();
+    return;
+  }
+  draft.status = "approved";
+  draft.approvedAt = new Date().toISOString();
+  draft.updatedAt = draft.approvedAt;
+}
+
+function schedulePlatformDraft(draft) {
+  if (!["approved", "staged", "scheduled", "published"].includes(draft.status)) approvePlatformDraft(draft);
+  if (draft.status === "blocked") return;
+  const scheduledAt = draft.scheduledAt || nextScheduleTime();
+  const schedule = {
+    id: draft.scheduledPostId || `scheduled-${Date.now()}-${draft.platform}`,
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    context: draft.context,
+    status: "scheduled",
+    scheduledAt,
+    text: draft.text,
+    media: draft.media || [],
+    createdAt: draft.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  state.scheduledPosts ||= [];
+  const index = state.scheduledPosts.findIndex((item) => item.id === schedule.id);
+  if (index >= 0) state.scheduledPosts[index] = { ...state.scheduledPosts[index], ...schedule };
+  else state.scheduledPosts.unshift(schedule);
+  draft.status = "scheduled";
+  draft.scheduledPostId = schedule.id;
+  draft.scheduledAt = scheduledAt;
+  draft.updatedAt = schedule.updatedAt;
+}
+
+function stagePlatformDraft(draft) {
+  if (!["approved", "scheduled", "staged"].includes(draft.status)) approvePlatformDraft(draft);
+  if (draft.status === "blocked") return;
+  draft.status = "staged";
+  draft.stagedAt = new Date().toISOString();
+  draft.stageUrl = resolveComposeUrl(accountForDraft(draft)) || "";
+  draft.stageNote = draft.stageUrl ? "Ready for browser staging in Operator tools." : "Compose URL missing; set account URL before staging.";
+  draft.updatedAt = draft.stagedAt;
+}
+
+function markPlatformDraftPosted(draft) {
+  const postedAt = new Date().toISOString();
+  draft.status = "published";
+  draft.publishedAt = postedAt;
+  draft.updatedAt = postedAt;
+  state.postRuns ||= [];
+  const run = {
+    id: draft.runId || `run-${Date.now()}-${draft.platform}`,
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    context: draft.context,
+    status: "posted",
+    text: draft.text,
+    media: draft.media || [],
+    createdAt: postedAt,
+  };
+  draft.runId = run.id;
+  const runIndex = state.postRuns.findIndex((item) => item.id === run.id);
+  if (runIndex >= 0) state.postRuns[runIndex] = { ...state.postRuns[runIndex], ...run };
+  else state.postRuns.unshift(run);
+  const schedule = state.scheduledPosts?.find((item) => item.id === draft.scheduledPostId || item.draftId === draft.id);
+  if (schedule) {
+    schedule.status = "posted";
+    schedule.postedAt = postedAt;
+    schedule.updatedAt = postedAt;
+  }
+}
+
+function markPlatformDraftAbandoned(draft) {
+  draft.status = "abandoned";
+  draft.abandonedAt = new Date().toISOString();
+  draft.updatedAt = draft.abandonedAt;
+}
+
+function updatePostPackageFromDrafts(postPackageId) {
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === postPackageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === postPackageId);
+  postPackage.status = packageStatusFromDrafts(drafts);
+  postPackage.updatedAt = latestValue(drafts.map((draft) => draft.updatedAt)) || new Date().toISOString();
+  postPackage.platformDraftIds = drafts.map((draft) => draft.id);
+}
+
+function packageStatusFromDrafts(drafts) {
+  const statuses = drafts.map((draft) => draft.status);
+  if (statuses.some((status) => status === "blocked")) return "blocked";
+  if (statuses.some((status) => status === "failed")) return "failed";
+  if (statuses.some((status) => status === "needs_review")) return "needs_review";
+  if (statuses.some((status) => status === "staged")) return "staged";
+  if (statuses.some((status) => status === "scheduled")) return "scheduled";
+  if (statuses.length && statuses.every((status) => status === "published")) return "published";
+  if (statuses.some((status) => status === "approved")) return "approved";
+  if (statuses.length && statuses.every((status) => status === "abandoned")) return "abandoned";
+  return "draft";
+}
+
+function reopenActiveDetail() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  openDetail(postPackage, drafts);
 }
 
 function handleIdeaInput() {
@@ -1212,6 +1436,45 @@ function platformCopy(idea, platform) {
 
 function socialAccountIdForPlatform(platform) {
   return (state.socialAccounts || []).find((account) => account.platform === platform)?.id || state.context.socialAccountId;
+}
+
+function accountForDraft(draft) {
+  return (state.socialAccounts || []).find((account) => account.id === draft.socialAccountId)
+    || (state.socialAccounts || []).find((account) => account.platform === draft.platform)
+    || null;
+}
+
+function approvalPolicyFor(draft) {
+  return (state.approvalPolicies || []).find((policy) => policy.id === draft.context?.approvalPolicyId)
+    || (state.approvalPolicies || []).find((policy) => policy.companyId === draft.companyId)
+    || {};
+}
+
+function brandLibraryFor(draft) {
+  return (state.brandLibraries || []).find((library) => library.brandId === draft.brandId)
+    || {};
+}
+
+function claimLibraryFor(draft) {
+  return (state.claimLibraries || []).find((library) => library.brandId === draft.brandId)
+    || {};
+}
+
+function strategyFor(draft) {
+  return (state.contentStrategies || []).find((strategy) => strategy.campaignId === draft.campaignId)
+    || {};
+}
+
+function nextScheduleTime() {
+  const date = new Date();
+  date.setHours(date.getHours() + 1, 0, 0, 0);
+  return date.toISOString();
+}
+
+function latestValue(values = []) {
+  return values
+    .filter(Boolean)
+    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] || "";
 }
 
 function platformIcon(platform) {

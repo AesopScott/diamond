@@ -424,9 +424,58 @@ textarea {
   margin-bottom: 12px;
 }
 
+.platform-preview header div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .platform-preview header span {
   color: var(--muted);
   font-weight: 800;
+}
+
+.platform-action-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.platform-action-row button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 36px;
+  padding: 8px;
+}
+
+.platform-action-row button:hover {
+  border-color: #e5e5e8;
+}
+
+.platform-evaluation {
+  background: #09090a;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.platform-evaluation span,
+.platform-evaluation p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .social-preview {
@@ -1455,5 +1504,9 @@ textarea {
 
   .operator-meta {
     grid-template-columns: 1fr;
+  }
+
+  .platform-action-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
