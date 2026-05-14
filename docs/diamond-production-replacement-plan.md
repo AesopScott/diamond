@@ -4,7 +4,7 @@ Date: 2026-05-14
 
 ## Decision
 
-Replace the current Diamond renderer shell with the Levercast-style shell.
+Replace the current Diamond renderer shell with the Diamond-style shell.
 
 The replacement should proceed, but not as a one-shot overwrite. The current shell still has working production wiring for browser staging, account setup, session checks, logs, validation, and scheduling. The new shell has the better product structure, so the right move is to make it the production shell while keeping the current shell reachable as a legacy fallback during integration.
 
@@ -33,14 +33,14 @@ The new shell becomes the default only after these flows are working inside it:
    - Preserve `posts-prototype.html` as a reference until the production shell is verified.
    - Keep archive files in `docs/archive/diamond-current-ui-2026-05-14/`.
 
-3. Wire Posts first. First pass built: the Levercast shell now hydrates saved app state, prefers persisted `postPackages/platformDrafts`, and saves newly created packages through `window.diamond.saveState`.
+3. Wire Posts first. First pass built: the Diamond shell now hydrates saved app state, prefers persisted `postPackages/platformDrafts`, and saves newly created packages through `window.diamond.saveState`.
    - Use existing post package helpers.
    - Replace prototype sample state with persisted app state.
    - Ensure board cards open real package detail.
    - Keep platform-specific drafts editable.
-   - First action pass built: platform drafts can be evaluated, approved, scheduled, staged, marked posted, or abandoned from the Levercast post detail.
+   - First action pass built: platform drafts can be evaluated, approved, scheduled, staged, marked posted, or abandoned from the Diamond post detail.
 
-4. Wire Accounts and Brands next. First pass built: the Levercast shell can add companies, brands, campaigns, and social accounts; edit account URLs/session status; edit brand workspace fields; and set the active account or brand scope.
+4. Wire Accounts and Brands next. First pass built: the Diamond shell can add companies, brands, campaigns, and social accounts; edit account URLs/session status; edit brand workspace fields; and set the active account or brand scope.
    - Make company, brand, campaign, and social account state persistent.
    - Keep accounts scoped per company and brand.
    - Restore add company, add brand, add account, save, and session-check actions.
@@ -67,7 +67,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Verify smaller screens do not clip button text.
 
 9. Flip the default.
-   - Make the Levercast-style shell the default renderer.
+   - Make the Diamond-style shell the default renderer.
    - Keep `legacy` available for one release.
    - Remove legacy only after the user confirms the new shell is doing the real work.
 
@@ -84,3 +84,4 @@ Rollback should not require Git surgery.
 Build the shell switch and legacy route first.
 
 This is the smallest production-facing move because it lets the new shell enter the app without risking the currently working renderer.
+

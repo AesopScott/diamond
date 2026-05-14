@@ -1,7 +1,7 @@
 const SHELL_STORAGE_KEY = "diamond.shell";
 const SHELL_ROUTES = {
   legacy: "./legacy-shell.html",
-  levercast: "./posts-prototype.html",
+  diamond: "./posts-prototype.html",
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -19,3 +19,4 @@ function normalizeShell(value) {
   const normalized = String(value || "").trim().toLowerCase();
   return Object.hasOwn(SHELL_ROUTES, normalized) ? normalized : "";
 }
+

@@ -1,6 +1,6 @@
 # Diamond Current UI Archive
 
-Archived on 2026-05-14 before the Levercast-style redesign planning work.
+Archived on 2026-05-14 before the Diamond-style redesign planning work.
 
 Reference commit: `98f71a9`
 
@@ -23,3 +23,4 @@ This is not the primary rollback mechanism. Git remains the source of truth for 
 To restore the archived UI manually, copy the three files in `src-renderer/` back to `src/renderer/`.
 
 To restore through Git, use commit `98f71a9` as the pre-redesign reference point.
+

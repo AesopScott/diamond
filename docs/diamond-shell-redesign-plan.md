@@ -1,4 +1,4 @@
-# Diamond Levercast-Style Redesign Plan
+# Diamond Diamond-style Redesign Plan
 
 ## Intent
 
@@ -140,14 +140,14 @@ platformDrafts
 10. Move license, Firebase, legal, theme, and accessibility into Settings. Prototype built in `src/renderer/posts-prototype.html`.
 11. Add Analytics page. Prototype built in `src/renderer/posts-prototype.html`.
 12. Move advanced operator panels into an explicit drawer or page. Prototype drawer built in `src/renderer/posts-prototype.html`.
-13. Screenshot compare new shell against the archived current UI. Captures and recommendation saved in `docs/levercast-redesign-comparison.md`.
-14. Decide whether to replace the current renderer shell. Decision: replace it with a rollback-friendly shell switch and legacy route. Production plan saved in `docs/levercast-production-replacement-plan.md`.
+13. Screenshot compare new shell against the archived current UI. Captures and recommendation saved in `docs/Diamond-redesign-comparison.md`.
+14. Decide whether to replace the current renderer shell. Decision: replace it with a rollback-friendly shell switch and legacy route. Production plan saved in `docs/Diamond-production-replacement-plan.md`.
 
 ## Production Replacement Decision
 
 Proceed with replacement.
 
-The Levercast-style shell should become Diamond's production shell, but the existing renderer should remain reachable as a legacy route until the new shell has real wiring for posts, accounts, brands, calendar, settings, and operator controls.
+The Diamond-style shell should become Diamond's production shell, but the existing renderer should remain reachable as a legacy route until the new shell has real wiring for posts, accounts, brands, calendar, settings, and operator controls.
 
 Immediate next build: add the shell switch and legacy route.
 
@@ -158,3 +158,4 @@ Immediate next build: add the shell switch and legacy route.
 - Should platform draft media be shared by default or separate per platform?
 - Should tags live on the parent package, child platform draft, or both?
 - Should the visible browser live in an advanced drawer, post detail panel, or dedicated staging page?
+

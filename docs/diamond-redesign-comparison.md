@@ -1,12 +1,12 @@
-# Diamond Levercast-Style Redesign Comparison
+# Diamond Diamond-style Redesign Comparison
 
 Date: 2026-05-14
 
 ## Captures
 
-- Archived current UI: `docs/levercast-redesign-comparison/01-archived-current-ui.png`
-- New posts board: `docs/levercast-redesign-comparison/02-new-posts-board.png`
-- New operator drawer: `docs/levercast-redesign-comparison/03-new-operator-drawer.png`
+- Archived current UI: `docs/Diamond-redesign-comparison/01-archived-current-ui.png`
+- New posts board: `docs/Diamond-redesign-comparison/02-new-posts-board.png`
+- New operator drawer: `docs/Diamond-redesign-comparison/03-new-operator-drawer.png`
 
 ## Summary
 
@@ -33,7 +33,7 @@ Proceed to the replacement planning step.
 
 Recommended path:
 
-1. Add a feature switch that can load either the current renderer shell or the Levercast-style shell.
+1. Add a feature switch that can load either the current renderer shell or the Diamond-style shell.
 2. Move the prototype shell into the production renderer file structure without removing the archived current UI.
 3. Wire the new shell to the existing renderer actions one page at a time: Posts first, then Accounts, then Calendar, then Settings, then Operator.
 4. Keep the old shell available as `legacy` until the staging, account setup, and schedule flows are verified in the new shell.
@@ -43,4 +43,5 @@ Recommended path:
 
 Step 13 is complete. The prototype is visually and structurally strong enough to advance to step 14: decide and plan the production shell replacement.
 
-Step 14 decision: replace the current renderer shell with the Levercast-style shell, using a shell switch and legacy route first. The production replacement plan is saved in `docs/levercast-production-replacement-plan.md`.
+Step 14 decision: replace the current renderer shell with the Diamond-style shell, using a shell switch and legacy route first. The production replacement plan is saved in `docs/Diamond-production-replacement-plan.md`.
+
