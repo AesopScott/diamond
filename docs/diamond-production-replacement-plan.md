@@ -83,5 +83,5 @@ Rollback should not require Git surgery.
 
 ## Immediate Next Build
 
-Run a user-facing smoke pass on the Diamond default shell and decide whether to keep legacy for one release or remove it after confirmation.
+Run the Diamond default shell smoke pass from `docs/diamond-default-shell-smoke-checklist.md`, then decide whether to keep legacy for one release or remove it after confirmation. Use `npm run smoke` for the automated gate before opening the app.
 
