@@ -7,6 +7,9 @@ const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.met
 
 assert.match(html, /Diamond Posts Prototype/);
 assert.match(html, /id="posts-board"/);
+assert.match(html, /id="post-detail"/);
+assert.match(html, /id="idea-text"/);
+assert.match(html, /id="platform-previews"/);
 assert.match(html, /Posts/);
 assert.match(html, /Analytics/);
 assert.match(html, /Templates/);
@@ -16,14 +19,21 @@ assert.match(html, /Brands/);
 assert.match(html, /Settings/);
 
 assert.match(css, /\.prototype-shell/);
+assert.match(css, /\.hidden/);
 assert.match(css, /\.posts-board/);
 assert.match(css, /\.post-column/);
 assert.match(css, /\.post-card/);
+assert.match(css, /\.post-detail/);
+assert.match(css, /\.platform-preview/);
+assert.match(css, /\.social-preview/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
 assert.match(js, /buildPostBoardView/);
 assert.match(js, /loadPrototypeState/);
 assert.match(js, /buildSampleWorkspace/);
 assert.match(js, /renderBoard/);
+assert.match(js, /openCreateDetail/);
+assert.match(js, /openPackageDetail/);
+assert.match(js, /renderPlatformPreviews/);
 
 console.log("All Diamond posts prototype tests passed.");

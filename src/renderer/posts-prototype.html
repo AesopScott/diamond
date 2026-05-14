@@ -30,7 +30,7 @@
             <h1>Posts</h1>
             <p>Create, manage, and publish across platforms.</p>
           </div>
-          <button class="create-button" type="button">Create</button>
+          <button id="create-post" class="create-button" type="button">Create</button>
         </header>
 
         <section class="prototype-toolbar" aria-label="Post filters">
@@ -45,6 +45,47 @@
         </section>
 
         <section id="posts-board" class="posts-board" aria-label="Posts board"></section>
+
+        <section id="post-detail" class="post-detail hidden" aria-labelledby="post-detail-heading">
+          <header class="detail-header">
+            <button id="back-to-board" class="back-button" type="button">Back</button>
+            <div>
+              <h2 id="post-detail-heading">Draft</h2>
+              <span id="detail-status" class="status-badge">Draft</span>
+            </div>
+          </header>
+
+          <section class="idea-panel" aria-labelledby="idea-heading">
+            <label id="idea-heading">
+              Enter Post Idea
+              <textarea id="idea-text" rows="5"></textarea>
+            </label>
+          </section>
+
+          <section class="detail-tools" aria-label="Media, platforms, and tags">
+            <span class="cadence-pill">4 / 20 this week</span>
+            <label class="style-select">
+              Generation style
+              <select id="generation-style">
+                <option>Default (Default)</option>
+                <option>Rob's Style</option>
+                <option>Claude Prompt</option>
+              </select>
+            </label>
+            <button class="media-button" type="button">+ Media</button>
+            <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>
+            <button class="round-add" type="button" aria-label="Add platform">+</button>
+            <label class="tag-input">
+              Post tags
+              <input id="post-tags" type="text" placeholder="+ Post tags">
+            </label>
+          </section>
+
+          <section aria-labelledby="platform-previews-heading">
+            <h3 id="platform-previews-heading">Content & previews by platform</h3>
+            <div id="platform-previews" class="platform-previews"></div>
+          </section>
+        </section>
       </main>
     </div>
 

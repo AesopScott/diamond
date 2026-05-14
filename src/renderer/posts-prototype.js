@@ -1,12 +1,17 @@
 import {
   buildPostBoardView,
+  createPlatformDraft,
   createPostDraft,
+  createPostPackage,
   createSeedWorkspace,
+  derivePostPackagesFromWorkspace,
 } from "../index.js";
 
 const state = await loadPrototypeState();
-const board = buildPostBoardView({ workspace: state });
+let prototypeModel = derivePostPackagesFromWorkspace(state);
+let board = buildPostBoardView(prototypeModel);
 renderBoard(board);
+wirePrototypeControls();
 
 async function loadPrototypeState() {
   const saved = await window.diamond?.getState?.();
@@ -69,6 +74,9 @@ function buildSampleWorkspace() {
 }
 
 function renderBoard(columns) {
+  document.querySelector("#posts-board").classList.remove("hidden");
+  document.querySelector(".prototype-toolbar").classList.remove("hidden");
+  document.querySelector("#post-detail").classList.add("hidden");
   const target = document.querySelector("#posts-board");
   target.innerHTML = columns.map((column) => `
     <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}">
@@ -85,13 +93,155 @@ function renderBoard(columns) {
 
 function renderCard(post) {
   return `
-    <article class="post-card">
+    <button class="post-card" type="button" data-package-id="${escapeHtml(post.id)}">
       <strong>${escapeHtml(post.excerpt || post.title)}</strong>
       <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
       ${post.platforms?.length ? `<div class="platform-row">${post.platforms.map((platform) => `<span>${escapeHtml(platform)}</span>`).join("")}</div>` : ""}
       ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-    </article>
+    </button>
   `;
+}
+
+function wirePrototypeControls() {
+  document.querySelector("#create-post").addEventListener("click", openCreateDetail);
+  document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
+  document.querySelector("#posts-board").addEventListener("click", (event) => {
+    const card = event.target.closest("[data-package-id]");
+    if (!card) return;
+    openPackageDetail(card.dataset.packageId);
+  });
+  document.querySelector("#idea-text").addEventListener("input", updatePreviewCopy);
+  document.querySelector("#post-tags").addEventListener("input", updatePreviewTags);
+}
+
+function openCreateDetail() {
+  const context = state.context;
+  const postPackage = createPostPackage({
+    id: `prototype-new-${Date.now()}`,
+    context,
+    ideaText: "Write the core post idea here, then generate platform versions.",
+    tags: ["draft"],
+    source: "prototype-create",
+  });
+  const platforms = ["linkedin", "x"];
+  const drafts = platforms.map((platform) => createPlatformDraft({
+    postPackage,
+    context,
+    platform,
+    socialAccountId: socialAccountIdForPlatform(platform),
+    text: platformCopy(postPackage.ideaText, platform),
+    status: "draft",
+  }));
+  openDetail(postPackage, drafts);
+}
+
+function openPackageDetail(packageId) {
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === packageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === postPackage.id);
+  openDetail(postPackage, drafts.length ? drafts : [createPlatformDraft({
+    postPackage,
+    context: postPackage.context,
+    platform: postPackage.context.platform,
+    socialAccountId: postPackage.context.socialAccountId,
+    text: postPackage.ideaText,
+    status: postPackage.status,
+  })]);
+}
+
+function openDetail(postPackage, drafts) {
+  document.querySelector("#posts-board").classList.add("hidden");
+  document.querySelector(".prototype-toolbar").classList.add("hidden");
+  document.querySelector("#post-detail").classList.remove("hidden");
+  document.querySelector("#post-detail-heading").textContent = postPackage.title || "Draft";
+  document.querySelector("#detail-status").textContent = titleCase(postPackage.status);
+  document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
+  document.querySelector("#idea-text").value = postPackage.ideaText || "";
+  document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
+  renderPlatformButtons(drafts);
+  renderPlatformPreviews(drafts);
+}
+
+function renderPlatformButtons(drafts) {
+  const target = document.querySelector("#platform-buttons");
+  target.innerHTML = drafts.map((draft) => `
+    <button type="button" class="platform-button active">${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</button>
+  `).join("");
+}
+
+function renderPlatformPreviews(drafts) {
+  const target = document.querySelector("#platform-previews");
+  target.innerHTML = drafts.map((draft) => `
+    <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}">
+      <header>
+        <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
+        ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
+      </header>
+      <textarea rows="${draft.platform === "x" ? 4 : 7}">${escapeHtml(draft.text)}</textarea>
+      <button type="button" class="media-button">+ Media</button>
+      <div class="social-preview">
+        <div class="avatar"></div>
+        <div>
+          <strong>Your Name</strong>
+          <p>Your headline<br>now</p>
+        </div>
+        <p>${escapeHtml(draft.text)}</p>
+      </div>
+    </article>
+  `).join("");
+}
+
+function updatePreviewCopy() {
+  const idea = document.querySelector("#idea-text").value;
+  document.querySelectorAll("[data-preview-platform]").forEach((preview) => {
+    const platform = preview.dataset.previewPlatform;
+    const text = platformCopy(idea, platform);
+    const textarea = preview.querySelector("textarea");
+    textarea.value = text;
+    const counter = preview.querySelector("header span");
+    if (counter) counter.textContent = `${text.length}/${platform === "x" ? 280 : 2200}`;
+    preview.querySelector(".social-preview > p").textContent = text;
+  });
+}
+
+function updatePreviewTags() {
+  const value = document.querySelector("#post-tags").value;
+  document.querySelector("#detail-status").title = `Tags: ${value || "none"}`;
+}
+
+function platformCopy(idea, platform) {
+  const text = String(idea || "").trim();
+  if (platform === "x") return text.length > 220 ? `${text.slice(0, 217)}...` : text;
+  if (platform === "linkedin") return text;
+  return text;
+}
+
+function socialAccountIdForPlatform(platform) {
+  return (state.socialAccounts || []).find((account) => account.platform === platform)?.id || state.context.socialAccountId;
+}
+
+function platformIcon(platform) {
+  return {
+    linkedin: "in",
+    x: "X",
+    instagram: "◎",
+    tiktok: "♪",
+    facebook: "f",
+  }[platform] || "+";
+}
+
+function platformLabel(platform) {
+  return {
+    linkedin: "LinkedIn",
+    x: "X",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    facebook: "Facebook",
+  }[platform] || platform;
+}
+
+function titleCase(value) {
+  return String(value || "draft").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatDate(value) {
