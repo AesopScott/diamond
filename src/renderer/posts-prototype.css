@@ -1029,6 +1029,136 @@ textarea {
   margin: 0 0 12px;
 }
 
+.analytics-workspace {
+  display: grid;
+  gap: 22px;
+}
+
+.analytics-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.metric-tile,
+.analytics-panel,
+.analytics-runs,
+.analytics-run-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.metric-tile strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.1;
+  margin-top: 6px;
+}
+
+.metric-tile p {
+  color: var(--muted);
+  font-weight: 800;
+  margin: 8px 0 0;
+}
+
+.analytics-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(240px, 0.9fr) repeat(2, minmax(260px, 1fr));
+}
+
+.analytics-panel > header,
+.analytics-runs > header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.analytics-panel h2,
+.analytics-runs h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.funnel-list,
+.analytics-table,
+.analytics-run-list {
+  display: grid;
+  gap: 10px;
+}
+
+.funnel-row {
+  display: grid;
+  gap: 8px;
+}
+
+.funnel-row span,
+.analytics-row span,
+.analytics-run-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.funnel-row strong {
+  font-size: 20px;
+}
+
+.funnel-row div {
+  background: #0b0b0c;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.funnel-row i {
+  background: #f5f5f7;
+  display: block;
+  height: 100%;
+}
+
+.analytics-row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.analytics-run-list {
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+}
+
+.analytics-run-card {
+  background: var(--card);
+}
+
+.analytics-run-card header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.analytics-run-card p {
+  color: #dedee3;
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.analytics-run-card time {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .placeholder-view {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1076,6 +1206,9 @@ textarea {
   .template-columns,
   .settings-grid,
   .legal-list,
+  .analytics-summary,
+  .analytics-layout,
+  .analytics-run-list,
   .account-meta,
   .account-actions {
     grid-template-columns: 1fr;

@@ -7,6 +7,8 @@ const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.met
 
 assert.match(html, /Diamond Posts Prototype/);
 assert.match(html, /id="posts-board"/);
+assert.match(html, /id="analytics-view"/);
+assert.match(html, /id="analytics-workspace"/);
 assert.match(html, /id="templates-view"/);
 assert.match(html, /id="templates-workspace"/);
 assert.match(html, /id="calendar-view"/);
@@ -56,6 +58,9 @@ assert.match(css, /\.template-card/);
 assert.match(css, /\.settings-workspace/);
 assert.match(css, /\.settings-panel/);
 assert.match(css, /\.legal-card/);
+assert.match(css, /\.analytics-workspace/);
+assert.match(css, /\.metric-tile/);
+assert.match(css, /\.analytics-run-card/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
 assert.match(js, /buildPostBoardView/);
@@ -87,5 +92,10 @@ assert.match(js, /renderLegalCard/);
 assert.match(js, /createTemporaryUnlimitedDiamondLicense/);
 assert.match(js, /resolveFirebaseAdminConfig/);
 assert.match(js, /getDiamondLegalDocuments/);
+assert.match(js, /renderAnalytics/);
+assert.match(js, /renderMetricTile/);
+assert.match(js, /analyticsPlatformRows/);
+assert.match(js, /summarizePostMetrics/);
+assert.match(js, /createPostMetrics/);
 
 console.log("All Diamond posts prototype tests passed.");

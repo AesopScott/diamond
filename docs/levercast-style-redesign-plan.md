@@ -138,7 +138,7 @@ platformDrafts
 8. Move brand/company/campaign strategy into Brands. Prototype built in `src/renderer/posts-prototype.html`.
 9. Move templates/assets into Templates. Prototype built in `src/renderer/posts-prototype.html`.
 10. Move license, Firebase, legal, theme, and accessibility into Settings. Prototype built in `src/renderer/posts-prototype.html`.
-11. Add Analytics page.
+11. Add Analytics page. Prototype built in `src/renderer/posts-prototype.html`.
 12. Move advanced operator panels into an explicit drawer or page.
 13. Screenshot compare new shell against the archived current UI.
 14. Only then decide whether to replace the current renderer shell.

@@ -105,7 +105,22 @@
           <section id="calendar-board" class="calendar-board" aria-label="Scheduled post calendar"></section>
         </section>
 
-        <section id="analytics-view" class="prototype-view placeholder-view hidden"><h1>Analytics</h1><p>Analytics page placeholder.</p></section>
+        <section id="analytics-view" class="prototype-view hidden" aria-labelledby="analytics-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="analytics-heading">Analytics</h1>
+              <p>Track publishing output, campaign funnel health, platform readiness, and operational blockers.</p>
+            </div>
+            <button class="create-button" type="button">Export</button>
+          </header>
+          <section class="prototype-toolbar" aria-label="Analytics filters">
+            <button type="button" class="filter-pill">World Cup</button>
+            <button type="button" class="filter-pill">All platforms</button>
+            <button type="button" class="filter-pill">Last 7 days</button>
+            <button type="button" class="filter-pill">Funnel</button>
+          </section>
+          <section id="analytics-workspace" class="analytics-workspace" aria-label="Analytics workspace"></section>
+        </section>
         <section id="templates-view" class="prototype-view hidden" aria-labelledby="templates-heading">
           <header class="prototype-header">
             <div>

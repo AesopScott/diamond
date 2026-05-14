@@ -2,6 +2,7 @@ import {
   buildSocialAccountSetupKit,
   buildDiamondLicenseModel,
   buildPostBoardView,
+  createPostMetrics,
   createTemporaryUnlimitedDiamondLicense,
   createPlatformDraft,
   createPostDraft,
@@ -13,6 +14,7 @@ import {
   resolveFirebaseAdminConfig,
   resolveComposeUrl,
   resolveLoginUrl,
+  summarizePostMetrics,
   summarizeFirestoreSyncBundle,
   buildFirestoreSyncBundle,
 } from "../index.js";
@@ -26,6 +28,7 @@ renderAccounts();
 renderBrands();
 renderTemplates();
 renderSettings();
+renderAnalytics();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -93,6 +96,34 @@ function buildSampleWorkspace() {
     text: "The free World Cup league is open. Make your picks and climb the board.",
     media: [],
     createdAt: "2026-05-13T18:00:00.000Z",
+    metrics: createPostMetrics({
+      impressions: 1800,
+      clicks: 210,
+      signups: 42,
+      leagueJoins: 18,
+      leagueId: "wc-free-2026",
+      leagueName: "World Cup Free League",
+      notes: "Launch copy pulled strong signup intent.",
+      capturedAt: "2026-05-14T09:00:00.000Z",
+    }),
+  }, {
+    id: "prototype-run-2",
+    draftId: "prototype-scheduled-2",
+    context: { ...workspace.context, platform: "instagram", socialAccountId: "the-card-instagram" },
+    status: "posted",
+    text: "Show your country on the board before matchday.",
+    media: ["assets/world-cup-leaderboard-placeholder.png"],
+    createdAt: "2026-05-14T15:00:00.000Z",
+    metrics: createPostMetrics({
+      impressions: 2400,
+      clicks: 330,
+      signups: 61,
+      leagueJoins: 27,
+      leagueId: "wc-free-2026",
+      leagueName: "World Cup Free League",
+      notes: "Country leaderboard image outperformed plain copy.",
+      capturedAt: "2026-05-14T18:00:00.000Z",
+    }),
   }];
   workspace.socialAccounts = workspace.socialAccounts.map((account) => ({
     ...account,
@@ -197,6 +228,7 @@ function showPrototypeView(viewId) {
     view.classList.toggle("hidden", view.id !== viewId);
   });
   if (viewId === "posts-view") renderBoard(board);
+  if (viewId === "analytics-view") renderAnalytics();
   if (viewId === "calendar-view") renderCalendar();
   if (viewId === "templates-view") renderTemplates();
   if (viewId === "accounts-view") renderAccounts();
@@ -603,6 +635,167 @@ function renderSettings() {
   `;
 }
 
+function renderAnalytics() {
+  const target = document.querySelector("#analytics-workspace");
+  if (!target) return;
+  const metricsRuns = (state.postRuns || []).filter((run) => run.metrics);
+  const totals = totalMetrics(metricsRuns);
+  const statusCounts = countBy(state.drafts || [], (draft) => draft.status || "draft");
+  const platformRows = analyticsPlatformRows(metricsRuns);
+  const readinessRows = (state.socialAccounts || []).map((account) => ({
+    label: platformLabel(account.platform),
+    primary: titleCase(account.sessionStatus || "unknown"),
+    secondary: `${account.proofCount || 0} proof captures`,
+    status: account.sessionStatus || "unknown",
+  }));
+  target.innerHTML = `
+    <section class="analytics-summary" aria-label="Campaign summary">
+      ${renderMetricTile("Impressions", formatNumber(totals.impressions), "Captured from posted runs")}
+      ${renderMetricTile("Clicks", formatNumber(totals.clicks), `${formatRate(totals.ctr)} CTR`)}
+      ${renderMetricTile("Signups", formatNumber(totals.signups), `${formatRate(totals.signupRate)} signup rate`)}
+      ${renderMetricTile("League joins", formatNumber(totals.leagueJoins), `${formatRate(totals.leagueJoinRate)} join rate`)}
+    </section>
+    <section class="analytics-layout">
+      <article class="analytics-panel">
+        <header>
+          <h2>Content funnel</h2>
+          <span class="count">${(state.drafts || []).length}</span>
+        </header>
+        <div class="funnel-list">
+          ${renderFunnelRow("Draft", statusCounts.draft || 0)}
+          ${renderFunnelRow("Needs review", statusCounts.needs_review || 0)}
+          ${renderFunnelRow("Scheduled", (state.scheduledPosts || []).filter((item) => item.status === "scheduled").length)}
+          ${renderFunnelRow("Posted", (state.postRuns || []).filter((run) => run.status === "posted").length)}
+          ${renderFunnelRow("Failed", statusCounts.failed || 0)}
+        </div>
+      </article>
+      <article class="analytics-panel">
+        <header>
+          <h2>Platform performance</h2>
+          <span class="count">${platformRows.length}</span>
+        </header>
+        <div class="analytics-table">
+          ${platformRows.map(renderAnalyticsRow).join("") || `<div class="empty-column">No platform metrics</div>`}
+        </div>
+      </article>
+      <article class="analytics-panel">
+        <header>
+          <h2>Account readiness</h2>
+          <span class="count">${readinessRows.length}</span>
+        </header>
+        <div class="analytics-table">
+          ${readinessRows.map(renderReadinessRow).join("")}
+        </div>
+      </article>
+    </section>
+    <section class="analytics-runs" aria-label="Recent measured posts">
+      <header>
+        <h2>Recent measured posts</h2>
+        <span class="count">${metricsRuns.length}</span>
+      </header>
+      <div class="analytics-run-list">
+        ${metricsRuns.map(renderRunMetricCard).join("") || `<div class="empty-column">No measured posts yet</div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderMetricTile(label, value, note) {
+  return `
+    <article class="metric-tile">
+      <span class="eyebrow">${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <p>${escapeHtml(note)}</p>
+    </article>
+  `;
+}
+
+function renderFunnelRow(label, count) {
+  const total = Math.max((state.drafts || []).length + (state.scheduledPosts || []).length + (state.postRuns || []).length, 1);
+  const percent = Math.round((count / total) * 100);
+  return `
+    <div class="funnel-row">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(count)}</strong>
+      <div><i style="width:${percent}%"></i></div>
+    </div>
+  `;
+}
+
+function renderAnalyticsRow(row) {
+  return `
+    <div class="analytics-row">
+      <strong>${escapeHtml(row.label)}</strong>
+      <span>${formatNumber(row.impressions)} impressions</span>
+      <span>${formatRate(row.ctr)} CTR</span>
+      <span>${formatNumber(row.leagueJoins)} joins</span>
+    </div>
+  `;
+}
+
+function renderReadinessRow(row) {
+  return `
+    <div class="analytics-row">
+      <strong>${escapeHtml(row.label)}</strong>
+      <span>${escapeHtml(row.primary)}</span>
+      <span>${escapeHtml(row.secondary)}</span>
+      <span>${escapeHtml(row.status)}</span>
+    </div>
+  `;
+}
+
+function renderRunMetricCard(run) {
+  return `
+    <article class="analytics-run-card">
+      <header>
+        <strong>${escapeHtml(platformLabel(run.context?.platform || "x"))}</strong>
+        <time datetime="${escapeHtml(run.createdAt || "")}">${formatDateTime(run.createdAt)}</time>
+      </header>
+      <p>${escapeHtml(run.text || "Measured post")}</p>
+      <small>${escapeHtml(summarizePostMetrics(run.metrics))}</small>
+    </article>
+  `;
+}
+
+function analyticsPlatformRows(runs) {
+  const rows = new Map();
+  runs.forEach((run) => {
+    const platform = run.context?.platform || "x";
+    const current = rows.get(platform) || { label: platformLabel(platform), impressions: 0, clicks: 0, signups: 0, leagueJoins: 0 };
+    current.impressions += run.metrics?.impressions || 0;
+    current.clicks += run.metrics?.clicks || 0;
+    current.signups += run.metrics?.signups || 0;
+    current.leagueJoins += run.metrics?.leagueJoins || 0;
+    rows.set(platform, current);
+  });
+  return [...rows.values()].map((row) => ({
+    ...row,
+    ctr: row.impressions ? row.clicks / row.impressions : null,
+  }));
+}
+
+function totalMetrics(runs) {
+  const total = runs.reduce((acc, run) => {
+    acc.impressions += run.metrics?.impressions || 0;
+    acc.clicks += run.metrics?.clicks || 0;
+    acc.signups += run.metrics?.signups || 0;
+    acc.leagueJoins += run.metrics?.leagueJoins || 0;
+    return acc;
+  }, { impressions: 0, clicks: 0, signups: 0, leagueJoins: 0 });
+  total.ctr = total.impressions ? total.clicks / total.impressions : null;
+  total.signupRate = total.clicks ? total.signups / total.clicks : null;
+  total.leagueJoinRate = total.signups ? total.leagueJoins / total.signups : null;
+  return total;
+}
+
+function countBy(items, mapper) {
+  return items.reduce((acc, item) => {
+    const key = mapper(item);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
 function renderSettingsPanel(title, rows) {
   return `
     <article class="settings-panel">
@@ -777,6 +970,15 @@ function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "No date";
   return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function formatRate(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "0.0%";
+  return `${(Number(value) * 100).toFixed(1)}%`;
 }
 
 function isSameLocalDay(left, right) {
