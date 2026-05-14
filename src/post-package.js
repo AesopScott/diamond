@@ -254,17 +254,32 @@ function platformDraftFromRun(run, postPackage) {
 
 function postCardForPackage(postPackage, platformDrafts) {
   const drafts = platformDrafts.filter((draft) => draft.postPackageId === postPackage.id);
+  const platforms = [...new Set([
+    ...drafts.map((draft) => draft.platform),
+    postPackage.context?.platform,
+  ].filter(Boolean))];
   return {
     id: postPackage.id,
     title: postPackage.title || excerpt(postPackage.ideaText, 64),
     excerpt: excerpt(postPackage.ideaText, 120),
     status: postPackage.status,
     tags: postPackage.tags || [],
-    platforms: [...new Set(drafts.map((draft) => draft.platform).filter(Boolean))],
+    platforms,
+    platformStatuses: platformStatusesForCard(drafts, platforms, postPackage.status),
     platformDraftCount: drafts.length,
     createdAt: postPackage.createdAt,
     updatedAt: postPackage.updatedAt,
   };
+}
+
+function platformStatusesForCard(drafts, platforms, fallbackStatus) {
+  return platforms.map((platform) => {
+    const draft = drafts.find((item) => item.platform === platform);
+    return {
+      platform,
+      status: normalizePackageStatus(draft?.status || fallbackStatus || "draft"),
+    };
+  });
 }
 
 function upsertPlatformDraft(platformDrafts, next) {

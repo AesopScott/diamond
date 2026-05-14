@@ -80,6 +80,7 @@ const board = buildPostBoardView({ workspace });
 const publishedColumn = board.find((column) => column.id === "published");
 assert.equal(publishedColumn.count, 1);
 assert.equal(publishedColumn.posts[0].platforms[0], "x");
+assert.deepEqual(publishedColumn.posts[0].platformStatuses, [{ platform: "x", status: "published" }]);
 
 const persistedBoard = buildPostBoardView({
   postPackages: [postPackage],
@@ -89,5 +90,15 @@ const draftColumn = persistedBoard.find((column) => column.id === "draft");
 assert.equal(draftColumn.count, 1);
 assert.equal(draftColumn.posts[0].id, "world-cup-idea");
 assert.deepEqual(draftColumn.posts[0].platforms, ["x"]);
+assert.deepEqual(draftColumn.posts[0].platformStatuses, [{ platform: "x", status: "draft" }]);
+
+const contextOnlyBoard = buildPostBoardView({
+  postPackages: [{ ...postPackage, id: "context-only", status: "staged", context: { ...context, platform: "facebook" } }],
+  platformDrafts: [],
+});
+const stagedColumn = contextOnlyBoard.find((column) => column.id === "staged");
+assert.equal(stagedColumn.count, 1);
+assert.deepEqual(stagedColumn.posts[0].platforms, ["facebook"]);
+assert.deepEqual(stagedColumn.posts[0].platformStatuses, [{ platform: "facebook", status: "staged" }]);
 
 console.log("All Diamond post package tests passed.");

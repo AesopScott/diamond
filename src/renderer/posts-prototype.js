@@ -246,11 +246,15 @@ function renderBoard(columns) {
 }
 
 function renderCard(post) {
+  const platformStatuses = post.platformStatuses?.length
+    ? post.platformStatuses
+    : (post.platforms || []).map((platform) => ({ platform, status: post.status || "draft" }));
   return `
     <button class="post-card" type="button" data-package-id="${escapeHtml(post.id)}">
+      <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(titleCase(post.status || "draft"))}</span>
       <strong>${escapeHtml(post.excerpt || post.title)}</strong>
       <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
-      ${post.platforms?.length ? `<div class="platform-row">${post.platforms.map((platform) => `<span>${escapeHtml(platform)}</span>`).join("")}</div>` : ""}
+      ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(titleCase(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>Platform not set</span></div>`}
       ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </button>
   `;

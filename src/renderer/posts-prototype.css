@@ -250,6 +250,44 @@ button:disabled {
   line-height: 1.35;
 }
 
+.card-status {
+  background: #1d2430;
+  border: 1px solid #303744;
+  border-radius: 999px;
+  color: #f1f3f8;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.card-status.staged {
+  background: #2f2614;
+  border-color: #6f5726;
+  color: #ffd36a;
+}
+
+.card-status.scheduled {
+  background: #162640;
+  border-color: #2d558e;
+  color: #8bbcff;
+}
+
+.card-status.published {
+  background: #12301e;
+  border-color: #277244;
+  color: #53dc8d;
+}
+
+.card-status.failed,
+.card-status.blocked {
+  background: #351414;
+  border-color: #7a2a2a;
+  color: #ff6969;
+}
+
 .post-card time,
 .empty-column {
   color: var(--muted);
@@ -279,6 +317,11 @@ button:disabled {
   font-weight: 900;
   padding: 4px 7px;
   text-transform: uppercase;
+}
+
+.platform-row.missing span {
+  background: #351414;
+  color: #ff9696;
 }
 
 .tag-row span {
