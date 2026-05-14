@@ -1,0 +1,85 @@
+# Diamond Production Shell Replacement Plan
+
+Date: 2026-05-14
+
+## Decision
+
+Replace the current Diamond renderer shell with the Levercast-style shell.
+
+The replacement should proceed, but not as a one-shot overwrite. The current shell still has working production wiring for browser staging, account setup, session checks, logs, validation, and scheduling. The new shell has the better product structure, so the right move is to make it the production shell while keeping the current shell reachable as a legacy fallback during integration.
+
+## Replacement Rule
+
+The new shell becomes the default only after these flows are working inside it:
+
+- Create and edit a post package.
+- Generate and edit platform drafts.
+- Evaluate, approve, schedule, stage, and mark a post.
+- Open and use platform account sessions.
+- View and change company, brand, campaign, and account scope.
+- Review schedule/calendar status.
+- Read license, Firebase, legal, accessibility, and routine settings.
+- Open Operator tools for browser staging, validation, sync checks, and run logs.
+
+## Integration Sequence
+
+1. Add a shell switch.
+   - Keep the existing `src/renderer/index.html` reachable as the legacy shell.
+   - Add a route or query flag for the new shell.
+   - Default to the legacy shell until the wiring steps below are done.
+
+2. Move the prototype shell into production file structure.
+   - Promote the prototype layout, CSS, and navigation to production-owned files.
+   - Preserve `posts-prototype.html` as a reference until the production shell is verified.
+   - Keep archive files in `docs/archive/diamond-current-ui-2026-05-14/`.
+
+3. Wire Posts first.
+   - Use existing post package helpers.
+   - Replace prototype sample state with persisted app state.
+   - Ensure board cards open real package detail.
+   - Keep platform-specific drafts editable.
+
+4. Wire Accounts and Brands next.
+   - Make company, brand, campaign, and social account state persistent.
+   - Keep accounts scoped per company and brand.
+   - Restore add company, add brand, add account, save, and session-check actions.
+
+5. Wire Calendar and Scheduling.
+   - Connect scheduled post records to the Calendar page.
+   - Make Schedule post create or update a persisted scheduled post.
+   - Keep calendar scoped by active company, brand, campaign, and platform.
+
+6. Wire Settings.
+   - Move Firebase Admin, License, Legal Drafts, theme, accessibility, and routine due-window settings into the Settings page.
+   - Keep the temporary unlimited license active until the shop exists.
+   - Keep license checks backed by Firebase when available and offline grace when not.
+
+7. Wire Operator drawer.
+   - Connect Evaluate, Approve, Stage in browser, Worker stage, Capture run, and proof controls.
+   - Keep the visible browser out of the main post board.
+   - Put advanced validation and run logs in the drawer.
+
+8. Manual verification pass.
+   - Verify X, Facebook, and TikTok logged-in sessions still survive app restarts.
+   - Verify the embedded browser can use the full visible window.
+   - Verify every visible button either works or is clearly disabled.
+   - Verify smaller screens do not clip button text.
+
+9. Flip the default.
+   - Make the Levercast-style shell the default renderer.
+   - Keep `legacy` available for one release.
+   - Remove legacy only after the user confirms the new shell is doing the real work.
+
+## Rollback
+
+Rollback should not require Git surgery.
+
+- Before default flip: switch the shell flag back to legacy.
+- After default flip: open the legacy route and continue working.
+- Full restore remains possible from the archive or Git commit `98f71a9`.
+
+## Immediate Next Build
+
+Build the shell switch and legacy route first.
+
+This is the smallest production-facing move because it lets the new shell enter the app without risking the currently working renderer.

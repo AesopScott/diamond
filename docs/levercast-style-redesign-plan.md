@@ -141,7 +141,15 @@ platformDrafts
 11. Add Analytics page. Prototype built in `src/renderer/posts-prototype.html`.
 12. Move advanced operator panels into an explicit drawer or page. Prototype drawer built in `src/renderer/posts-prototype.html`.
 13. Screenshot compare new shell against the archived current UI. Captures and recommendation saved in `docs/levercast-redesign-comparison.md`.
-14. Only then decide whether to replace the current renderer shell.
+14. Decide whether to replace the current renderer shell. Decision: replace it with a rollback-friendly shell switch and legacy route. Production plan saved in `docs/levercast-production-replacement-plan.md`.
+
+## Production Replacement Decision
+
+Proceed with replacement.
+
+The Levercast-style shell should become Diamond's production shell, but the existing renderer should remain reachable as a legacy route until the new shell has real wiring for posts, accounts, brands, calendar, settings, and operator controls.
+
+Immediate next build: add the shell switch and legacy route.
 
 ## Open Product Questions
 

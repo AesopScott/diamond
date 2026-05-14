@@ -42,3 +42,5 @@ Recommended path:
 ## Decision
 
 Step 13 is complete. The prototype is visually and structurally strong enough to advance to step 14: decide and plan the production shell replacement.
+
+Step 14 decision: replace the current renderer shell with the Levercast-style shell, using a shell switch and legacy route first. The production replacement plan is saved in `docs/levercast-production-replacement-plan.md`.
