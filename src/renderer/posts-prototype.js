@@ -243,24 +243,51 @@ function renderCalendarItem(item) {
 function renderAccounts(selectedAccountId) {
   const target = document.querySelector("#accounts-grid");
   const detail = document.querySelector("#account-detail");
+  const scope = document.querySelector("#account-scope-strip");
   if (!target || !detail) return;
   const accounts = state.socialAccounts || [];
   const selected = accounts.find((account) => account.id === selectedAccountId) || accounts[0];
+  if (scope) scope.innerHTML = renderAccountScope(selected);
   target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("");
   detail.innerHTML = selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
 }
 
 function renderAccountCard(account, selectedAccountId) {
   const status = account.sessionStatus || "unknown";
+  const company = companyName(account.companyId);
+  const brand = brandName(account.brandId);
   return `
     <button class="account-card ${account.id === selectedAccountId ? "active" : ""}" type="button" data-account-id="${escapeHtml(account.id)}">
       <span class="platform-mark">${platformIcon(account.platform)}</span>
       <span>
         <strong>${escapeHtml(platformLabel(account.platform))}</strong>
         <small>${escapeHtml(account.handle || account.id)}</small>
+        <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
       </span>
       <em class="session-pill ${escapeHtml(status)}">${escapeHtml(titleCase(status))}</em>
     </button>
+  `;
+}
+
+function renderAccountScope(account) {
+  if (!account) return "";
+  return `
+    <article>
+      <span class="eyebrow">Company</span>
+      <strong>${escapeHtml(companyName(account.companyId))}</strong>
+    </article>
+    <article>
+      <span class="eyebrow">Brand</span>
+      <strong>${escapeHtml(brandName(account.brandId))}</strong>
+    </article>
+    <article>
+      <span class="eyebrow">Campaign</span>
+      <strong>${escapeHtml(campaignName(state.context?.campaignId))}</strong>
+    </article>
+    <article>
+      <span class="eyebrow">Rule</span>
+      <strong>Accounts are brand-scoped</strong>
+    </article>
   `;
 }
 
@@ -281,6 +308,9 @@ function renderAccountDetail(account) {
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
       </header>
       <dl class="account-meta">
+        <div><dt>Company</dt><dd>${escapeHtml(company?.name || account.companyId || "Unassigned")}</dd></div>
+        <div><dt>Brand</dt><dd>${escapeHtml(brand?.name || account.brandId || "Unassigned")}</dd></div>
+        <div><dt>Campaign context</dt><dd>${escapeHtml(campaign?.name || campaign?.id || "No campaign")}</dd></div>
         <div><dt>Browser profile</dt><dd>${escapeHtml(account.browserProfileId || "Not assigned")}</dd></div>
         <div><dt>Public account</dt><dd>${escapeHtml(account.accountUrl || "Not saved")}</dd></div>
         <div><dt>Login URL</dt><dd>${escapeHtml(resolveLoginUrl(account) || "Not configured")}</dd></div>
@@ -303,6 +333,18 @@ function renderAccountDetail(account) {
       </section>
     </article>
   `;
+}
+
+function companyName(companyId) {
+  return (state.companies || []).find((company) => company.id === companyId)?.name || companyId || "Unassigned company";
+}
+
+function brandName(brandId) {
+  return (state.brands || []).find((brand) => brand.id === brandId)?.name || brandId || "Unassigned brand";
+}
+
+function campaignName(campaignId) {
+  return (state.campaigns || []).find((campaign) => campaign.id === campaignId)?.name || campaignId || "No campaign";
 }
 
 function renderBrands() {

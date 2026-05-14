@@ -504,6 +504,26 @@ textarea {
   grid-template-columns: minmax(280px, 360px) 1fr;
 }
 
+.account-scope-strip {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  margin: -12px 0 24px;
+}
+
+.account-scope-strip article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.account-scope-strip strong {
+  display: block;
+  font-size: 15px;
+  margin-top: 5px;
+}
+
 .accounts-layout h2 {
   font-size: 16px;
   margin: 0 0 12px;
@@ -837,6 +857,7 @@ textarea {
   }
 
   .accounts-layout,
+  .account-scope-strip,
   .brand-workspace,
   .brand-panels,
   .account-meta,
