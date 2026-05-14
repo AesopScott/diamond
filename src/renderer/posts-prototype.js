@@ -29,6 +29,7 @@ renderBrands();
 renderTemplates();
 renderSettings();
 renderAnalytics();
+renderOperatorDrawer();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -199,6 +200,8 @@ function renderCard(post) {
 
 function wirePrototypeControls() {
   document.querySelector("#prototype-nav").addEventListener("click", handlePrototypeNav);
+  document.querySelector("#operator-toggle")?.addEventListener("click", toggleOperatorDrawer);
+  document.querySelector("#operator-close")?.addEventListener("click", closeOperatorDrawer);
   document.querySelector("#create-post").addEventListener("click", openCreateDetail);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector("#posts-board").addEventListener("click", (event) => {
@@ -213,6 +216,20 @@ function wirePrototypeControls() {
     if (!card) return;
     renderAccounts(card.dataset.accountId);
   });
+}
+
+function toggleOperatorDrawer() {
+  const drawer = document.querySelector("#operator-drawer");
+  const button = document.querySelector("#operator-toggle");
+  const willOpen = drawer.classList.contains("hidden");
+  drawer.classList.toggle("hidden", !willOpen);
+  button?.setAttribute("aria-expanded", String(willOpen));
+  if (willOpen) renderOperatorDrawer();
+}
+
+function closeOperatorDrawer() {
+  document.querySelector("#operator-drawer")?.classList.add("hidden");
+  document.querySelector("#operator-toggle")?.setAttribute("aria-expanded", "false");
 }
 
 function handlePrototypeNav(event) {
@@ -698,6 +715,168 @@ function renderAnalytics() {
       </div>
     </section>
   `;
+}
+
+function renderOperatorDrawer() {
+  const target = document.querySelector("#operator-workspace");
+  if (!target) return;
+  const context = state.context || {};
+  const account = activeSocialAccount();
+  const checks = operatorChecks(account);
+  const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
+  const recentLogs = operatorRunLogs();
+  target.innerHTML = `
+    <section class="operator-panel">
+      <header>
+        <h3>Active target</h3>
+        <span class="session-pill ${escapeHtml(account?.sessionStatus || "unknown")}">${escapeHtml(titleCase(account?.sessionStatus || "unknown"))}</span>
+      </header>
+      <dl class="operator-meta">
+        <div><dt>Company</dt><dd>${escapeHtml(companyName(context.companyId))}</dd></div>
+        <div><dt>Brand</dt><dd>${escapeHtml(brandName(context.brandId))}</dd></div>
+        <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(context.campaignId))}</dd></div>
+        <div><dt>Platform</dt><dd>${escapeHtml(platformLabel(account?.platform || context.platform || "x"))}</dd></div>
+        <div><dt>Account</dt><dd>${escapeHtml(account?.handle || account?.id || "No account selected")}</dd></div>
+        <div><dt>Browser profile</dt><dd>${escapeHtml(account?.browserProfileId || "Not assigned")}</dd></div>
+      </dl>
+    </section>
+
+    <section class="operator-panel">
+      <header>
+        <h3>Preflight checks</h3>
+        <span class="count">${checks.filter((check) => check.ok).length}/${checks.length}</span>
+      </header>
+      <div class="operator-checks">
+        ${checks.map(renderOperatorCheck).join("")}
+      </div>
+    </section>
+
+    <section class="operator-panel">
+      <header>
+        <h3>Browser staging</h3>
+        <span class="count">4</span>
+      </header>
+      <div class="operator-action-grid">
+        ${renderOperatorAction("Open account", resolveLoginUrl(account) || "Login URL missing")}
+        ${renderOperatorAction("Check session", `Current state: ${titleCase(account?.sessionStatus || "unknown")}`)}
+        ${renderOperatorAction("Stage in browser", resolveComposeUrl(account) || "Compose URL missing")}
+        ${renderOperatorAction("Capture proof", `${account?.proofCount || 0} proof captures saved`)}
+      </div>
+    </section>
+
+    <section class="operator-panel">
+      <header>
+        <h3>Validation and sync</h3>
+        <span class="count">${Object.keys(syncSummary).length}</span>
+      </header>
+      <div class="operator-action-grid">
+        ${renderOperatorAction("Validate package", "Checks policy, platform limits, and missing media.")}
+        ${renderOperatorAction("Sync license", "Reads the Firebase license cache and offline grace window.")}
+        ${renderOperatorAction("Check Firebase", "Validates admin config and expected collection paths.")}
+        ${renderOperatorAction("Export bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`)}
+      </div>
+    </section>
+
+    <section class="operator-panel operator-log-panel">
+      <header>
+        <h3>Run log</h3>
+        <span class="count">${recentLogs.length}</span>
+      </header>
+      <ol class="operator-log">
+        ${recentLogs.map((log) => `<li><time>${escapeHtml(formatDateTime(log.createdAt))}</time><span>${escapeHtml(log.message)}</span></li>`).join("")}
+      </ol>
+    </section>
+  `;
+}
+
+function operatorChecks(account) {
+  const license = state.licenseCache || createTemporaryUnlimitedDiamondLicense({
+    userId: "scott",
+    brands: [state.context?.brandId].filter(Boolean),
+    platforms: (state.socialAccounts || []).map((item) => item.platform),
+  });
+  const licenseCheck = evaluateDiamondLicense(license, {
+    requestedBrands: [account?.brandId || state.context?.brandId].filter(Boolean),
+    requestedPlatforms: [account?.platform || state.context?.platform].filter(Boolean),
+  });
+  const firebase = resolveFirebaseAdminConfig({
+    env: {},
+    projectId: "diamond-local-preview",
+    files: ["C:/Users/scott/Code/diamond/firebase-admin.json"],
+  });
+  const cadencePolicy = (state.cadencePolicies || [])[0] || {};
+  return [
+    {
+      label: "License permits target",
+      ok: licenseCheck.ok,
+      note: licenseCheck.ok ? `${licenseCheck.planId || license.planId || "custom"} permits this brand/platform.` : licenseCheck.reason || "License blocked.",
+    },
+    {
+      label: "Firebase admin config",
+      ok: firebase.ok,
+      note: firebase.ok ? firebase.redactedPath || "Configured" : "Admin JSON or project id missing.",
+    },
+    {
+      label: "Account session",
+      ok: account?.sessionStatus === "ready",
+      note: `${platformLabel(account?.platform || "x")} is ${titleCase(account?.sessionStatus || "unknown")}.`,
+    },
+    {
+      label: "Browser profile",
+      ok: Boolean(account?.browserProfileId),
+      note: account?.browserProfileId || "No browser profile assigned.",
+    },
+    {
+      label: "Cadence window",
+      ok: Number(cadencePolicy.routineDueWindowMinutes ?? 15) > 0,
+      note: `${cadencePolicy.routineDueWindowMinutes ?? 15} minute due window.`,
+    },
+    {
+      label: "Manual approval policy",
+      ok: (state.approvalPolicies || []).some((policy) => policy.autoAllowed),
+      note: (state.approvalPolicies || [])[0]?.name || "No approval policy configured.",
+    },
+  ];
+}
+
+function renderOperatorCheck(check) {
+  return `
+    <article class="operator-check ${check.ok ? "ready" : "blocked"}">
+      <span>${check.ok ? "Ready" : "Needs attention"}</span>
+      <strong>${escapeHtml(check.label)}</strong>
+      <p>${escapeHtml(check.note)}</p>
+    </article>
+  `;
+}
+
+function renderOperatorAction(label, note) {
+  return `
+    <button class="operator-action" type="button">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(note)}</span>
+    </button>
+  `;
+}
+
+function activeSocialAccount() {
+  const context = state.context || {};
+  return (state.socialAccounts || []).find((account) => account.id === context.socialAccountId)
+    || (state.socialAccounts || []).find((account) => account.platform === context.platform)
+    || (state.socialAccounts || [])[0];
+}
+
+function operatorRunLogs() {
+  const runLogs = (state.postRuns || []).map((run) => ({
+    createdAt: run.createdAt,
+    message: `${platformLabel(run.context?.platform || "x")} ${run.status || "run"}: ${run.text || run.id}`,
+  }));
+  return [
+    ...runLogs,
+    {
+      createdAt: new Date().toISOString(),
+      message: "Prototype operator drawer rendered with validation, staging, and sync panels.",
+    },
+  ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()).slice(0, 5);
 }
 
 function renderMetricTile(label, value, note) {

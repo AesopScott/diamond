@@ -22,6 +22,9 @@
           <a href="#brands" data-view="brands-view">Brands</a>
           <a href="#settings" data-view="settings-view">Settings</a>
         </nav>
+        <button id="operator-toggle" class="operator-toggle" type="button" aria-controls="operator-drawer" aria-expanded="false">
+          Operator
+        </button>
       </aside>
 
       <main class="prototype-main">
@@ -193,6 +196,18 @@
           <section id="settings-workspace" class="settings-workspace" aria-label="Settings workspace"></section>
         </section>
       </main>
+
+      <aside id="operator-drawer" class="operator-drawer hidden" aria-label="Advanced operator tools">
+        <header class="operator-drawer-header">
+          <div>
+            <span class="eyebrow">Advanced</span>
+            <h2>Operator tools</h2>
+            <p>Browser staging, validation, sync checks, and run proof live here.</p>
+          </div>
+          <button id="operator-close" class="operator-close" type="button" aria-label="Close operator tools">Close</button>
+        </header>
+        <section id="operator-workspace" class="operator-workspace"></section>
+      </aside>
     </div>
 
     <script type="module" src="./posts-prototype.js"></script>
