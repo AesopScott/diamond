@@ -40,7 +40,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Keep platform-specific drafts editable.
    - First action pass built: platform drafts can be evaluated, approved, scheduled, staged, marked posted, or abandoned from the Levercast post detail.
 
-4. Wire Accounts and Brands next.
+4. Wire Accounts and Brands next. First pass built: the Levercast shell can add companies, brands, campaigns, and social accounts; edit account URLs/session status; edit brand workspace fields; and set the active account or brand scope.
    - Make company, brand, campaign, and social account state persistent.
    - Keep accounts scoped per company and brand.
    - Restore add company, add brand, add account, save, and session-check actions.

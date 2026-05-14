@@ -2,6 +2,9 @@ import {
   buildSocialAccountSetupKit,
   buildDiamondLicenseModel,
   buildPostBoardView,
+  createBrandRecord,
+  createCampaignRecord,
+  createCompanyRecord,
   createPostMetrics,
   createTemporaryUnlimitedDiamondLicense,
   createPlatformDraft,
@@ -14,6 +17,12 @@ import {
   evaluateDraftRisk,
   getDiamondLegalDocuments,
   migrateWorkspaceState,
+  normalizeAccountUrl,
+  normalizeBrowserProfileId,
+  normalizeComposeUrl,
+  normalizeHost,
+  normalizeId,
+  normalizeLoginUrl,
   resolveFirebaseAdminConfig,
   resolveComposeUrl,
   resolveLoginUrl,
@@ -26,6 +35,7 @@ const state = await loadProductionState();
 let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
+let selectedAccountId = state.context?.socialAccountId || null;
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -247,6 +257,10 @@ function wirePrototypeControls() {
   document.querySelector("#operator-toggle")?.addEventListener("click", toggleOperatorDrawer);
   document.querySelector("#operator-close")?.addEventListener("click", closeOperatorDrawer);
   document.querySelector("#create-post").addEventListener("click", openCreateDetail);
+  document.querySelector("#add-social-account")?.addEventListener("click", addSocialAccount);
+  document.querySelector("#add-company-record")?.addEventListener("click", addCompanyRecord);
+  document.querySelector("#add-brand-record")?.addEventListener("click", addBrandRecord);
+  document.querySelector("#add-campaign-record")?.addEventListener("click", addCampaignRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector("#posts-board").addEventListener("click", (event) => {
     const card = event.target.closest("[data-package-id]");
@@ -260,8 +274,11 @@ function wirePrototypeControls() {
   document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
+    selectedAccountId = card.dataset.accountId;
     renderAccounts(card.dataset.accountId);
   });
+  document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
+  document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
 }
 
 function toggleOperatorDrawer() {
@@ -301,6 +318,8 @@ function showPrototypeView(viewId) {
 
 async function refreshProductionViews() {
   board = buildPostBoardView(prototypeModel);
+  renderAccounts(selectedAccountId);
+  renderBrands();
   renderCalendar();
   renderSettings();
   renderAnalytics();
@@ -373,7 +392,8 @@ function renderAccounts(selectedAccountId) {
   const scope = document.querySelector("#account-scope-strip");
   if (!target || !detail) return;
   const accounts = state.socialAccounts || [];
-  const selected = accounts.find((account) => account.id === selectedAccountId) || accounts[0];
+  const selected = accounts.find((account) => account.id === selectedAccountId) || accounts.find((account) => account.id === state.context?.socialAccountId) || accounts[0];
+  if (selected) selectedAccountId = selected.id;
   if (scope) scope.innerHTML = renderAccountScope(selected);
   target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("");
   detail.innerHTML = selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
@@ -435,21 +455,23 @@ function renderAccountDetail(account) {
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
       </header>
       <dl class="account-meta">
-        <div><dt>Company</dt><dd>${escapeHtml(company?.name || account.companyId || "Unassigned")}</dd></div>
-        <div><dt>Brand</dt><dd>${escapeHtml(brand?.name || account.brandId || "Unassigned")}</dd></div>
+        <div><dt>Company</dt><dd><select data-account-field="companyId">${companyOptions(account.companyId)}</select></dd></div>
+        <div><dt>Brand</dt><dd><select data-account-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></dd></div>
         <div><dt>Campaign context</dt><dd>${escapeHtml(campaign?.name || campaign?.id || "No campaign")}</dd></div>
-        <div><dt>Browser profile</dt><dd>${escapeHtml(account.browserProfileId || "Not assigned")}</dd></div>
-        <div><dt>Public account</dt><dd>${escapeHtml(account.accountUrl || "Not saved")}</dd></div>
-        <div><dt>Login URL</dt><dd>${escapeHtml(resolveLoginUrl(account) || "Not configured")}</dd></div>
-        <div><dt>Compose URL</dt><dd>${escapeHtml(resolveComposeUrl(account) || "Not configured")}</dd></div>
-        <div><dt>Proof captures</dt><dd>${escapeHtml(account.proofCount || 0)}</dd></div>
+        <div><dt>Platform</dt><dd><select data-account-field="platform">${platformOptions(account.platform)}</select></dd></div>
+        <div><dt>Handle</dt><dd><input data-account-field="handle" type="text" value="${escapeHtml(account.handle || "")}"></dd></div>
+        <div><dt>Browser profile</dt><dd><input data-account-field="browserProfileId" type="text" value="${escapeHtml(account.browserProfileId || "")}"></dd></div>
+        <div><dt>Public account</dt><dd><input data-account-field="accountUrl" type="url" value="${escapeHtml(account.accountUrl || "")}"></dd></div>
+        <div><dt>Login URL</dt><dd><input data-account-field="loginUrl" type="url" value="${escapeHtml(resolveLoginUrl(account) || "")}"></dd></div>
+        <div><dt>Compose URL</dt><dd><input data-account-field="composeUrl" type="url" value="${escapeHtml(resolveComposeUrl(account) || "")}"></dd></div>
+        <div><dt>Expected host</dt><dd><input data-account-field="expectedHost" type="text" value="${escapeHtml(account.expectedHost || "")}"></dd></div>
         <div><dt>Mode</dt><dd>${account.monitoringOnly ? "Monitoring only" : "Posting enabled"}</dd></div>
       </dl>
       <section class="account-actions" aria-label="Account actions">
-        <button type="button">Open login</button>
-        <button type="button">Check session</button>
-        <button type="button">Capture proof</button>
-        <button type="button">Open composer</button>
+        <button type="button" data-account-action="save" data-account-id="${escapeHtml(account.id)}">Save account</button>
+        <button type="button" data-account-action="set-active" data-account-id="${escapeHtml(account.id)}">Set active</button>
+        <button type="button" data-account-action="ready" data-account-id="${escapeHtml(account.id)}">Mark ready</button>
+        <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
       </section>
       <section class="setup-kit" aria-labelledby="setup-kit-heading">
         <h3 id="setup-kit-heading">Setup kit</h3>
@@ -474,32 +496,69 @@ function campaignName(campaignId) {
   return (state.campaigns || []).find((campaign) => campaign.id === campaignId)?.name || campaignId || "No campaign";
 }
 
+function companyOptions(selectedId) {
+  return (state.companies || []).map((company) => `
+    <option value="${escapeHtml(company.id)}" ${company.id === selectedId ? "selected" : ""}>${escapeHtml(company.name || company.id)}</option>
+  `).join("");
+}
+
+function brandOptions(companyId, selectedId) {
+  return (state.brands || [])
+    .filter((brand) => !companyId || brand.companyId === companyId)
+    .map((brand) => `
+      <option value="${escapeHtml(brand.id)}" ${brand.id === selectedId ? "selected" : ""}>${escapeHtml(brand.name || brand.id)}</option>
+    `).join("");
+}
+
+function campaignOptions(companyId, brandId, selectedId) {
+  return (state.campaigns || [])
+    .filter((campaign) => (!companyId || campaign.companyId === companyId) && (!brandId || campaign.brandId === brandId))
+    .map((campaign) => `
+      <option value="${escapeHtml(campaign.id)}" ${campaign.id === selectedId ? "selected" : ""}>${escapeHtml(campaign.name || campaign.id)}</option>
+    `).join("");
+}
+
+function platformOptions(selectedPlatform) {
+  const platforms = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "facebook", "reddit"];
+  return platforms.map((platform) => `
+    <option value="${escapeHtml(platform)}" ${platform === selectedPlatform ? "selected" : ""}>${escapeHtml(platformLabel(platform))}</option>
+  `).join("");
+}
+
 function renderBrands() {
   const target = document.querySelector("#brand-workspace");
   if (!target) return;
-  const company = (state.companies || [])[0] || {};
-  const brand = (state.brands || [])[0] || {};
-  const campaign = (state.campaigns || [])[0] || {};
-  const strategy = (state.contentStrategies || [])[0] || {};
-  const library = (state.brandLibraries || [])[0] || {};
-  const claims = (state.claimLibraries || [])[0] || {};
+  const company = (state.companies || []).find((item) => item.id === state.context?.companyId) || (state.companies || [])[0] || {};
+  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId) || (state.brands || [])[0] || {};
+  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId) || (state.campaigns || [])[0] || {};
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || (state.contentStrategies || [])[0] || {};
+  const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || (state.brandLibraries || [])[0] || {};
+  const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || (state.claimLibraries || [])[0] || {};
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Brand overview">
       <article class="brand-identity-card">
         <span class="eyebrow">Company</span>
         <h2>${escapeHtml(company.name || company.id || "Company")}</h2>
         <dl class="brand-facts">
-          <div><dt>Brand</dt><dd>${escapeHtml(brand.name || brand.id || "Unassigned")}</dd></div>
-          <div><dt>Campaign</dt><dd>${escapeHtml(campaign.name || campaign.id || "No campaign")}</dd></div>
-          <div><dt>Status</dt><dd>${escapeHtml(titleCase(campaign.status || "draft"))}</dd></div>
-          <div><dt>Languages</dt><dd>${escapeHtml((brand.languages || []).join(", ") || "English")}</dd></div>
+          <div><dt>Company</dt><dd><select data-brand-field="contextCompanyId">${companyOptions(company.id)}</select></dd></div>
+          <div><dt>Brand</dt><dd><select data-brand-field="contextBrandId">${brandOptions(company.id, brand.id)}</select></dd></div>
+          <div><dt>Campaign</dt><dd><select data-brand-field="contextCampaignId">${campaignOptions(company.id, brand.id, campaign.id)}</select></dd></div>
+          <div><dt>Company name</dt><dd><input data-brand-field="companyName" type="text" value="${escapeHtml(company.name || "")}"></dd></div>
+          <div><dt>Brand name</dt><dd><input data-brand-field="brandName" type="text" value="${escapeHtml(brand.name || "")}"></dd></div>
+          <div><dt>Campaign name</dt><dd><input data-brand-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
+          <div><dt>Status</dt><dd><input data-brand-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
+          <div><dt>Languages</dt><dd><input data-brand-field="brandLanguages" type="text" value="${escapeHtml((brand.languages || []).join(", ") || "en")}"></dd></div>
         </dl>
+        <section class="account-actions" aria-label="Brand actions">
+          <button type="button" data-brand-action="save">Save brand workspace</button>
+          <button type="button" data-brand-action="set-active">Set active scope</button>
+        </section>
       </article>
       <article class="strategy-card">
         <h3>Primary CTA</h3>
-        <p>${escapeHtml(strategy.cta || "No CTA set.")}</p>
+        <textarea data-brand-field="strategyCta" rows="4">${escapeHtml(strategy.cta || "")}</textarea>
         <h3>Offer</h3>
-        <p>${escapeHtml(strategy.offer || "No offer set.")}</p>
+        <textarea data-brand-field="strategyOffer" rows="4">${escapeHtml(strategy.offer || "")}</textarea>
       </article>
     </aside>
     <section class="brand-panels" aria-label="Brand operating rules">
@@ -528,6 +587,233 @@ function renderBrandPanel(title, items = []) {
       ${list.length ? `<ul>${list.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>No ${escapeHtml(title.toLowerCase())} set.</p>`}
     </article>
   `;
+}
+
+async function addCompanyRecord() {
+  const name = promptForText("Company name", "New company");
+  if (!name) return;
+  const company = createCompanyRecord({ name });
+  state.companies ||= [];
+  state.companies.push(company);
+  state.context = {
+    ...state.context,
+    companyId: company.id,
+  };
+  await saveProductionState();
+  renderBrands();
+  renderAccounts(selectedAccountId);
+}
+
+async function addBrandRecord() {
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
+  if (!companyId) return;
+  const name = promptForText("Brand name", "New brand");
+  if (!name) return;
+  const brand = createBrandRecord({ name, companyId });
+  state.brands ||= [];
+  state.brands.push(brand);
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId: brand.id,
+  };
+  await ensureBrandSupportRecords(brand);
+  await saveProductionState();
+  renderBrands();
+  renderAccounts(selectedAccountId);
+}
+
+async function addCampaignRecord() {
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
+  const brandId = state.context?.brandId || (state.brands || [])[0]?.id;
+  if (!companyId || !brandId) return;
+  const name = promptForText("Campaign name", "New campaign");
+  if (!name) return;
+  const campaign = createCampaignRecord({ name, companyId, brandId });
+  state.campaigns ||= [];
+  state.campaigns.push(campaign);
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId,
+    campaignId: campaign.id,
+  };
+  await ensureStrategyRecord(campaign);
+  await saveProductionState();
+  renderBrands();
+}
+
+async function addSocialAccount() {
+  const platform = normalizeId(promptForText("Platform", "x"), "platform");
+  if (!platform) return;
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
+  if (!companyId || !brandId) return;
+  const handle = promptForText("Handle or page", platform === "x" ? "@thecardbet" : "thecard.bet") || "";
+  const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
+  const account = {
+    id,
+    companyId,
+    brandId,
+    platform,
+    handle,
+    accountUrl: normalizeAccountUrl(handle, platform),
+    loginUrl: normalizeLoginUrl("", platform),
+    composeUrl: normalizeComposeUrl("", platform),
+    expectedHost: normalizeHost(normalizeAccountUrl(handle, platform)),
+    sessionStatus: "unknown",
+    browserProfileId: normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    monitoringOnly: platform === "reddit",
+    proofCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  state.socialAccounts ||= [];
+  state.socialAccounts.push(account);
+  selectedAccountId = account.id;
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId,
+    platform,
+    socialAccountId: account.id,
+    browserProfileId: account.browserProfileId,
+  };
+  await saveProductionState();
+  renderAccounts(account.id);
+  renderOperatorDrawer();
+}
+
+async function handleAccountDetailClick(event) {
+  const button = event.target.closest("[data-account-action]");
+  if (!button) return;
+  const account = (state.socialAccounts || []).find((item) => item.id === button.dataset.accountId);
+  if (!account) return;
+  if (button.dataset.accountAction === "save") saveAccountForm(account);
+  if (button.dataset.accountAction === "set-active") setActiveAccount(account);
+  if (button.dataset.accountAction === "ready") account.sessionStatus = "ready";
+  if (button.dataset.accountAction === "needs-login") account.sessionStatus = "needs_login";
+  account.updatedAt = new Date().toISOString();
+  await saveProductionState();
+  renderAccounts(account.id);
+  renderOperatorDrawer();
+}
+
+function saveAccountForm(account) {
+  const detail = document.querySelector("#account-detail");
+  if (!detail) return;
+  const valueFor = (field) => detail.querySelector(`[data-account-field="${field}"]`)?.value || "";
+  account.companyId = normalizeId(valueFor("companyId") || account.companyId, "companyId");
+  account.brandId = normalizeId(valueFor("brandId") || account.brandId, "brandId");
+  account.platform = normalizeId(valueFor("platform") || account.platform, "platform");
+  account.handle = valueFor("handle");
+  account.accountUrl = normalizeAccountUrl(valueFor("accountUrl") || account.handle, account.platform);
+  account.loginUrl = normalizeLoginUrl(valueFor("loginUrl"), account.platform);
+  account.composeUrl = normalizeComposeUrl(valueFor("composeUrl"), account.platform);
+  account.expectedHost = normalizeHost(valueFor("expectedHost") || account.accountUrl);
+  account.browserProfileId = normalizeBrowserProfileId(valueFor("browserProfileId") || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
+}
+
+function setActiveAccount(account) {
+  state.context = {
+    ...state.context,
+    companyId: account.companyId,
+    brandId: account.brandId,
+    platform: account.platform,
+    socialAccountId: account.id,
+    browserProfileId: account.browserProfileId,
+  };
+  selectedAccountId = account.id;
+}
+
+async function handleBrandWorkspaceClick(event) {
+  const button = event.target.closest("[data-brand-action]");
+  if (!button) return;
+  const scope = saveBrandWorkspace();
+  if (button.dataset.brandAction === "set-active") {
+    state.context = {
+      ...state.context,
+      companyId: scope.companyId,
+      brandId: scope.brandId,
+      campaignId: scope.campaignId,
+    };
+  }
+  await saveProductionState();
+  renderBrands();
+  renderAccounts(selectedAccountId);
+  renderOperatorDrawer();
+}
+
+function saveBrandWorkspace() {
+  const workspace = document.querySelector("#brand-workspace");
+  const valueFor = (field) => workspace?.querySelector(`[data-brand-field="${field}"]`)?.value || "";
+  const companyId = normalizeId(valueFor("contextCompanyId") || state.context?.companyId, "companyId");
+  const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
+  const campaignId = normalizeId(valueFor("contextCampaignId") || state.context?.campaignId, "campaignId");
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  const brand = (state.brands || []).find((item) => item.id === brandId);
+  const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
+  if (company) company.name = valueFor("companyName") || company.name;
+  if (brand) {
+    brand.name = valueFor("brandName") || brand.name;
+    brand.languages = valueFor("brandLanguages").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  if (campaign) {
+    campaign.name = valueFor("campaignName") || campaign.name;
+    campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
+  }
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
+  if (strategy) {
+    strategy.cta = valueFor("strategyCta") || strategy.cta;
+    strategy.offer = valueFor("strategyOffer") || strategy.offer;
+  }
+  return { companyId, brandId, campaignId };
+}
+
+async function ensureBrandSupportRecords(brand) {
+  state.brandLibraries ||= [];
+  state.claimLibraries ||= [];
+  if (!state.brandLibraries.some((library) => library.brandId === brand.id)) {
+    state.brandLibraries.push({
+      id: `${brand.id}-brand-library`,
+      companyId: brand.companyId,
+      brandId: brand.id,
+      voice: "",
+      approvedPhrases: [],
+      bannedPhrases: [],
+      links: [],
+      identityRules: [],
+    });
+  }
+  if (!state.claimLibraries.some((library) => library.brandId === brand.id)) {
+    state.claimLibraries.push({
+      id: `${brand.id}-claim-library`,
+      companyId: brand.companyId,
+      brandId: brand.id,
+      prizeLanguage: [],
+      freeToPlayLanguage: [],
+      requiresReviewClaims: [],
+      blockedClaims: [],
+    });
+  }
+}
+
+async function ensureStrategyRecord(campaign) {
+  state.contentStrategies ||= [];
+  if (state.contentStrategies.some((strategy) => strategy.campaignId === campaign.id)) return;
+  state.contentStrategies.push({
+    id: `${campaign.id}-strategy`,
+    companyId: campaign.companyId,
+    brandId: campaign.brandId,
+    campaignId: campaign.id,
+    goals: [],
+    audience: [],
+    pillars: [],
+    cta: "",
+    ctaEs: "",
+    offer: "",
+    offerEs: "",
+    referenceAccounts: [],
+  });
 }
 
 function renderTemplates() {
@@ -1475,6 +1761,10 @@ function latestValue(values = []) {
   return values
     .filter(Boolean)
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] || "";
+}
+
+function promptForText(label, fallback = "") {
+  return String(window.prompt(label, fallback) || "").trim();
 }
 
 function platformIcon(platform) {

@@ -108,6 +108,13 @@ button, a {
   margin-bottom: 34px;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .prototype-header h1 {
   font-size: 32px;
   letter-spacing: 0;
@@ -139,6 +146,11 @@ button, a {
   background: var(--accent);
   color: #111;
   min-width: 112px;
+}
+
+.create-button.secondary {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .prototype-toolbar {
@@ -350,6 +362,12 @@ select {
   color: var(--text);
   font: inherit;
   padding: 12px;
+}
+
+dl input,
+dl select {
+  min-height: 36px;
+  width: 100%;
 }
 
 textarea {
@@ -840,6 +858,10 @@ textarea {
   font-weight: 800;
   line-height: 1.4;
   margin: 0 0 18px;
+}
+
+.strategy-card textarea {
+  margin-bottom: 18px;
 }
 
 .strategy-card p:last-child {

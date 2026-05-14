@@ -146,7 +146,7 @@
               <h1 id="accounts-heading">Accounts</h1>
               <p>Manage platform logins, browser profiles, proof captures, and setup kits by company and brand.</p>
             </div>
-            <button class="create-button" type="button">Add account</button>
+            <button id="add-social-account" class="create-button" type="button">Add account</button>
           </header>
           <section id="account-scope-strip" class="account-scope-strip" aria-label="Active account scope"></section>
           <section class="prototype-toolbar" aria-label="Account filters">
@@ -169,7 +169,11 @@
               <h1 id="brands-heading">Brands</h1>
               <p>Keep company identity, campaign strategy, voice, and claim rules in one place.</p>
             </div>
-            <button class="create-button" type="button">Add brand</button>
+            <div class="header-actions">
+              <button id="add-company-record" class="create-button secondary" type="button">Add company</button>
+              <button id="add-brand-record" class="create-button secondary" type="button">Add brand</button>
+              <button id="add-campaign-record" class="create-button" type="button">Add campaign</button>
+            </div>
           </header>
           <section class="prototype-toolbar" aria-label="Brand filters">
             <button type="button" class="filter-pill">Active company</button>
