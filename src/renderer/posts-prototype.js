@@ -674,31 +674,36 @@ function renderBrands() {
       </article>
     </aside>
     <section class="brand-panels" aria-label="Brand operating rules">
-      ${renderBrandPanel("Goals", strategy.goals)}
-      ${renderBrandPanel("Audience", strategy.audience)}
-      ${renderBrandPanel("Pillars", strategy.pillars)}
-      ${renderBrandPanel("Voice", [library.voice])}
-      ${renderBrandPanel("Approved phrases", library.approvedPhrases)}
-      ${renderBrandPanel("Banned phrases", library.bannedPhrases)}
-      ${renderBrandPanel("Prize language", claims.prizeLanguage)}
-      ${renderBrandPanel("Requires review", claims.requiresReviewClaims)}
-      ${renderBrandPanel("Blocked claims", claims.blockedClaims)}
-      ${renderBrandPanel("Reference accounts", strategy.referenceAccounts)}
+      ${renderEditableBrandPanel("Goals", "strategyGoals", strategy.goals, "One goal per line")}
+      ${renderEditableBrandPanel("Audience", "strategyAudience", strategy.audience, "One audience segment per line")}
+      ${renderEditableBrandPanel("Pillars", "strategyPillars", strategy.pillars, "One content pillar per line")}
+      ${renderEditableBrandPanel("Voice", "brandVoice", [library.voice].filter(Boolean), "Describe how the brand should sound")}
+      ${renderEditableBrandPanel("Approved phrases", "approvedPhrases", library.approvedPhrases, "One approved phrase per line")}
+      ${renderEditableBrandPanel("Banned phrases", "bannedPhrases", library.bannedPhrases, "One banned phrase per line")}
+      ${renderEditableBrandPanel("Prize language", "prizeLanguage", claims.prizeLanguage, "One approved prize phrase per line")}
+      ${renderEditableBrandPanel("Free-to-play language", "freeToPlayLanguage", claims.freeToPlayLanguage, "One approved free-play phrase per line")}
+      ${renderEditableBrandPanel("Requires review", "requiresReviewClaims", claims.requiresReviewClaims, "One review trigger per line")}
+      ${renderEditableBrandPanel("Blocked claims", "blockedClaims", claims.blockedClaims, "One blocked claim per line")}
+      ${renderEditableBrandPanel("Reference accounts", "referenceAccounts", strategy.referenceAccounts, "One reference account per line")}
     </section>
   `;
 }
 
-function renderBrandPanel(title, items = []) {
+function renderEditableBrandPanel(title, field, items = [], placeholder = "") {
   const list = (items || []).filter(Boolean);
   return `
-    <article class="brand-panel">
+    <article class="brand-panel editable-brand-panel">
       <header>
         <h3>${escapeHtml(title)}</h3>
         <span class="count">${list.length}</span>
       </header>
-      ${list.length ? `<ul>${list.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>No ${escapeHtml(title.toLowerCase())} set.</p>`}
+      <textarea data-brand-field="${escapeHtml(field)}" rows="${field === "brandVoice" ? 5 : 7}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(list.join("\n"))}</textarea>
     </article>
   `;
+}
+
+function renderBrandPanel(title, items = []) {
+  return renderEditableBrandPanel(title, normalizeId(title, "brandPanel"), items);
 }
 
 async function addCompanyRecord() {
@@ -858,6 +863,7 @@ async function handleBrandWorkspaceClick(event) {
 function saveBrandWorkspace() {
   const workspace = document.querySelector("#brand-workspace");
   const valueFor = (field) => workspace?.querySelector(`[data-brand-field="${field}"]`)?.value || "";
+  const listValueFor = (field) => listValueForBrandField(workspace, field);
   const companyId = normalizeId(valueFor("contextCompanyId") || state.context?.companyId, "companyId");
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
   const campaignId = normalizeId(valueFor("contextCampaignId") || state.context?.campaignId, "campaignId");
@@ -877,8 +883,35 @@ function saveBrandWorkspace() {
   if (strategy) {
     strategy.cta = valueFor("strategyCta") || strategy.cta;
     strategy.offer = valueFor("strategyOffer") || strategy.offer;
+    strategy.goals = listValueFor("strategyGoals");
+    strategy.audience = listValueFor("strategyAudience");
+    strategy.pillars = listValueFor("strategyPillars");
+    strategy.referenceAccounts = listValueFor("referenceAccounts");
+    strategy.updatedAt = new Date().toISOString();
+  }
+  const library = (state.brandLibraries || []).find((item) => item.brandId === brandId);
+  if (library) {
+    library.voice = valueFor("brandVoice") || "";
+    library.approvedPhrases = listValueFor("approvedPhrases");
+    library.bannedPhrases = listValueFor("bannedPhrases");
+    library.updatedAt = new Date().toISOString();
+  }
+  const claims = (state.claimLibraries || []).find((item) => item.brandId === brandId);
+  if (claims) {
+    claims.prizeLanguage = listValueFor("prizeLanguage");
+    claims.freeToPlayLanguage = listValueFor("freeToPlayLanguage");
+    claims.requiresReviewClaims = listValueFor("requiresReviewClaims");
+    claims.blockedClaims = listValueFor("blockedClaims");
+    claims.updatedAt = new Date().toISOString();
   }
   return { companyId, brandId, campaignId };
+}
+
+function listValueForBrandField(workspace, field) {
+  return (workspace?.querySelector(`[data-brand-field="${field}"]`)?.value || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 async function ensureBrandSupportRecords(brand) {

@@ -983,6 +983,26 @@ textarea {
   margin: 0;
 }
 
+.editable-brand-panel textarea {
+  background: #090b10;
+  border: 1px solid #2d3441;
+  border-radius: 7px;
+  color: #f8f8fb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  min-height: 138px;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.editable-brand-panel textarea:focus {
+  border-color: #f15249;
+  outline: none;
+}
+
 .templates-workspace {
   display: grid;
   gap: 22px;
