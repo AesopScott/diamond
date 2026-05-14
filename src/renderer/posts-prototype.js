@@ -1,10 +1,13 @@
 import {
+  buildSocialAccountSetupKit,
   buildPostBoardView,
   createPlatformDraft,
   createPostDraft,
   createPostPackage,
   createSeedWorkspace,
   derivePostPackagesFromWorkspace,
+  resolveComposeUrl,
+  resolveLoginUrl,
 } from "../index.js";
 
 const state = await loadPrototypeState();
@@ -12,6 +15,7 @@ let prototypeModel = derivePostPackagesFromWorkspace(state);
 let board = buildPostBoardView(prototypeModel);
 renderBoard(board);
 renderCalendar();
+renderAccounts();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -80,6 +84,34 @@ function buildSampleWorkspace() {
     media: [],
     createdAt: "2026-05-13T18:00:00.000Z",
   }];
+  workspace.socialAccounts = workspace.socialAccounts.map((account) => ({
+    ...account,
+    accountUrl: account.platform === "x" ? "https://x.com/thecardbet" : account.accountUrl,
+    sessionStatus: {
+      x: "ready",
+      facebook: "ready",
+      tiktok: "ready",
+      instagram: "needs_login",
+      linkedin: "unknown",
+      "youtube-shorts": "blocked",
+      reddit: "monitoring",
+    }[account.platform] || "unknown",
+    handle: {
+      x: "@thecardbet",
+      instagram: "thecard.bet",
+      tiktok: "thecardbet",
+      facebook: "thecard.bet",
+    }[account.platform] || "",
+    proofCount: {
+      x: 3,
+      facebook: 2,
+      tiktok: 2,
+      instagram: 0,
+      linkedin: 0,
+      "youtube-shorts": 0,
+      reddit: 1,
+    }[account.platform] || 0,
+  }));
   return workspace;
 }
 
@@ -123,6 +155,11 @@ function wirePrototypeControls() {
   });
   document.querySelector("#idea-text").addEventListener("input", updatePreviewCopy);
   document.querySelector("#post-tags").addEventListener("input", updatePreviewTags);
+  document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-account-id]");
+    if (!card) return;
+    renderAccounts(card.dataset.accountId);
+  });
 }
 
 function handlePrototypeNav(event) {
@@ -139,6 +176,7 @@ function showPrototypeView(viewId) {
   });
   if (viewId === "posts-view") renderBoard(board);
   if (viewId === "calendar-view") renderCalendar();
+  if (viewId === "accounts-view") renderAccounts();
 }
 
 function renderCalendar() {
@@ -196,6 +234,71 @@ function renderCalendarItem(item) {
         <span>${escapeHtml(item.context?.platform || "x")}</span>
         <span>${escapeHtml(item.status || "scheduled")}</span>
       </div>
+    </article>
+  `;
+}
+
+function renderAccounts(selectedAccountId) {
+  const target = document.querySelector("#accounts-grid");
+  const detail = document.querySelector("#account-detail");
+  if (!target || !detail) return;
+  const accounts = state.socialAccounts || [];
+  const selected = accounts.find((account) => account.id === selectedAccountId) || accounts[0];
+  target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("");
+  detail.innerHTML = selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
+}
+
+function renderAccountCard(account, selectedAccountId) {
+  const status = account.sessionStatus || "unknown";
+  return `
+    <button class="account-card ${account.id === selectedAccountId ? "active" : ""}" type="button" data-account-id="${escapeHtml(account.id)}">
+      <span class="platform-mark">${platformIcon(account.platform)}</span>
+      <span>
+        <strong>${escapeHtml(platformLabel(account.platform))}</strong>
+        <small>${escapeHtml(account.handle || account.id)}</small>
+      </span>
+      <em class="session-pill ${escapeHtml(status)}">${escapeHtml(titleCase(status))}</em>
+    </button>
+  `;
+}
+
+function renderAccountDetail(account) {
+  const company = (state.companies || []).find((item) => item.id === account.companyId);
+  const brand = (state.brands || []).find((item) => item.id === account.brandId);
+  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId);
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign?.id);
+  const kit = buildSocialAccountSetupKit({ company, brand, campaign, account, strategy });
+  return `
+    <article class="account-detail-card">
+      <header>
+        <div>
+          <span class="eyebrow">Active account</span>
+          <h2>${escapeHtml(platformLabel(account.platform))}</h2>
+          <p>${escapeHtml(account.handle || account.accountUrl || account.id)}</p>
+        </div>
+        <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
+      </header>
+      <dl class="account-meta">
+        <div><dt>Browser profile</dt><dd>${escapeHtml(account.browserProfileId || "Not assigned")}</dd></div>
+        <div><dt>Public account</dt><dd>${escapeHtml(account.accountUrl || "Not saved")}</dd></div>
+        <div><dt>Login URL</dt><dd>${escapeHtml(resolveLoginUrl(account) || "Not configured")}</dd></div>
+        <div><dt>Compose URL</dt><dd>${escapeHtml(resolveComposeUrl(account) || "Not configured")}</dd></div>
+        <div><dt>Proof captures</dt><dd>${escapeHtml(account.proofCount || 0)}</dd></div>
+        <div><dt>Mode</dt><dd>${account.monitoringOnly ? "Monitoring only" : "Posting enabled"}</dd></div>
+      </dl>
+      <section class="account-actions" aria-label="Account actions">
+        <button type="button">Open login</button>
+        <button type="button">Check session</button>
+        <button type="button">Capture proof</button>
+        <button type="button">Open composer</button>
+      </section>
+      <section class="setup-kit" aria-labelledby="setup-kit-heading">
+        <h3 id="setup-kit-heading">Setup kit</h3>
+        <p>${escapeHtml(kit.summary)}</p>
+        <ul>
+          ${kit.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </section>
     </article>
   `;
 }
