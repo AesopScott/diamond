@@ -133,7 +133,7 @@ platformDrafts
 3. Add a new shell prototype behind a feature flag or separate route.
 4. Add post package creation flow. Prototype built in `src/renderer/posts-prototype.html`.
 5. Add platform-specific draft generation and preview sections. Prototype built in `src/renderer/posts-prototype.html`.
-6. Move schedule/calendar into a dedicated Calendar page.
+6. Move schedule/calendar into a dedicated Calendar page. Prototype built in `src/renderer/posts-prototype.html`.
 7. Move account setup, sessions, and proof into Accounts.
 8. Move brand/company/campaign strategy into Brands.
 9. Move templates/assets into Templates.

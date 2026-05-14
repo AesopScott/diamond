@@ -11,6 +11,7 @@ const state = await loadPrototypeState();
 let prototypeModel = derivePostPackagesFromWorkspace(state);
 let board = buildPostBoardView(prototypeModel);
 renderBoard(board);
+renderCalendar();
 wirePrototypeControls();
 
 async function loadPrototypeState() {
@@ -60,6 +61,15 @@ function buildSampleWorkspace() {
     text: "Show your country on the board before matchday.",
     media: [],
     createdAt: "2026-05-14T12:00:00.000Z",
+  }, {
+    id: "prototype-schedule-2",
+    draftId: "prototype-draft-0",
+    context: workspace.context,
+    status: "posted",
+    scheduledAt: "2026-05-13T18:00:00.000Z",
+    text: "The free World Cup league is open. Make your picks and climb the board.",
+    media: [],
+    createdAt: "2026-05-13T12:00:00.000Z",
   }];
   workspace.postRuns = [{
     id: "prototype-run-1",
@@ -103,6 +113,7 @@ function renderCard(post) {
 }
 
 function wirePrototypeControls() {
+  document.querySelector("#prototype-nav").addEventListener("click", handlePrototypeNav);
   document.querySelector("#create-post").addEventListener("click", openCreateDetail);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector("#posts-board").addEventListener("click", (event) => {
@@ -112,6 +123,81 @@ function wirePrototypeControls() {
   });
   document.querySelector("#idea-text").addEventListener("input", updatePreviewCopy);
   document.querySelector("#post-tags").addEventListener("input", updatePreviewTags);
+}
+
+function handlePrototypeNav(event) {
+  const link = event.target.closest("[data-view]");
+  if (!link) return;
+  event.preventDefault();
+  showPrototypeView(link.dataset.view);
+  document.querySelectorAll("#prototype-nav a").forEach((item) => item.classList.toggle("active", item === link));
+}
+
+function showPrototypeView(viewId) {
+  document.querySelectorAll(".prototype-view").forEach((view) => {
+    view.classList.toggle("hidden", view.id !== viewId);
+  });
+  if (viewId === "posts-view") renderBoard(board);
+  if (viewId === "calendar-view") renderCalendar();
+}
+
+function renderCalendar() {
+  const target = document.querySelector("#calendar-board");
+  if (!target) return;
+  const groups = calendarGroups(state.scheduledPosts || []);
+  target.innerHTML = groups.map((group) => `
+    <article class="calendar-group ${escapeHtml(group.id)}" aria-labelledby="calendar-${escapeHtml(group.id)}">
+      <header>
+        <div>
+          <h2 id="calendar-${escapeHtml(group.id)}">${escapeHtml(group.label)}</h2>
+          <p>${escapeHtml(group.description)}</p>
+        </div>
+        <span class="count">${group.items.length}</span>
+      </header>
+      <div class="calendar-list">
+        ${group.items.length ? group.items.map(renderCalendarItem).join("") : `<div class="empty-column">No scheduled posts</div>`}
+      </div>
+    </article>
+  `).join("");
+}
+
+function calendarGroups(schedules) {
+  const now = new Date();
+  const groups = [
+    { id: "overdue", label: "Overdue", description: "Scheduled windows that need attention.", items: [] },
+    { id: "today", label: "Ready Today", description: "Posts due today.", items: [] },
+    { id: "upcoming", label: "Upcoming", description: "Planned posts after today.", items: [] },
+    { id: "completed", label: "Completed", description: "Posted or closed schedule records.", items: [] },
+  ];
+  schedules.forEach((schedule) => {
+    const scheduledAt = new Date(schedule.scheduledAt);
+    if (["posted", "published", "completed"].includes(schedule.status)) {
+      groups[3].items.push(schedule);
+    } else if (scheduledAt.getTime() < now.getTime() && !isSameLocalDay(scheduledAt, now)) {
+      groups[0].items.push(schedule);
+    } else if (isSameLocalDay(scheduledAt, now)) {
+      groups[1].items.push(schedule);
+    } else {
+      groups[2].items.push(schedule);
+    }
+  });
+  groups.forEach((group) => {
+    group.items.sort((left, right) => new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime());
+  });
+  return groups;
+}
+
+function renderCalendarItem(item) {
+  return `
+    <article class="calendar-item">
+      <strong>${escapeHtml(item.text || "Untitled scheduled post")}</strong>
+      <time datetime="${escapeHtml(item.scheduledAt || "")}">${formatDateTime(item.scheduledAt)}</time>
+      <div class="platform-row">
+        <span>${escapeHtml(item.context?.platform || "x")}</span>
+        <span>${escapeHtml(item.status || "scheduled")}</span>
+      </div>
+    </article>
+  `;
 }
 
 function openCreateDetail() {
@@ -224,8 +310,8 @@ function platformIcon(platform) {
   return {
     linkedin: "in",
     x: "X",
-    instagram: "◎",
-    tiktok: "♪",
+    instagram: "IG",
+    tiktok: "TT",
     facebook: "f",
   }[platform] || "+";
 }
@@ -248,6 +334,18 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "No date";
   return date.toLocaleDateString([], { month: "numeric", day: "numeric", year: "numeric" });
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No date";
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function isSameLocalDay(left, right) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
 }
 
 function escapeHtml(value) {
