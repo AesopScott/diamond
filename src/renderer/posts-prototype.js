@@ -36,6 +36,9 @@ let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
 let selectedAccountId = state.context?.socialAccountId || null;
+let latestFirebaseStatus = null;
+let latestLicenseSync = null;
+let latestSyncExportPath = "";
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -280,6 +283,8 @@ function wirePrototypeControls() {
   });
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
+  document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
+  document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
 }
 
 function toggleOperatorDrawer() {
@@ -1035,43 +1040,35 @@ function renderSettings() {
   const legalDocuments = getDiamondLegalDocuments();
   const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
   const cadencePolicy = (state.cadencePolicies || [])[0] || {};
+  const firebaseRows = latestFirebaseStatus || firebase;
+  const licenseSyncLabel = latestLicenseSync
+    ? latestLicenseSync.ok ? "Synced from Firebase" : "Firebase sync unavailable"
+    : "Using local cache";
   target.innerHTML = `
+    <section class="settings-actions" aria-label="Settings actions">
+      <button type="button" data-settings-action="save-settings">Save settings</button>
+      <button type="button" data-settings-action="check-firebase">Check Firebase</button>
+      <button type="button" data-settings-action="sync-license">Sync license</button>
+      <button type="button" data-settings-action="export-sync">Export Firestore bundle</button>
+      <button type="button" data-settings-action="copy-legal">Copy legal summary</button>
+    </section>
+    <section class="settings-status" aria-live="polite">
+      <span>${escapeHtml(licenseSyncLabel)}</span>
+      <span>${escapeHtml(latestFirebaseStatus?.reason || firebase.reason || "Firebase has not been checked in this session.")}</span>
+      ${latestSyncExportPath ? `<span>Last export: ${escapeHtml(latestSyncExportPath)}</span>` : ""}
+    </section>
     <section class="settings-grid">
-      ${renderSettingsPanel("License", [
-        ["Status", licenseCheck.ok ? "Ready" : "Blocked"],
-        ["Plan", license.planId || "custom"],
-        ["Role", license.role || "user"],
-        ["Brands", String(licenseCheck.brandLimit || license.brandLimit || "0")],
-        ["Platforms", String(licenseCheck.platformLimit || license.platformLimit || "0")],
-        ["Automation", formatAutomation(licenseCheck.automationPlatforms || license.automationPlatforms)],
-        ["Firebase path", license.firebasePath || model.firebase.collectionPath],
-      ])}
+      ${renderLicenseSettingsPanel(license, licenseCheck, model)}
       ${renderSettingsPanel("Firebase", [
-        ["Status", firebase.ok ? "Configured" : "Not configured"],
-        ["Admin JSON", firebase.redactedPath || "Missing"],
-        ["Project", firebase.projectId || "Missing"],
-        ["Source", firebase.source],
+        ["Status", firebaseRows.ok || firebaseRows.configured ? "Configured" : "Not configured"],
+        ["Admin JSON", firebaseRows.redactedPath || "Missing"],
+        ["Project", firebaseRows.projectId || "Missing"],
+        ["Source", firebaseRows.source || "local scan"],
         ["License collection", model.firebase.collectionPath],
       ])}
-      ${renderSettingsPanel("Routine timing", [
-        ["Due window", `${cadencePolicy.routineDueWindowMinutes ?? 15} minutes`],
-        ["Max posts/day", String(cadencePolicy.maxPostsPerDay ?? "Not set")],
-        ["Max replies/hour", String(cadencePolicy.maxRepliesPerHour ?? "Not set")],
-        ["Cooldown", `${cadencePolicy.cooldownMinutes ?? 0} minutes`],
-      ])}
-      ${renderSettingsPanel("Theme", [
-        ["Selected", titleCase(state.themeId || "broadcast")],
-        ["Shell color", "#080808"],
-        ["Panel color", "#111113"],
-        ["Accent color", "#f5f5f7"],
-        ["Custom swatches", "4 editable dots"],
-      ])}
-      ${renderSettingsPanel("Accessibility", [
-        ["Keyboard navigation", state.accessibility?.keyboardNavigation || "baseline"],
-        ["Screen reader labels", state.accessibility?.screenReaderLabels || "baseline"],
-        ["Color contrast", state.accessibility?.colorContrast || "planned"],
-        ["Reduced motion", state.accessibility?.reducedMotion || "planned"],
-      ])}
+      ${renderRoutineSettingsPanel(cadencePolicy)}
+      ${renderThemeSettingsPanel()}
+      ${renderAccessibilitySettingsPanel()}
       ${renderSettingsPanel("Firestore sync", Object.entries(syncSummary).map(([key, value]) => [titleCase(key), String(value)]))}
     </section>
     <section class="legal-settings" aria-label="Legal drafts">
@@ -1083,6 +1080,175 @@ function renderSettings() {
         ${legalDocuments.map(renderLegalCard).join("")}
       </div>
     </section>
+  `;
+}
+
+async function handleSettingsAction(event) {
+  const button = event.target.closest("[data-settings-action]");
+  if (!button) return;
+  await runSettingsAction(button.dataset.settingsAction);
+}
+
+async function runSettingsAction(action) {
+  if (action === "save-settings") {
+    saveSettingsForm();
+    await saveProductionState();
+    renderSettings();
+  }
+  if (action === "check-firebase") {
+    latestFirebaseStatus = await window.diamond?.getFirebaseAdminStatus?.();
+    renderSettings();
+  }
+  if (action === "sync-license") {
+    const userId = getSettingsFieldValue("licenseUserId") || state.licenseCache?.userId || "scott";
+    latestLicenseSync = await window.diamond?.getFirebaseLicense?.({
+      userId,
+      email: getSettingsFieldValue("licenseEmail") || state.licenseCache?.email || "",
+      firebasePath: state.licenseCache?.firebasePath,
+    });
+    if (latestLicenseSync?.ok && latestLicenseSync.license) {
+      state.licenseCache = latestLicenseSync.license;
+      await saveProductionState();
+    }
+    renderSettings();
+  }
+  if (action === "export-sync") {
+    latestSyncExportPath = await window.diamond?.exportSyncBundle?.({
+      name: `diamond-firestore-sync-${Date.now()}`,
+      bundle: buildFirestoreSyncBundle(state),
+    }) || "";
+    renderSettings();
+  }
+  if (action === "copy-legal") {
+    const summary = getDiamondLegalDocuments()
+      .map((document) => `${document.title}\nStatus: ${document.status}\nUpdated: ${document.updatedAt}\n${document.summary}`)
+      .join("\n\n");
+    await window.diamond?.writeClipboard?.(summary);
+    renderSettings();
+  }
+}
+
+function saveSettingsForm() {
+  state.licenseCache ||= createTemporaryUnlimitedDiamondLicense({
+    userId: "scott",
+    brands: [state.context?.brandId].filter(Boolean),
+    platforms: (state.socialAccounts || []).map((account) => account.platform),
+  });
+  state.licenseCache.userId = getSettingsFieldValue("licenseUserId") || state.licenseCache.userId;
+  state.licenseCache.email = getSettingsFieldValue("licenseEmail") || state.licenseCache.email;
+  state.themeId = getSettingsFieldValue("themeId") || state.themeId || "custom";
+  state.accessibility = {
+    keyboardNavigation: getSettingsFieldValue("keyboardNavigation") || "baseline",
+    screenReaderLabels: getSettingsFieldValue("screenReaderLabels") || "baseline",
+    colorContrast: getSettingsFieldValue("colorContrast") || "planned",
+    reducedMotion: getSettingsFieldValue("reducedMotion") || "planned",
+  };
+  state.cadencePolicies ||= [];
+  let cadencePolicy = state.cadencePolicies[0];
+  if (!cadencePolicy) {
+    cadencePolicy = {
+      id: `cadence-${Date.now()}`,
+      companyId: state.context?.companyId || "",
+      brandId: state.context?.brandId || "",
+      campaignId: state.context?.campaignId || "",
+    };
+    state.cadencePolicies.push(cadencePolicy);
+  }
+  cadencePolicy.routineDueWindowMinutes = getSettingsNumber("routineDueWindowMinutes", cadencePolicy.routineDueWindowMinutes ?? 15);
+  cadencePolicy.maxPostsPerDay = getSettingsNumber("maxPostsPerDay", cadencePolicy.maxPostsPerDay ?? 3);
+  cadencePolicy.maxRepliesPerHour = getSettingsNumber("maxRepliesPerHour", cadencePolicy.maxRepliesPerHour ?? 8);
+  cadencePolicy.cooldownMinutes = getSettingsNumber("cooldownMinutes", cadencePolicy.cooldownMinutes ?? 0);
+  cadencePolicy.updatedAt = new Date().toISOString();
+}
+
+function getSettingsFieldValue(field) {
+  return document.querySelector(`[data-settings-field="${field}"]`)?.value?.trim() || "";
+}
+
+function getSettingsNumber(field, fallback) {
+  const value = Number.parseInt(getSettingsFieldValue(field), 10);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function renderLicenseSettingsPanel(license, licenseCheck, model) {
+  return `
+    <article class="settings-panel editable-settings">
+      <header>
+        <h2>License</h2>
+        <span class="count">${escapeHtml(licenseCheck.ok ? "Ready" : "Blocked")}</span>
+      </header>
+      <dl>
+        <div><dt>User ID</dt><dd><input data-settings-field="licenseUserId" type="text" value="${escapeHtml(license.userId || "scott")}"></dd></div>
+        <div><dt>Email</dt><dd><input data-settings-field="licenseEmail" type="email" value="${escapeHtml(license.email || "")}"></dd></div>
+        <div><dt>Plan</dt><dd>${escapeHtml(license.planId || "custom")}</dd></div>
+        <div><dt>Role</dt><dd>${escapeHtml(license.role || "user")}</dd></div>
+        <div><dt>Brands</dt><dd>${escapeHtml(String(licenseCheck.brandLimit || license.brandLimit || "0"))}</dd></div>
+        <div><dt>Platforms</dt><dd>${escapeHtml(String(licenseCheck.platformLimit || license.platformLimit || "0"))}</dd></div>
+        <div><dt>Automation</dt><dd>${escapeHtml(formatAutomation(licenseCheck.automationPlatforms || license.automationPlatforms))}</dd></div>
+        <div><dt>Firebase path</dt><dd>${escapeHtml(license.firebasePath || model.firebase.collectionPath)}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderRoutineSettingsPanel(policy = {}) {
+  return `
+    <article class="settings-panel editable-settings">
+      <header>
+        <h2>Routine timing</h2>
+        <span class="count">Editable</span>
+      </header>
+      <dl>
+        <div><dt>Due window</dt><dd><input data-settings-field="routineDueWindowMinutes" type="number" min="1" value="${escapeHtml(policy.routineDueWindowMinutes ?? 15)}"><span>minutes</span></dd></div>
+        <div><dt>Max posts/day</dt><dd><input data-settings-field="maxPostsPerDay" type="number" min="0" value="${escapeHtml(policy.maxPostsPerDay ?? 3)}"></dd></div>
+        <div><dt>Max replies/hour</dt><dd><input data-settings-field="maxRepliesPerHour" type="number" min="0" value="${escapeHtml(policy.maxRepliesPerHour ?? 8)}"></dd></div>
+        <div><dt>Cooldown</dt><dd><input data-settings-field="cooldownMinutes" type="number" min="0" value="${escapeHtml(policy.cooldownMinutes ?? 0)}"><span>minutes</span></dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderThemeSettingsPanel() {
+  const themes = ["broadcast", "custom", "charcoal", "terminal", "studio", "midnight"];
+  return `
+    <article class="settings-panel editable-settings">
+      <header>
+        <h2>Theme</h2>
+        <span class="count">CSS module</span>
+      </header>
+      <dl>
+        <div>
+          <dt>Selected</dt>
+          <dd>
+            <select data-settings-field="themeId">
+              ${themes.map((theme) => `<option value="${escapeHtml(theme)}" ${theme === (state.themeId || "broadcast") ? "selected" : ""}>${escapeHtml(titleCase(theme))}</option>`).join("")}
+            </select>
+          </dd>
+        </div>
+        <div><dt>Shell color</dt><dd>#080808</dd></div>
+        <div><dt>Panel color</dt><dd>#111113</dd></div>
+        <div><dt>Accent color</dt><dd>#f5f5f7</dd></div>
+        <div><dt>Custom swatches</dt><dd>4 editable dots</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function renderAccessibilitySettingsPanel() {
+  const accessibility = state.accessibility || {};
+  return `
+    <article class="settings-panel editable-settings">
+      <header>
+        <h2>Accessibility</h2>
+        <span class="count">Baseline</span>
+      </header>
+      <dl>
+        <div><dt>Keyboard navigation</dt><dd><input data-settings-field="keyboardNavigation" type="text" value="${escapeHtml(accessibility.keyboardNavigation || "baseline")}"></dd></div>
+        <div><dt>Screen reader labels</dt><dd><input data-settings-field="screenReaderLabels" type="text" value="${escapeHtml(accessibility.screenReaderLabels || "baseline")}"></dd></div>
+        <div><dt>Color contrast</dt><dd><input data-settings-field="colorContrast" type="text" value="${escapeHtml(accessibility.colorContrast || "planned")}"></dd></div>
+        <div><dt>Reduced motion</dt><dd><input data-settings-field="reducedMotion" type="text" value="${escapeHtml(accessibility.reducedMotion || "planned")}"></dd></div>
+      </dl>
+    </article>
   `;
 }
 

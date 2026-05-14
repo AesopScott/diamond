@@ -1050,6 +1050,47 @@ textarea {
   gap: 22px;
 }
 
+.settings-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+}
+
+.settings-actions button {
+  align-items: center;
+  background: #1a1e27;
+  border: 1px solid #2d3441;
+  border-radius: 8px;
+  color: #f7f7fa;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: clamp(13px, 1vw, 15px);
+  font-weight: 1000;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.settings-actions button:hover {
+  border-color: #f15249;
+}
+
+.settings-status {
+  background: #10151f;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: #cdd6e9;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.settings-status span {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .settings-grid {
   display: grid;
   gap: 16px;
@@ -1110,6 +1151,32 @@ textarea {
   line-height: 1.35;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.editable-settings input,
+.editable-settings select {
+  background: #090b10;
+  border: 1px solid #2d3441;
+  border-radius: 6px;
+  color: #f8f8fb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  min-height: 34px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.editable-settings dd {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.editable-settings dd span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .legal-list {
@@ -1538,6 +1605,7 @@ textarea {
   .template-summary,
   .template-columns,
   .settings-grid,
+  .settings-actions,
   .legal-list,
   .analytics-summary,
   .analytics-layout,

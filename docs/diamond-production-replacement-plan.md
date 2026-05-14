@@ -50,10 +50,11 @@ The new shell becomes the default only after these flows are working inside it:
    - Make Schedule post create or update a persisted scheduled post.
    - Keep calendar scoped by active company, brand, campaign, and platform.
 
-6. Wire Settings.
+6. Wire Settings. First pass built: Settings now has real action buttons for saving settings, checking Firebase, syncing the Firebase license cache, exporting the Firestore sync bundle, and copying legal summaries.
    - Move Firebase Admin, License, Legal Drafts, theme, accessibility, and routine due-window settings into the Settings page.
    - Keep the temporary unlimited license active until the shop exists.
    - Keep license checks backed by Firebase when available and offline grace when not.
+   - Save editable license identity, theme, accessibility baseline fields, and routine cadence limits from the Diamond shell.
 
 7. Wire Operator drawer.
    - Connect Evaluate, Approve, Stage in browser, Worker stage, Capture run, and proof controls.
