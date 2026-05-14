@@ -140,7 +140,7 @@ platformDrafts
 10. Move license, Firebase, legal, theme, and accessibility into Settings. Prototype built in `src/renderer/posts-prototype.html`.
 11. Add Analytics page. Prototype built in `src/renderer/posts-prototype.html`.
 12. Move advanced operator panels into an explicit drawer or page. Prototype drawer built in `src/renderer/posts-prototype.html`.
-13. Screenshot compare new shell against the archived current UI.
+13. Screenshot compare new shell against the archived current UI. Captures and recommendation saved in `docs/levercast-redesign-comparison.md`.
 14. Only then decide whether to replace the current renderer shell.
 
 ## Open Product Questions
