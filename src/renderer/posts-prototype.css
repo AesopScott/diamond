@@ -585,6 +585,33 @@ textarea {
   margin-top: 8px;
 }
 
+.calendar-actions {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.calendar-actions button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 32px;
+  padding: 7px;
+}
+
+.calendar-actions button:hover {
+  border-color: #e5e5e8;
+}
+
+.calendar-item.canceled {
+  opacity: 0.68;
+}
+
 .accounts-layout {
   display: grid;
   gap: 24px;

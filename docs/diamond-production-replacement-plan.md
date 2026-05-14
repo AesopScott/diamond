@@ -45,7 +45,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Keep accounts scoped per company and brand.
    - Restore add company, add brand, add account, save, and session-check actions.
 
-5. Wire Calendar and Scheduling.
+5. Wire Calendar and Scheduling. First pass built: Calendar now reads real scheduled records, scopes them to the active company/brand/campaign, and supports load, stage, mark posted, and cancel actions.
    - Connect scheduled post records to the Calendar page.
    - Make Schedule post create or update a persisted scheduled post.
    - Keep calendar scoped by active company, brand, campaign, and platform.

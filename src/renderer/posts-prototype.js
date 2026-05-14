@@ -271,6 +271,7 @@ function wirePrototypeControls() {
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
+  document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
   document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
@@ -330,7 +331,7 @@ async function refreshProductionViews() {
 function renderCalendar() {
   const target = document.querySelector("#calendar-board");
   if (!target) return;
-  const groups = calendarGroups(state.scheduledPosts || []);
+  const groups = calendarGroups(calendarSchedulesForActiveScope());
   target.innerHTML = groups.map((group) => `
     <article class="calendar-group ${escapeHtml(group.id)}" aria-labelledby="calendar-${escapeHtml(group.id)}">
       <header>
@@ -357,7 +358,7 @@ function calendarGroups(schedules) {
   ];
   schedules.forEach((schedule) => {
     const scheduledAt = new Date(schedule.scheduledAt);
-    if (["posted", "published", "completed"].includes(schedule.status)) {
+    if (["posted", "published", "completed", "canceled"].includes(schedule.status)) {
       groups[3].items.push(schedule);
     } else if (scheduledAt.getTime() < now.getTime() && !isSameLocalDay(scheduledAt, now)) {
       groups[0].items.push(schedule);
@@ -375,15 +376,107 @@ function calendarGroups(schedules) {
 
 function renderCalendarItem(item) {
   return `
-    <article class="calendar-item">
+    <article class="calendar-item ${escapeHtml(item.status || "scheduled")}" data-schedule-id="${escapeHtml(item.id)}">
       <strong>${escapeHtml(item.text || "Untitled scheduled post")}</strong>
       <time datetime="${escapeHtml(item.scheduledAt || "")}">${formatDateTime(item.scheduledAt)}</time>
       <div class="platform-row">
         <span>${escapeHtml(item.context?.platform || "x")}</span>
         <span>${escapeHtml(item.status || "scheduled")}</span>
+        <span>${escapeHtml(campaignName(item.context?.campaignId))}</span>
+      </div>
+      <div class="calendar-actions">
+        <button type="button" data-calendar-action="load" data-schedule-id="${escapeHtml(item.id)}">Load</button>
+        <button type="button" data-calendar-action="stage" data-schedule-id="${escapeHtml(item.id)}">Stage</button>
+        <button type="button" data-calendar-action="posted" data-schedule-id="${escapeHtml(item.id)}">Posted</button>
+        <button type="button" data-calendar-action="cancel" data-schedule-id="${escapeHtml(item.id)}">Cancel</button>
       </div>
     </article>
   `;
+}
+
+function calendarSchedulesForActiveScope() {
+  const context = state.context || {};
+  return (state.scheduledPosts || []).filter((schedule) => {
+    const scheduleContext = schedule.context || {};
+    return (!context.companyId || scheduleContext.companyId === context.companyId)
+      && (!context.brandId || scheduleContext.brandId === context.brandId)
+      && (!context.campaignId || scheduleContext.campaignId === context.campaignId);
+  });
+}
+
+async function handleCalendarAction(event) {
+  const button = event.target.closest("[data-calendar-action]");
+  if (!button) return;
+  const schedule = (state.scheduledPosts || []).find((item) => item.id === button.dataset.scheduleId);
+  if (!schedule) return;
+  const draft = prototypeModel.platformDrafts.find((item) => item.id === schedule.draftId);
+  if (button.dataset.calendarAction === "load") {
+    openScheduleDetail(schedule, draft);
+    return;
+  }
+  if (button.dataset.calendarAction === "stage" && draft) {
+    stagePlatformDraft(draft);
+    schedule.status = draft.status === "staged" ? "staged" : schedule.status;
+    schedule.stagedAt = draft.stagedAt;
+    schedule.updatedAt = draft.updatedAt;
+    updatePostPackageFromDrafts(draft.postPackageId);
+  }
+  if (button.dataset.calendarAction === "posted") {
+    if (draft) {
+      markPlatformDraftPosted(draft);
+      updatePostPackageFromDrafts(draft.postPackageId);
+    } else {
+      schedule.status = "posted";
+      schedule.postedAt = new Date().toISOString();
+      schedule.updatedAt = schedule.postedAt;
+    }
+  }
+  if (button.dataset.calendarAction === "cancel") {
+    schedule.status = "canceled";
+    schedule.canceledAt = new Date().toISOString();
+    schedule.updatedAt = schedule.canceledAt;
+    if (draft && draft.status === "scheduled") {
+      draft.status = "approved";
+      draft.updatedAt = schedule.canceledAt;
+      updatePostPackageFromDrafts(draft.postPackageId);
+    }
+  }
+  await saveProductionState();
+  await refreshProductionViews();
+}
+
+function openScheduleDetail(schedule, draft) {
+  if (draft?.postPackageId) {
+    const postPackage = prototypeModel.postPackages.find((item) => item.id === draft.postPackageId);
+    if (postPackage) {
+      openDetail(postPackage, prototypeModel.platformDrafts.filter((item) => item.postPackageId === postPackage.id));
+      return;
+    }
+  }
+  const postPackage = createPostPackage({
+    id: schedule.postPackageId || `package-${normalizeId(schedule.id, "scheduleId")}`,
+    context: schedule.context,
+    ideaText: schedule.text || "Scheduled post",
+    tags: ["scheduled"],
+    status: schedule.status || "scheduled",
+    source: "schedule",
+    createdAt: schedule.createdAt || schedule.scheduledAt,
+    updatedAt: schedule.updatedAt || schedule.createdAt || schedule.scheduledAt,
+  });
+  const scheduleDraft = draft || createPlatformDraft({
+    id: schedule.draftId || `${postPackage.id}-${schedule.context?.platform || "x"}`,
+    postPackage,
+    context: schedule.context,
+    platform: schedule.context?.platform || "x",
+    socialAccountId: schedule.context?.socialAccountId || state.context?.socialAccountId,
+    text: schedule.text || postPackage.ideaText,
+    media: schedule.media || [],
+    status: schedule.status || "scheduled",
+    scheduledAt: schedule.scheduledAt,
+    createdAt: schedule.createdAt || schedule.scheduledAt,
+    updatedAt: schedule.updatedAt || schedule.createdAt || schedule.scheduledAt,
+  });
+  openDetail(postPackage, [scheduleDraft]);
 }
 
 function renderAccounts(selectedAccountId) {
