@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diamond Posts Prototype</title>
+    <link rel="stylesheet" href="./posts-prototype.css">
+  </head>
+  <body>
+    <div class="prototype-shell">
+      <aside class="prototype-sidebar" aria-label="Diamond prototype navigation">
+        <div class="prototype-logo">
+          <span></span>
+          <strong>DIAMOND</strong>
+        </div>
+        <nav>
+          <a class="active" href="#posts">Posts</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#templates">Templates</a>
+          <a href="#calendar">Calendar</a>
+          <a href="#accounts">Accounts</a>
+          <a href="#brands">Brands</a>
+          <a href="#settings">Settings</a>
+        </nav>
+      </aside>
+
+      <main class="prototype-main" id="posts">
+        <header class="prototype-header">
+          <div>
+            <h1>Posts</h1>
+            <p>Create, manage, and publish across platforms.</p>
+          </div>
+          <button class="create-button" type="button">Create</button>
+        </header>
+
+        <section class="prototype-toolbar" aria-label="Post filters">
+          <button type="button" class="filter-pill">All</button>
+          <button type="button" class="filter-pill">All tags</button>
+          <button type="button" class="filter-pill">Created date</button>
+          <button type="button" class="filter-pill">Newest first</button>
+          <div class="view-toggle" aria-label="View mode">
+            <button type="button" class="active">Board</button>
+            <button type="button">List</button>
+          </div>
+        </section>
+
+        <section id="posts-board" class="posts-board" aria-label="Posts board"></section>
+      </main>
+    </div>
+
+    <script type="module" src="./posts-prototype.js"></script>
+  </body>
+</html>
