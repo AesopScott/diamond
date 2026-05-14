@@ -56,7 +56,7 @@ The new shell becomes the default only after these flows are working inside it:
    - Keep license checks backed by Firebase when available and offline grace when not.
    - Save editable license identity, theme, accessibility baseline fields, and routine cadence limits from the Diamond shell.
 
-7. Wire Operator drawer.
+7. Wire Operator drawer. First pass built: Operator buttons now open account pages, update session status, run Playwright-assisted staging, record proof runs, validate active packages, sync license, check Firebase, and export Firestore bundles.
    - Connect Evaluate, Approve, Stage in browser, Worker stage, Capture run, and proof controls.
    - Keep the visible browser out of the main post board.
    - Put advanced validation and run logs in the drawer.

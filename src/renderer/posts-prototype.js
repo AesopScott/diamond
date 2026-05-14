@@ -39,6 +39,7 @@ let selectedAccountId = state.context?.socialAccountId || null;
 let latestFirebaseStatus = null;
 let latestLicenseSync = null;
 let latestSyncExportPath = "";
+let latestOperatorMessage = "";
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -285,6 +286,7 @@ function wirePrototypeControls() {
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
+  document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
 }
 
 function toggleOperatorDrawer() {
@@ -1326,6 +1328,7 @@ function renderOperatorDrawer() {
   const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
   const recentLogs = operatorRunLogs();
   target.innerHTML = `
+    ${latestOperatorMessage ? `<section class="operator-status" aria-live="polite">${escapeHtml(latestOperatorMessage)}</section>` : ""}
     <section class="operator-panel">
       <header>
         <h3>Active target</h3>
@@ -1357,10 +1360,10 @@ function renderOperatorDrawer() {
         <span class="count">4</span>
       </header>
       <div class="operator-action-grid">
-        ${renderOperatorAction("Open account", resolveLoginUrl(account) || "Login URL missing")}
-        ${renderOperatorAction("Check session", `Current state: ${titleCase(account?.sessionStatus || "unknown")}`)}
-        ${renderOperatorAction("Stage in browser", resolveComposeUrl(account) || "Compose URL missing")}
-        ${renderOperatorAction("Capture proof", `${account?.proofCount || 0} proof captures saved`)}
+        ${renderOperatorAction("Open account", resolveLoginUrl(account) || "Login URL missing", "open-account", !resolveLoginUrl(account))}
+        ${renderOperatorAction("Check session", `Current state: ${titleCase(account?.sessionStatus || "unknown")}`, "check-session", !account)}
+        ${renderOperatorAction("Stage in browser", resolveComposeUrl(account) || "Compose URL missing", "stage-browser", !account)}
+        ${renderOperatorAction("Capture proof", `${account?.proofCount || 0} proof captures saved`, "capture-proof", !account)}
       </div>
     </section>
 
@@ -1370,10 +1373,10 @@ function renderOperatorDrawer() {
         <span class="count">${Object.keys(syncSummary).length}</span>
       </header>
       <div class="operator-action-grid">
-        ${renderOperatorAction("Validate package", "Checks policy, platform limits, and missing media.")}
-        ${renderOperatorAction("Sync license", "Reads the Firebase license cache and offline grace window.")}
-        ${renderOperatorAction("Check Firebase", "Validates admin config and expected collection paths.")}
-        ${renderOperatorAction("Export bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`)}
+        ${renderOperatorAction("Validate package", "Checks policy, platform limits, and missing media.", "validate-package")}
+        ${renderOperatorAction("Sync license", "Reads the Firebase license cache and offline grace window.", "sync-license")}
+        ${renderOperatorAction("Check Firebase", "Validates admin config and expected collection paths.", "check-firebase")}
+        ${renderOperatorAction("Export bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`, "export-bundle")}
       </div>
     </section>
 
@@ -1387,6 +1390,170 @@ function renderOperatorDrawer() {
       </ol>
     </section>
   `;
+}
+
+async function handleOperatorAction(event) {
+  const button = event.target.closest("[data-operator-action]");
+  if (!button || button.disabled) return;
+  await runOperatorAction(button.dataset.operatorAction);
+}
+
+async function runOperatorAction(action) {
+  const account = activeSocialAccount();
+  const draft = activeOperatorDraft(account);
+  if (action === "open-account") {
+    const url = resolveLoginUrl(account);
+    if (!url) return setOperatorMessage("Open account blocked: login URL is missing.");
+    await window.diamond?.openExternal?.(url);
+    return setOperatorMessage(`Opened ${platformLabel(account.platform)} account page.`);
+  }
+  if (action === "check-session") {
+    if (!account) return setOperatorMessage("Session check blocked: no active account.");
+    account.sessionStatus = resolveLoginUrl(account) ? "ready" : "needs_login";
+    account.sessionCheckedAt = new Date().toISOString();
+    await saveProductionState();
+    renderAccounts(selectedAccountId);
+    return setOperatorMessage(`${platformLabel(account.platform)} session marked ${titleCase(account.sessionStatus)}.`);
+  }
+  if (action === "stage-browser") {
+    return stageOperatorDraft(account, draft);
+  }
+  if (action === "capture-proof") {
+    return captureOperatorProof(account, draft);
+  }
+  if (action === "validate-package") {
+    return validateOperatorPackage(account);
+  }
+  if (action === "sync-license") {
+    await runSettingsAction("sync-license");
+    return setOperatorMessage(latestLicenseSync?.reason || "License sync finished.");
+  }
+  if (action === "check-firebase") {
+    await runSettingsAction("check-firebase");
+    return setOperatorMessage(latestFirebaseStatus?.reason || "Firebase check finished.");
+  }
+  if (action === "export-bundle") {
+    await runSettingsAction("export-sync");
+    return setOperatorMessage(latestSyncExportPath ? `Exported Firestore bundle to ${latestSyncExportPath}.` : "Export finished.");
+  }
+}
+
+async function stageOperatorDraft(account, draft) {
+  if (!account) return setOperatorMessage("Browser staging blocked: no active account.");
+  if (!draft) return setOperatorMessage("Browser staging blocked: no active draft.");
+  stagePlatformDraft(draft);
+  const composeUrl = resolveComposeUrl(account);
+  if (!composeUrl) {
+    draft.stageNote = "Compose URL missing; set the account compose URL first.";
+    await saveProductionState();
+    return setOperatorMessage(draft.stageNote);
+  }
+  const context = {
+    ...draft.context,
+    platform: draft.platform || account.platform,
+    socialAccountId: account.id,
+    browserProfileId: account.browserProfileId,
+  };
+  await window.diamond?.writeClipboard?.(draft.text || "");
+  let result;
+  try {
+    result = await window.diamond?.stageWithPlaywright?.({
+      context,
+      account,
+      composeUrl,
+      text: draft.text,
+      media: draft.media || [],
+      screenshotName: `operator-${draft.id}-${Date.now()}`,
+    });
+  } catch (error) {
+    result = {
+      ok: false,
+      status: "needs_manual_finish",
+      reason: error.message || "Playwright worker failed to start.",
+    };
+  }
+  const stagedAt = new Date().toISOString();
+  draft.status = result?.ok ? "staged" : result?.status || "needs_manual_finish";
+  draft.stagedAt = stagedAt;
+  draft.updatedAt = stagedAt;
+  draft.stageUrl = result?.currentUrl || composeUrl;
+  draft.stageNote = result?.reason || "Browser staging finished.";
+  draft.screenshotPath = result?.screenshotPath || draft.screenshotPath || "";
+  createOperatorRun(draft, {
+    status: draft.status,
+    note: `Operator staging: ${draft.stageNote}`,
+    screenshotPath: draft.screenshotPath,
+    platformUrl: draft.stageUrl,
+  });
+  updatePostPackageFromDrafts(draft.postPackageId);
+  await saveProductionState();
+  await refreshProductionViews();
+  reopenActiveDetail();
+  return setOperatorMessage(result?.ok ? "Draft staged in browser. Review before posting." : `Browser staging needs manual finish: ${draft.stageNote}`);
+}
+
+async function captureOperatorProof(account, draft) {
+  if (!account) return setOperatorMessage("Proof capture blocked: no active account.");
+  if (!draft) return setOperatorMessage("Proof capture blocked: no active draft.");
+  account.proofCount = Number(account.proofCount || 0) + 1;
+  account.lastProofAt = new Date().toISOString();
+  createOperatorRun(draft, {
+    status: "proof_captured",
+    note: "Operator proof captured from the current draft record.",
+    screenshotPath: draft.screenshotPath || "",
+    platformUrl: draft.stageUrl || resolveComposeUrl(account) || resolveLoginUrl(account) || "",
+  });
+  await saveProductionState();
+  await refreshProductionViews();
+  return setOperatorMessage(`${platformLabel(account.platform)} proof recorded. Total proofs: ${account.proofCount}.`);
+}
+
+async function validateOperatorPackage(account) {
+  const checks = operatorChecks(account);
+  const drafts = activePostPackageId
+    ? prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId)
+    : activeOperatorDraft(account) ? [activeOperatorDraft(account)] : [];
+  drafts.forEach(evaluatePlatformDraft);
+  drafts.forEach((draft) => updatePostPackageFromDrafts(draft.postPackageId));
+  await saveProductionState();
+  await refreshProductionViews();
+  reopenActiveDetail();
+  const ready = checks.filter((check) => check.ok).length;
+  return setOperatorMessage(`Validated ${drafts.length || 0} draft(s). Preflight ready: ${ready}/${checks.length}.`);
+}
+
+function createOperatorRun(draft, input = {}) {
+  state.postRuns ||= [];
+  const now = new Date().toISOString();
+  const run = {
+    id: `operator-run-${Date.now()}-${draft.platform || "platform"}`,
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    context: draft.context,
+    status: input.status || "operator_recorded",
+    note: input.note || "",
+    text: draft.text,
+    media: draft.media || [],
+    platformUrl: input.platformUrl || "",
+    screenshotPath: input.screenshotPath || "",
+    metrics: createPostMetrics(),
+    createdAt: now,
+  };
+  state.postRuns.unshift(run);
+  draft.lastRunId = run.id;
+  return run;
+}
+
+function setOperatorMessage(message) {
+  latestOperatorMessage = message;
+  state.operatorLogs ||= [];
+  state.operatorLogs.unshift({
+    createdAt: new Date().toISOString(),
+    message,
+  });
+  state.operatorLogs = state.operatorLogs.slice(0, 20);
+  window.diamond?.saveState?.(state);
+  renderOperatorDrawer();
 }
 
 function operatorChecks(account) {
@@ -1449,9 +1616,9 @@ function renderOperatorCheck(check) {
   `;
 }
 
-function renderOperatorAction(label, note) {
+function renderOperatorAction(label, note, action, disabled = false) {
   return `
-    <button class="operator-action" type="button">
+    <button class="operator-action" type="button" data-operator-action="${escapeHtml(action)}" ${disabled ? "disabled" : ""}>
       <strong>${escapeHtml(label)}</strong>
       <span>${escapeHtml(note)}</span>
     </button>
@@ -1465,12 +1632,25 @@ function activeSocialAccount() {
     || (state.socialAccounts || [])[0];
 }
 
+function activeOperatorDraft(account) {
+  const activeDrafts = activePostPackageId
+    ? prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId)
+    : [];
+  return activeDrafts.find((draft) => draft.socialAccountId === account?.id)
+    || activeDrafts.find((draft) => draft.platform === account?.platform)
+    || activeDrafts[0]
+    || prototypeModel.platformDrafts.find((draft) => draft.socialAccountId === account?.id)
+    || prototypeModel.platformDrafts.find((draft) => draft.platform === account?.platform)
+    || prototypeModel.platformDrafts[0];
+}
+
 function operatorRunLogs() {
   const runLogs = (state.postRuns || []).map((run) => ({
     createdAt: run.createdAt,
     message: `${platformLabel(run.context?.platform || "x")} ${run.status || "run"}: ${run.text || run.id}`,
   }));
   return [
+    ...(state.operatorLogs || []),
     ...runLogs,
     {
       createdAt: new Date().toISOString(),
