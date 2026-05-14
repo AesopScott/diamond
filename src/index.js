@@ -12,6 +12,7 @@ export * from "./metrics.js";
 export * from "./platform-browser-adapter.js";
 export * from "./platform-proof.js";
 export * from "./polaris-bridge.js";
+export * from "./post-package.js";
 export * from "./quality.js";
 export * from "./risk.js";
 export * from "./reply-classifier.js";

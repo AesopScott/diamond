@@ -128,7 +128,7 @@ platformDrafts
 
 ## Build Sequence
 
-1. Add post package and platform draft helpers.
+1. Add post package and platform draft helpers. Built in `src/post-package.js`.
 2. Build a read-only posts board from existing drafts, scheduled posts, and post runs.
 3. Add a new shell prototype behind a feature flag or separate route.
 4. Add post package creation flow.

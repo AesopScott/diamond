@@ -24,6 +24,8 @@ export function buildFirestoreSyncBundle(workspace = {}) {
     generatedAt: new Date().toISOString(),
     collections: {
       postDrafts: scopedRows(workspace.drafts),
+      postPackages: scopedRows(workspace.postPackages),
+      platformDrafts: scopedRows(workspace.platformDrafts),
       scheduledPosts: scopedRows(workspace.scheduledPosts),
       postRuns: scopedRows(workspace.postRuns),
       metrics: scopedRows((workspace.postRuns || []).filter((run) => run.metrics).map((run) => ({

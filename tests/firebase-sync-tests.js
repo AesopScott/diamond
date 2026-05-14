@@ -25,6 +25,8 @@ assert.ok(!fromGoogle.redactedPath.includes("secrets") || fromGoogle.redactedPat
 
 const workspace = createSeedWorkspace();
 workspace.drafts = [{ id: "draft-1", context: workspace.context, text: "Hello" }];
+workspace.postPackages = [{ id: "package-1", context: workspace.context, ideaText: "Hello" }];
+workspace.platformDrafts = [{ id: "platform-draft-1", context: workspace.context, postPackageId: "package-1", text: "Hello" }];
 workspace.scheduledPosts = [{ id: "schedule-1", context: workspace.context }];
 workspace.postRuns = [{ id: "run-1", context: workspace.context, metrics: { impressions: 100, clicks: 10 } }];
 workspace.socialReplies = [{ id: "reply-1", context: workspace.context }];
@@ -35,6 +37,8 @@ workspace.licenseCache = createDiamondLicense({ userId: "scott", brands: ["the-c
 const bundle = buildFirestoreSyncBundle(workspace);
 const summary = summarizeFirestoreSyncBundle(bundle);
 assert.equal(summary.postDrafts, 1);
+assert.equal(summary.postPackages, 1);
+assert.equal(summary.platformDrafts, 1);
 assert.equal(summary.scheduledPosts, 1);
 assert.equal(summary.postRuns, 1);
 assert.equal(summary.metrics, 1);
