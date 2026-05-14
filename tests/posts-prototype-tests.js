@@ -165,6 +165,8 @@ assert.match(js, /saveSettingsForm/);
 assert.match(js, /getFirebaseAdminStatus/);
 assert.match(js, /getFirebaseLicense/);
 assert.match(js, /exportSyncBundle/);
+assert.match(js, /lastSyncExportPath/);
+assert.match(js, /lastSyncExportedAt/);
 assert.match(js, /data-settings-action="check-firebase"/);
 assert.match(js, /data-settings-action="sync-license"/);
 assert.match(js, /data-settings-action="export-sync"/);

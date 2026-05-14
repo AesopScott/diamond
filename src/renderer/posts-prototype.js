@@ -38,7 +38,7 @@ let activePostPackageId = null;
 let selectedAccountId = state.context?.socialAccountId || null;
 let latestFirebaseStatus = null;
 let latestLicenseSync = null;
-let latestSyncExportPath = "";
+let latestSyncExportPath = state.lastSyncExportPath || "";
 let latestOperatorMessage = "";
 renderBoard(board);
 renderCalendar();
@@ -1164,6 +1164,9 @@ async function runSettingsAction(action) {
       name: `diamond-firestore-sync-${Date.now()}`,
       bundle: buildFirestoreSyncBundle(state),
     }) || "";
+    state.lastSyncExportPath = latestSyncExportPath;
+    state.lastSyncExportedAt = new Date().toISOString();
+    await saveProductionState();
     renderSettings();
   }
   if (action === "copy-legal") {
