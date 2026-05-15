@@ -2313,7 +2313,7 @@ textarea {
   counter-increment: first-run;
   display: grid;
   gap: 5px 10px;
-  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   padding: 10px;
 }
 
@@ -2370,6 +2370,32 @@ textarea {
   grid-column: 1;
   text-align: center;
   text-transform: uppercase;
+}
+
+.first-run-panel li button {
+  align-self: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 1000;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  min-height: 34px;
+  min-width: 118px;
+  padding: 8px 10px;
+}
+
+.first-run-panel li.current button {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 80%, white);
+  color: var(--accent-text);
+}
+
+.first-run-panel li button:hover {
+  border-color: var(--accent);
 }
 
 .first-run-panel li.current em {

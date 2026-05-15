@@ -264,6 +264,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Beginner Mode setting for extra in-context guidance
   - [x] First-run checklist and guided flow
   - [x] First-run completion tracking and next-step state
+  - [x] First-run step jump buttons
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

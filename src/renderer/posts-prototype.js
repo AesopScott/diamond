@@ -1407,6 +1407,10 @@ function renderSettings() {
 async function handleSettingsAction(event) {
   const button = event.target.closest("[data-settings-action]");
   if (!button) return;
+  if (button.dataset.settingsAction === "go-first-run-step") {
+    goToFirstRunStep(button.dataset.firstRunStep || "");
+    return;
+  }
   await runSettingsAction(button.dataset.settingsAction);
 }
 
@@ -1779,11 +1783,39 @@ function renderFirstRunPanel() {
             <strong>${escapeHtml(step.title)}</strong>
             <span>${escapeHtml(step.complete ? step.doneDetail : step.detail)}</span>
             <em>${escapeHtml(step.complete ? "Done" : step.current ? "Next" : "Open")}</em>
+            <button type="button" data-settings-action="go-first-run-step" data-first-run-step="${escapeHtml(step.id)}">${escapeHtml(step.buttonLabel || "Go")}</button>
           </li>
         `).join("")}
       </ol>
     </section>
   `;
+}
+
+function goToFirstRunStep(stepId) {
+  const step = firstRunProgress().find((item) => item.id === stepId);
+  if (!step) return;
+  if (step.viewId) {
+    navigatePrototypeView(step.viewId);
+  }
+  if (step.openFirstPackage) {
+    const postPackage = prototypeModel.postPackages?.[0];
+    if (postPackage) openPackageDetail(postPackage.id);
+    else openCreateDetail();
+  }
+  if (step.openOperator) {
+    const drawer = document.querySelector("#operator-drawer");
+    if (drawer?.classList.contains("hidden")) toggleOperatorDrawer();
+  }
+  if (step.focusSelector) {
+    window.requestAnimationFrame(() => {
+      document.querySelector(step.focusSelector)?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    });
+  }
+}
+
+function navigatePrototypeView(viewId) {
+  showPrototypeView(viewId);
+  document.querySelectorAll("#prototype-nav a").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
 }
 
 function firstRunProgress() {
@@ -1810,41 +1842,71 @@ function firstRunProgress() {
       complete: Boolean(activeCompany && activeBrand && activeCampaign && activeStrategy.goals && activeStrategy.audience && (activeStrategy.pillars || []).length),
       detail: "Open Brands and confirm the active company, brand, campaign, goals, audience, pillars, and voice.",
       doneDetail: `Active scope is set to ${activeCompany?.name || "company"} / ${activeBrand?.name || "brand"} / ${activeCampaign?.name || "campaign"}.`,
+      buttonLabel: "Go to Brands",
+      viewId: "brands-view",
+      focusSelector: "#brand-workspace",
     },
     "first-run-account": {
       complete: Boolean(activeAccount && activeAccount.sessionStatus === "ready"),
       detail: "Open Accounts, choose the social account, log in manually if needed, and mark the session ready.",
       doneDetail: `${platformLabel(activeAccount?.platform)} account ${activeAccount?.handle || activeAccount?.id || ""} is marked ready.`,
+      buttonLabel: "Go to Accounts",
+      viewId: "accounts-view",
+      focusSelector: "#account-detail",
     },
     "first-run-create": {
       complete: Boolean((prototypeModel.postPackages || []).length),
       detail: "Create or open a post package so Diamond has one source idea to work from.",
       doneDetail: `${prototypeModel.postPackages.length} post package${prototypeModel.postPackages.length === 1 ? "" : "s"} exist in the workspace.`,
+      buttonLabel: "Go to Posts",
+      viewId: "posts-view",
+      focusSelector: "#posts-board",
     },
     "first-run-draft": {
       complete: Boolean(platformDrafts.length),
       detail: "Open a post package and confirm at least one platform draft exists.",
       doneDetail: `${platformDrafts.length} platform draft${platformDrafts.length === 1 ? "" : "s"} are available for review.`,
+      buttonLabel: "Open Draft",
+      viewId: "posts-view",
+      openFirstPackage: true,
+      focusSelector: "#platform-previews",
     },
     "first-run-evaluate": {
       complete: Boolean(evaluatedDraft && approvedDraft),
       detail: evaluatedDraft ? "The draft has been evaluated. Approve it when it is clean enough to stage." : "Click Evaluate, read the result, edit if needed, then click Approve.",
       doneDetail: `A ${platformLabel(approvedDraft?.platform)} draft has been evaluated and approved or moved beyond approval.`,
+      buttonLabel: "Open Actions",
+      viewId: "posts-view",
+      openFirstPackage: true,
+      focusSelector: ".platform-action-row",
     },
     "first-run-stage": {
       complete: Boolean(stagedDraft),
       detail: "Stage an approved draft in the visible browser. Remember: staging prepares the composer, it does not publish.",
       doneDetail: `A ${platformLabel(stagedDraft?.platform)} draft has been staged or opened for manual finish.`,
+      buttonLabel: "Open Operator",
+      viewId: "posts-view",
+      openFirstPackage: true,
+      openOperator: true,
+      focusSelector: "#operator-drawer",
     },
     "first-run-proof": {
       complete: Boolean(proofedDraft),
       detail: "Capture proof with a screenshot, URL, or run record after staging or posting.",
       doneDetail: `Proof exists for a ${platformLabel(proofedDraft?.platform)} draft.`,
+      buttonLabel: "Open Proof",
+      viewId: "posts-view",
+      openFirstPackage: true,
+      openOperator: true,
+      focusSelector: ".draft-proof-panel",
     },
     "first-run-posted": {
       complete: Boolean(postedDraft || postedRun),
       detail: "After the post is live, click Mark Posted. Add metrics later when results are available.",
       doneDetail: metricsRun ? "A post is marked posted and at least one metrics record exists." : "A post is marked posted. Metrics can be added later.",
+      buttonLabel: "Go to Analytics",
+      viewId: "analytics-view",
+      focusSelector: "#analytics-workspace",
     },
   };
   let foundCurrent = false;
