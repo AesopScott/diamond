@@ -9,7 +9,7 @@ This is the live top-level checklist for the three-build plan. Checked items are
 This is the current order for finishing the remaining checklist items.
 
 1. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-2. Expert checklist review and Scott workflow signoff.
+2. Scott workflow signoff.
 3. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
@@ -241,7 +241,9 @@ This is the current order for finishing the remaining checklist items.
   - [x] Custom four-color theme template
   - [x] Persisted custom theme controls
 - [ ] Expert review and workflow signoff
-  - [ ] Formal expert checklist pass
+  - [x] Formal expert checklist pass
+  - [x] In-app expert checklist panel
+  - [x] Copyable expert checklist report
   - [ ] Scott workflow signoff
   - [ ] Repeated staging proof
   - [ ] Decision on whether `auto_publish` ever becomes available
@@ -488,7 +490,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Design licensing and entitlement model | Built | Diamond has its own Firebase-backed per-user monthly license model, priced by brand count and social platform access count, with separate per-platform automation add-ons defaulting off, fed by Mojo AI Studio, with seven-day offline grace and dev/admin roles. |
 | P1 | Add license enforcement architecture | Built | Diamond now caches a Firebase-shaped license locally, validates active brand/platform access, blocks staging on license failure, blocks automation routines without per-platform automation entitlement, and honors the seven-day offline grace period. |
 | P1 | Run formal failure tests | Built | Wrong account, expired login, missing media helper, selector miss, risky copy, duplicate draft helper, missing approval, and routine readiness failures. |
-| P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. Do this after legal/accessibility baseline and image template gaps are closed. |
+| P1 | Run expert checklist review | Built | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, multitenancy, audit logs, and platform safety now run through an in-app Settings panel with a copyable report. Scott workflow signoff remains open. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and TikTok login proof are wired. Assisted composer and media proofs remain queued. |
 | P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and Facebook login proof are wired. Assisted composer and media proofs remain queued. |
 | P3 | Add Reddit monitoring only | Built | Reddit account context, planned monitoring slot, staging refusal, thread/comment capture, classification, and approval-gated response drafts are wired. |

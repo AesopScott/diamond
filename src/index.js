@@ -3,6 +3,7 @@ export * from "./account-setup.js";
 export * from "./constants.js";
 export * from "./content-generation.js";
 export * from "./draft.js";
+export * from "./expert-checklist.js";
 export * from "./failure-controls.js";
 export * from "./firebase-sync.js";
 export * from "./ids.js";

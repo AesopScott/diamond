@@ -15,6 +15,7 @@ import {
   evaluateDiamondLicense,
   evaluateDraftQuality,
   evaluateDraftRisk,
+  evaluateExpertChecklist,
   getDiamondLegalDocuments,
   migrateWorkspaceState,
   normalizeAccountUrl,
@@ -31,6 +32,7 @@ import {
   buildFirestoreSyncBundle,
   buildTourVoiceoverScript,
   createElevenLabsSpeechRequest,
+  expertChecklistMarkdown,
   getDiamondGuideSections,
   getDiamondTourSteps,
   captureRedditMonitoringItem,
@@ -155,6 +157,7 @@ const OPERATOR_LABELS_ES = {
   "Sync License": "Sincronizar licencia",
   "Export Firestore Bundle": "Exportar paquete Firestore",
   "Copy Legal Summary": "Copiar resumen legal",
+  "Copy Expert Checklist": "Copiar lista experta",
   "Copy User Guide": "Copiar guia",
   "Copy Tour Script": "Copiar guion",
   "Generate Voiceovers": "Generar voces",
@@ -168,6 +171,7 @@ const OPERATOR_LABELS_ES = {
   "Staged Url": "URL preparada",
   "Screenshot": "Captura",
   "Run Id": "ID de ejecucion",
+  "Expert Checklist": "Lista experta",
   "Account Proofs": "Pruebas de cuenta",
   "Next": "Siguiente",
   "Social Templates": "Plantillas sociales",
@@ -1304,6 +1308,7 @@ function renderSettings() {
   const legalDocuments = getDiamondLegalDocuments();
   const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
   const cadencePolicy = (state.cadencePolicies || [])[0] || {};
+  const expertReview = evaluateExpertChecklist(state);
   const firebaseRows = latestFirebaseStatus || firebase;
   const licenseSyncLabel = latestLicenseSync
     ? latestLicenseSync.ok ? "Synced from Firebase" : "Firebase sync unavailable"
@@ -1315,6 +1320,7 @@ function renderSettings() {
       <button type="button" data-settings-action="sync-license">${escapeHtml(t("Sync License"))}</button>
       <button type="button" data-settings-action="export-sync">${escapeHtml(t("Export Firestore Bundle"))}</button>
       <button type="button" data-settings-action="copy-legal">${escapeHtml(t("Copy Legal Summary"))}</button>
+      <button type="button" data-settings-action="copy-expert-checklist">${escapeHtml(t("Copy Expert Checklist"))}</button>
       <button type="button" data-settings-action="copy-guide">${escapeHtml(t("Copy User Guide"))}</button>
       <button type="button" data-settings-action="copy-tour-script">${escapeHtml(t("Copy Tour Script"))}</button>
       <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
@@ -1340,6 +1346,7 @@ function renderSettings() {
       ${renderThemeSettingsPanel()}
       ${renderAccessibilitySettingsPanel()}
       ${renderSettingsPanel("Firestore sync", Object.entries(syncSummary).map(([key, value]) => [titleCase(key), String(value)]))}
+      ${renderExpertChecklistPanel(expertReview)}
     </section>
     <section class="legal-settings" aria-label="Legal drafts">
       <header>
@@ -1422,6 +1429,11 @@ async function runSettingsAction(action) {
       .map((document) => `${document.title}\nStatus: ${document.status}\nUpdated: ${document.updatedAt}\n${document.summary}`)
       .join("\n\n");
     await window.diamond?.writeClipboard?.(summary);
+    renderSettings();
+  }
+  if (action === "copy-expert-checklist") {
+    await window.diamond?.writeClipboard?.(expertChecklistMarkdown(evaluateExpertChecklist(state)));
+    latestGuideMessage = "Copied the expert checklist review.";
     renderSettings();
   }
   if (action === "copy-guide") {
@@ -2341,6 +2353,33 @@ function renderSettingsPanel(title, rows) {
       <dl>
         ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
       </dl>
+    </article>
+  `;
+}
+
+function renderExpertChecklistPanel(review) {
+  return `
+    <article class="settings-panel expert-checklist-panel">
+      <header>
+        <h2>${escapeHtml(t("Expert Checklist"))}</h2>
+        <span class="session-pill ${escapeHtml(review.status)}">${escapeHtml(statusLabel(review.status))}</span>
+      </header>
+      <dl class="expert-checklist-counts">
+        <div><dt>${escapeHtml(t("Ready"))}</dt><dd>${escapeHtml(String(review.counts.ready))}</dd></div>
+        <div><dt>${escapeHtml(t("Needs Review"))}</dt><dd>${escapeHtml(String(review.counts.needs_review))}</dd></div>
+        <div><dt>${escapeHtml(t("Blocked"))}</dt><dd>${escapeHtml(String(review.counts.blocked))}</dd></div>
+      </dl>
+      <div class="expert-checklist-list">
+        ${(review.items || []).map((item) => `
+          <section class="expert-checklist-item ${escapeHtml(item.status)}">
+            <header>
+              <strong>${escapeHtml(item.label)}</strong>
+              <span>${escapeHtml(statusLabel(item.status))}</span>
+            </header>
+            <p>${escapeHtml(item.summary)}</p>
+          </section>
+        `).join("")}
+      </div>
     </article>
   `;
 }
