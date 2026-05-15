@@ -284,5 +284,19 @@ function createSeedTemplates(context, platform) {
       safeZone: "Flag/icon left; headline and CTA stay inside center-right safe area.",
       notes: `${platform} country leaderboard campaign card template.`,
     },
+    {
+      ...base,
+      id: `world-cup-founder-template-${platform}`,
+      type: "founder",
+      safeZone: "Founder block left; investor headline and proof points stay center-right.",
+      notes: `${platform} founder/investor outreach card template.`,
+    },
+    {
+      ...base,
+      id: `world-cup-campaign-template-${platform}`,
+      type: "campaign",
+      safeZone: "Three-step campaign cards centered; CTA stays inside bottom safe band.",
+      notes: `${platform} World Cup campaign explainer card template.`,
+    },
   ];
 }

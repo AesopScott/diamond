@@ -6,6 +6,8 @@ import {
   renderWorldCupLeaderboardSvg,
   renderWorldCupPrizeSvg,
   renderWorldCupCountrySvg,
+  renderWorldCupFounderSvg,
+  renderWorldCupCampaignSvg,
   validateTemplateForRender,
 } from "../src/index.js";
 
@@ -15,6 +17,8 @@ const template = workspace.socialTemplates[0];
 assert.equal(validateTemplateForRender(null).ok, false);
 assert.equal(validateTemplateForRender({ ...template, safeZone: "" }).ok, false);
 assert.equal(validateTemplateForRender(template).ok, true);
+assert.ok(workspace.socialTemplates.some((item) => item.type === "founder"));
+assert.ok(workspace.socialTemplates.some((item) => item.type === "campaign"));
 
 const svg = renderWorldCupLeaderboardSvg({
   title: "World Cup Leaderboard",
@@ -49,6 +53,24 @@ const spanishCountry = renderWorldCupCountrySvg({ language: "es", country: "Mexi
 assert.match(spanishCountry, /Mexico te necesita en la tabla/);
 assert.match(spanishCountry, /Tabla de la liga gratis/);
 
+const founderSvg = renderWorldCupFounderSvg({ founderName: "Scott" });
+assert.match(founderSvg, /We are building thecard\.bet/);
+assert.match(founderSvg, /Scott/);
+assert.match(renderWorldCupAssetSvg("founder", { founderName: "Scott" }), /INVESTORS/);
+
+const spanishFounder = renderWorldCupFounderSvg({ language: "es", founderName: "Scott" });
+assert.match(spanishFounder, /Estamos construyendo thecard\.bet/);
+assert.match(spanishFounder, /INVERSORES/);
+
+const campaignSvg = renderWorldCupCampaignSvg();
+assert.match(campaignSvg, /Free World Cup Campaign/);
+assert.match(campaignSvg, /Pick your country/);
+assert.match(renderWorldCupAssetSvg("campaign"), /Climb the board/);
+
+const spanishCampaign = renderWorldCupCampaignSvg({ language: "es" });
+assert.match(spanishCampaign, /Campana gratis del Mundial/);
+assert.match(spanishCampaign, /Elige tu pais/);
+
 const asset = buildGeneratedAssetRecord({
   template,
   filePath: "C:/Diamond/generated-assets/world-cup.svg",
@@ -76,6 +98,20 @@ const countryAsset = buildGeneratedAssetRecord({
 });
 assert.match(countryAsset.altText, /country leaderboard/);
 
+const founderAsset = buildGeneratedAssetRecord({
+  template: { ...template, id: "world-cup-founder-template", type: "founder" },
+  filePath: "C:/Diamond/generated-assets/founder.svg",
+  type: "founder",
+});
+assert.match(founderAsset.altText, /founder and investor/);
+
+const campaignAsset = buildGeneratedAssetRecord({
+  template: { ...template, id: "world-cup-campaign-template", type: "campaign" },
+  filePath: "C:/Diamond/generated-assets/campaign.svg",
+  type: "campaign",
+});
+assert.match(campaignAsset.altText, /free campaign/);
+
 const spanishAsset = buildGeneratedAssetRecord({
   template,
   filePath: "C:/Diamond/generated-assets/spanish.svg",
@@ -83,5 +119,13 @@ const spanishAsset = buildGeneratedAssetRecord({
   type: "leaderboard",
 });
 assert.match(spanishAsset.altText, /Tarjeta de tabla/);
+
+const spanishFounderAsset = buildGeneratedAssetRecord({
+  template,
+  filePath: "C:/Diamond/generated-assets/spanish-founder.svg",
+  language: "es",
+  type: "founder",
+});
+assert.match(spanishFounderAsset.altText, /fundador/);
 
 console.log("All Diamond template renderer tests passed.");

@@ -2445,6 +2445,7 @@ async function generateAssetFromTemplate() {
     subtitle: strategyText(strategy, "offer", els.assetLanguage.value || "en") || "Free picks. Country pride. Real leaderboard heat.",
     cta: strategyText(strategy, "cta", els.assetLanguage.value || "en") || "Join at thecard.bet",
     country: els.assetLanguage.value === "es" ? "Tu pais" : "Your country",
+    founderName: "Scott",
     language: els.assetLanguage.value || "en",
   });
   const filePath = await window.diamond.saveGeneratedAsset({
@@ -2476,9 +2477,13 @@ async function generateAssetFromTemplate() {
 function assetTitleForType(type, campaignName, language = "en") {
   if (language === "es" && type === "prize") return "$1,000 en premios del Mundial";
   if (language === "es" && type === "country") return "Tu pais te necesita en la tabla";
+  if (language === "es" && type === "founder") return "Estamos construyendo thecard.bet";
+  if (language === "es" && type === "campaign") return "Campana gratis del Mundial";
   if (language === "es") return `Tabla de ${campaignName}`;
   if (type === "prize") return "$1,000 World Cup Payouts";
   if (type === "country") return "Your country needs you on the board";
+  if (type === "founder") return "We are building thecard.bet";
+  if (type === "campaign") return "Free World Cup Campaign";
   return `${campaignName} Leaderboard`;
 }
 
@@ -2499,6 +2504,7 @@ function renderAssetFilters() {
     ["leaderboard", "Leaderboard"],
     ["prize", "Prize"],
     ["country", "Country"],
+    ["founder", "Founder"],
     ["campaign", "Campaign"],
     ["do-not-use", "Do not use"],
     ["all", "All"],

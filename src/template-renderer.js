@@ -112,9 +112,89 @@ export function renderWorldCupCountrySvg(input = {}) {
 </svg>`;
 }
 
+export function renderWorldCupFounderSvg(input = {}) {
+  const spanish = input.language === "es";
+  const founderName = input.founderName || "Scott";
+  const title = input.title || (spanish ? "Estamos construyendo thecard.bet" : "We are building thecard.bet");
+  const subtitle = input.subtitle || (spanish
+    ? "Un juego gratis del Mundial para probar predicciones deportivas sin apuestas."
+    : "A free World Cup game to test sports predictions without gambling.");
+  const cta = input.cta || (spanish ? "Hablemos del lanzamiento" : "Let's talk about the launch");
+  const proof = input.proof || (spanish
+    ? "Mundial 2026 / liga gratis / tabla global"
+    : "World Cup 2026 / free league / global leaderboard");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="${escapeXml(title)} founder card">
+  <rect width="1200" height="675" fill="#080a0f"/>
+  <rect x="38" y="38" width="1124" height="599" rx="34" fill="#111722" stroke="#283244" stroke-width="2"/>
+  <rect x="94" y="94" width="330" height="486" rx="28" fill="#141b26" stroke="#3b465a" stroke-width="2"/>
+  <circle cx="259" cy="236" r="86" fill="#e94b4b" opacity="0.18"/>
+  <circle cx="259" cy="236" r="58" fill="#f4f7fb" opacity="0.9"/>
+  <text x="259" y="253" fill="#111722" font-size="54" font-weight="1000" text-anchor="middle">${escapeXml(founderName.slice(0, 1).toUpperCase())}</text>
+  <text x="259" y="380" fill="#f4f7fb" font-size="38" font-weight="1000" text-anchor="middle">${escapeXml(founderName)}</text>
+  <text x="259" y="426" fill="#8f9bae" font-size="22" font-weight="800" text-anchor="middle">${spanish ? "Fundador" : "Founder"}</text>
+  <text x="500" y="132" fill="#e94b4b" font-size="24" font-weight="900" letter-spacing="6">${spanish ? "INVERSORES" : "INVESTORS"}</text>
+  <text x="500" y="210" fill="#f4f7fb" font-size="58" font-weight="1000">${escapeXml(title)}</text>
+  <text x="502" y="270" fill="#8f9bae" font-size="28" font-weight="800">${escapeXml(subtitle)}</text>
+  <rect x="500" y="330" width="604" height="84" rx="18" fill="#121923" stroke="#283244"/>
+  <text x="532" y="382" fill="#38d98a" font-size="28" font-weight="1000">${escapeXml(proof)}</text>
+  <rect x="500" y="448" width="604" height="84" rx="18" fill="#121923" stroke="#283244"/>
+  <text x="532" y="500" fill="#f4f7fb" font-size="28" font-weight="1000">${spanish ? "Buscamos socios para crecer rapido." : "Looking for partners to help it grow fast."}</text>
+  <rect x="96" y="575" width="1008" height="42" rx="21" fill="#e94b4b"/>
+  <text x="600" y="604" fill="#ffffff" font-size="22" font-weight="1000" text-anchor="middle">${escapeXml(cta)}</text>
+</svg>`;
+}
+
+export function renderWorldCupCampaignSvg(input = {}) {
+  const spanish = input.language === "es";
+  const title = input.title || (spanish ? "Campana gratis del Mundial" : "Free World Cup Campaign");
+  const subtitle = input.subtitle || (spanish
+    ? "Juega gratis, representa a tu pais y compite por premios reales."
+    : "Play free, represent your country, and compete for real prizes.");
+  const cta = input.cta || (spanish ? "Unete en thecard.bet" : "Join at thecard.bet");
+  const items = input.items || (spanish ? [
+    ["1", "Elige tu pais"],
+    ["2", "Haz predicciones"],
+    ["3", "Sube en la tabla"],
+  ] : [
+    ["1", "Pick your country"],
+    ["2", "Make predictions"],
+    ["3", "Climb the board"],
+  ]);
+  const itemMarkup = items.slice(0, 3).map(([number, label], index) => {
+    const x = 96 + index * 348;
+    return `
+      <g>
+        <rect x="${x}" y="350" width="300" height="132" rx="22" fill="#121923" stroke="${index === 0 ? "#e94b4b" : "#283244"}" stroke-width="2"/>
+        <circle cx="${x + 52}" cy="416" r="28" fill="#e94b4b"/>
+        <text x="${x + 52}" y="426" fill="#ffffff" font-size="28" font-weight="1000" text-anchor="middle">${escapeXml(number)}</text>
+        <text x="${x + 96}" y="426" fill="#f4f7fb" font-size="26" font-weight="1000">${escapeXml(label)}</text>
+      </g>
+    `;
+  }).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="${escapeXml(title)} campaign card">
+  <rect width="1200" height="675" fill="#090b10"/>
+  <rect x="38" y="38" width="1124" height="599" rx="34" fill="#111722" stroke="#283244" stroke-width="2"/>
+  <circle cx="1024" cy="142" r="96" fill="#38d98a" opacity="0.12"/>
+  <circle cx="948" cy="190" r="72" fill="#e94b4b" opacity="0.18"/>
+  <text x="96" y="112" fill="#e94b4b" font-size="24" font-weight="900" letter-spacing="6">WORLD CUP 2026</text>
+  <text x="96" y="186" fill="#f4f7fb" font-size="64" font-weight="1000">${escapeXml(title)}</text>
+  <text x="98" y="246" fill="#8f9bae" font-size="29" font-weight="800">${escapeXml(subtitle)}</text>
+  <rect x="96" y="286" width="1008" height="2" fill="#283244"/>
+  ${itemMarkup}
+  <rect x="96" y="575" width="1008" height="42" rx="21" fill="#e94b4b"/>
+  <text x="600" y="604" fill="#ffffff" font-size="22" font-weight="1000" text-anchor="middle">${escapeXml(cta)}</text>
+</svg>`;
+}
+
 export function renderWorldCupAssetSvg(type, input = {}) {
   if (type === "prize") return renderWorldCupPrizeSvg(input);
   if (type === "country") return renderWorldCupCountrySvg(input);
+  if (type === "founder") return renderWorldCupFounderSvg(input);
+  if (type === "campaign") return renderWorldCupCampaignSvg(input);
   return renderWorldCupLeaderboardSvg(input);
 }
 
@@ -123,10 +203,14 @@ export function buildGeneratedAssetRecord({ template, filePath, language = "en",
     leaderboard: "Tarjeta de tabla de posiciones de la liga del Mundial para thecard.bet.",
     prize: "Tarjeta de premios del Mundial para thecard.bet.",
     country: "Tarjeta de campana por pais del Mundial para thecard.bet.",
+    founder: "Tarjeta de fundador e inversores para thecard.bet.",
+    campaign: "Tarjeta de campana gratis del Mundial para thecard.bet.",
   } : {
     leaderboard: "World Cup league leaderboard card for thecard.bet.",
     prize: "World Cup prize payout card for thecard.bet.",
     country: "World Cup country leaderboard campaign card for thecard.bet.",
+    founder: "World Cup founder and investor campaign card for thecard.bet.",
+    campaign: "World Cup free campaign card for thecard.bet.",
   };
   return {
     id: `generated-${Date.now()}`,

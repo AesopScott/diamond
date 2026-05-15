@@ -157,13 +157,14 @@ This is the current order for finishing the remaining checklist items.
   - [x] Leaderboard card renderer
   - [x] Prize card
   - [x] Country/flag card
-  - [ ] Founder/investor card
-  - [ ] Campaign card
+  - [x] Founder/investor card
+  - [x] Campaign card
 - [x] Spanish generation path
   - [x] EN/ES campaign variants
   - [x] Spanish slot generation
   - [x] Spanish brand/claim checks
   - [x] Spanish card copy for leaderboard, prize, and country cards
+  - [x] Spanish card copy for founder/investor and campaign cards
   - [ ] Spanish UI labels where needed for operator review
 - [x] Reply capture and classification
   - [x] Capture replies/comments
