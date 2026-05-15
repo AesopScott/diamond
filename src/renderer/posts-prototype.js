@@ -2,6 +2,7 @@ import {
   buildSocialAccountSetupKit,
   buildDiamondLicenseModel,
   buildPostBoardView,
+  buildPlatformProofDashboard,
   createBrandRecord,
   createCampaignRecord,
   createCompanyRecord,
@@ -2207,6 +2208,7 @@ function renderOperatorDrawer() {
   const proofProgress = proof ? stagingProofSessionProgress(proof) : null;
   const proofEvaluation = proof ? evaluatePlatformProof(proof) : null;
   const proofQueue = buildPlatformProofQueue(state);
+  const proofDashboard = buildPlatformProofDashboard(state);
   target.innerHTML = `
     ${latestOperatorMessage ? `<section class="operator-status" aria-live="polite">${escapeHtml(latestOperatorMessage)}</section>` : ""}
     <section class="operator-panel">
@@ -2255,6 +2257,7 @@ function renderOperatorDrawer() {
       </section>
     ` : ""}
 
+    ${renderPlatformProofDashboardPanel(proofDashboard)}
     ${renderPlatformProofQueuePanel(proofQueue)}
 
     <section class="operator-panel">
@@ -2293,6 +2296,38 @@ function renderOperatorDrawer() {
       <ol class="operator-log">
         ${recentLogs.map((log) => `<li><time>${escapeHtml(formatDateTime(log.createdAt))}</time><span>${escapeHtml(log.message)}</span></li>`).join("")}
       </ol>
+    </section>
+  `;
+}
+
+function renderPlatformProofDashboardPanel(dashboard) {
+  const totals = dashboard.totals || {};
+  const cards = [
+    ["Ready", `${totals.ready || 0}`],
+    ["Needs proof", `${totals.needsProof || 0}`],
+    ["Monitoring", `${totals.monitoringOnly || 0}`],
+    ["Login gaps", `${totals.loginOpen || 0}`],
+    ["Staging gaps", `${totals.stagingOpen || 0}`],
+    ["Media gaps", `${totals.mediaOpen || 0}`],
+  ];
+  return `
+    <section class="operator-panel platform-proof-dashboard-panel">
+      <header>
+        <h3>Platform Proof Dashboard</h3>
+        <span class="count">${escapeHtml(String(dashboard.readinessPercent || 0))}%</span>
+      </header>
+      <div class="platform-proof-dashboard">
+        ${cards.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value)}</dd>
+          </div>
+        `).join("")}
+      </div>
+      <div class="platform-proof-next ${dashboard.complete ? "ready" : "needs_proof"}">
+        <strong>${escapeHtml(dashboard.complete ? "All platform proof gates are complete" : `Next proof target: ${dashboard.nextPlatform || "No platform"}`)}</strong>
+        <span>${escapeHtml(dashboard.complete ? "Keep recording proof as platforms change." : (dashboard.nextActions || [])[0] || "Record the next platform proof requirement.")}</span>
+      </div>
     </section>
   `;
 }

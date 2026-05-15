@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   createPlatformProofRecord,
   createSeedWorkspace,
+  buildPlatformProofDashboard,
   buildPlatformProofQueue,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
@@ -24,6 +25,12 @@ assert.equal(initialQueue.length, workspace.socialAccounts.length);
 assert.ok(initialQueue.find((item) => item.platform === "x").nextActions.some((action) => action.includes("text insertion")));
 assert.ok(initialQueue.find((item) => item.platform === "instagram").nextActions.some((action) => action.includes("media upload")));
 assert.equal(initialQueue.find((item) => item.platform === "reddit").status, "monitoring_only");
+const initialDashboard = buildPlatformProofDashboard(workspace);
+assert.equal(initialDashboard.totals.platforms, workspace.socialAccounts.length);
+assert.equal(initialDashboard.totals.needsProof > 0, true);
+assert.equal(initialDashboard.totals.loginOpen > 0, true);
+assert.equal(initialDashboard.complete, false);
+assert.ok(initialDashboard.nextActions.length);
 
 const xAccount = workspace.socialAccounts.find((account) => account.platform === "x");
 const xProof = createPlatformProofRecord({
@@ -142,6 +149,21 @@ const readyQueue = buildPlatformProofQueue({
 });
 assert.equal(readyQueue.find((item) => item.platform === "x").status, "ready");
 assert.equal(readyQueue.find((item) => item.platform === "instagram").status, "ready");
+const readyDashboard = buildPlatformProofDashboard({
+  ...workspace,
+  platformProofs: [
+    markPlatformLoginProof(proven),
+    {
+      ...instagramProof,
+      loginProofCount: 1,
+      manualProofCount: 3,
+      mediaProofCount: 1,
+    },
+    redditProof,
+  ],
+});
+assert.equal(readyDashboard.totals.ready >= 2, true);
+assert.equal(readyDashboard.readinessPercent > 0, true);
 assert.match(platformProofQueueMarkdown(initialQueue), /Diamond Platform Proof Queue/);
 assert.match(platformProofQueueMarkdown(initialQueue), /Instagram: Needs Proof/);
 

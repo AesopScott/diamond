@@ -210,6 +210,43 @@ export function buildPlatformProofQueue(workspace = {}, options = {}) {
   });
 }
 
+export function buildPlatformProofDashboard(workspace = {}, options = {}) {
+  const queue = buildPlatformProofQueue(workspace, options);
+  const totals = {
+    platforms: queue.length,
+    ready: queue.filter((item) => item.status === "ready").length,
+    needsProof: queue.filter((item) => item.status === "needs_proof").length,
+    monitoringOnly: queue.filter((item) => item.status === "monitoring_only").length,
+    loginOpen: 0,
+    textOpen: 0,
+    mediaOpen: 0,
+    manualOpen: 0,
+    stagingOpen: 0,
+  };
+  queue.forEach((item) => {
+    (item.requirements || []).forEach((requirementItem) => {
+      if (requirementItem.complete) return;
+      if (requirementItem.id === "login") totals.loginOpen += 1;
+      if (requirementItem.id === "text") totals.textOpen += 1;
+      if (requirementItem.id === "media") totals.mediaOpen += 1;
+      if (requirementItem.id === "manual") totals.manualOpen += 1;
+      if (requirementItem.id === "staging_sessions") totals.stagingOpen += 1;
+    });
+  });
+  const provenCount = totals.ready + totals.monitoringOnly;
+  const nextItem = queue.find((item) => item.status === "needs_proof") || null;
+  return {
+    queue,
+    totals,
+    provenCount,
+    readinessPercent: queue.length ? Math.round((provenCount / queue.length) * 100) : 100,
+    nextPlatform: nextItem?.label || "",
+    nextAccount: nextItem?.accountHandle || "",
+    nextActions: nextItem?.nextActions || [],
+    complete: totals.needsProof === 0,
+  };
+}
+
 export function buildPlatformProofQueueItem(account = {}, proof = {}, options = {}) {
   const adapter = getPlatformBrowserAdapter(account.platform || proof.platform);
   const record = createPlatformProofRecord({
