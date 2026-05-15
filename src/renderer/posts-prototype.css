@@ -1660,6 +1660,76 @@ textarea {
   min-height: 46px;
 }
 
+.account-login-browser {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.account-login-browser > header {
+  align-items: flex-start;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.account-login-browser h3 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+
+.account-login-browser p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+#account-login-browser-status {
+  background: var(--pill);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 1000;
+  max-width: 42%;
+  overflow-wrap: anywhere;
+  padding: 7px 10px;
+  text-align: right;
+}
+
+.account-login-browser-toolbar {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(112px, 1fr));
+  padding: 10px 12px;
+}
+
+.account-login-browser-toolbar button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+#account-login-webview {
+  background: #030405;
+  border: 0;
+  display: block;
+  height: min(62vh, 720px);
+  min-height: 460px;
+  width: 100%;
+}
+
 .account-meta {
   display: grid;
   gap: 10px;
@@ -3559,9 +3629,20 @@ textarea {
   .analytics-run-list,
   .account-login-fields,
   .account-session-panel,
+  .account-login-browser > header,
+  .account-login-browser-toolbar,
   .account-meta,
   .account-actions {
     grid-template-columns: 1fr;
+  }
+
+  #account-login-browser-status {
+    max-width: none;
+    text-align: left;
+  }
+
+  .account-login-browser > header {
+    flex-direction: column;
   }
 
   .expert-checklist-panel {

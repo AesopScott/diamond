@@ -29,6 +29,7 @@ import {
   resolveFirebaseAdminConfig,
   resolveComposeUrl,
   resolveLoginUrl,
+  inferSessionStatusFromUrl,
   summarizePostMetrics,
   summarizeFirestoreSyncBundle,
   buildFirestoreSyncBundle,
@@ -913,6 +914,7 @@ function renderAccounts(selectedAccountId) {
   detail.innerHTML = accountCreatorOpen
     ? renderAccountCreator(selected)
     : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
+  if (!accountCreatorOpen && selected) initializeAccountLoginWebview(selected);
 }
 
 function accountsForScope(companyId, brandId) {
@@ -970,6 +972,9 @@ function renderAccountDetail(account) {
   const proof = getPlatformProofForAccount(account);
   const loginUrl = resolveLoginUrl(account);
   const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
+  const browserProfileId = normalizeBrowserProfileId(account.browserProfileId || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
+  const partition = `persist:${browserProfileId.replace(/[^a-z0-9-]+/gi, "-")}`;
+  const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
   const lastLoginProof = account.lastLoginProofAt || proof?.lastLoginProofAt || proof?.lastProofAt;
   return `
     <article class="account-detail-card account-login-panel">
@@ -981,24 +986,30 @@ function renderAccountDetail(account) {
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
       </header>
-      <p class="account-login-note">Use this panel to log into the official platform page. Diamond can help you open the right place, but it does not save social-media passwords or bypass verification.</p>
-      <dl class="account-login-fields">
-        <div>
-          <dt>Username / handle</dt>
-          <dd><input data-account-field="handle" type="text" value="${escapeHtml(account.handle || "")}" placeholder="@parentalcareguide" autocomplete="username"></dd>
+      <p class="account-login-note">Use this pane to log into the official platform page and visually confirm the account is signed in. Diamond does not save social-media passwords or bypass verification.</p>
+      <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
+        <header>
+          <div>
+            <h3 id="account-login-browser-heading">Login page</h3>
+            <p>Use this pane to sign into ${escapeHtml(platformLabel(account.platform))} and confirm the page is actually logged in.</p>
+          </div>
+          <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
+        </header>
+        <div class="account-login-browser-toolbar">
+          <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
+          <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
+          <button type="button" data-account-action="load-public-profile" data-account-id="${escapeHtml(account.id)}">Load profile</button>
+          <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
+          <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
+          <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
         </div>
-        <div>
-          <dt>Temporary password</dt>
-          <dd><input data-account-field="temporaryPassword" type="password" value="" placeholder="Not saved by Diamond" autocomplete="current-password"></dd>
-        </div>
-      </dl>
-      <section class="account-actions account-login-actions" aria-label="Login actions">
-        <button type="button" data-account-action="save-login" data-account-id="${escapeHtml(account.id)}">Save username</button>
-        <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Open login</button>
-        <button type="button" data-account-action="copy-login-username" data-account-id="${escapeHtml(account.id)}">Copy username</button>
-        <button type="button" data-account-action="copy-login-password" data-account-id="${escapeHtml(account.id)}">Copy password</button>
-        <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
-        <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
+        <webview
+          id="account-login-webview"
+          title="${escapeHtml(platformLabel(account.platform))} login preview"
+          partition="${escapeHtml(partition)}"
+          src="${escapeHtml(previewUrl)}"
+          allowpopups
+        ></webview>
       </section>
       <section class="account-session-panel" aria-label="Login status">
         <div>
@@ -1042,6 +1053,24 @@ function renderAccountDetail(account) {
       </details>
     </article>
   `;
+}
+
+function initializeAccountLoginWebview(account) {
+  const webview = document.querySelector("#account-login-webview");
+  if (!webview) return;
+  const updateFromWebview = (message = "") => {
+    const currentUrl = accountLoginWebviewUrl();
+    const status = document.querySelector("#account-login-browser-status");
+    if (status) status.textContent = message || (currentUrl ? `Viewing ${safeUrlLabel(currentUrl)}` : "Login pane is ready.");
+  };
+  webview.addEventListener?.("dom-ready", () => updateFromWebview("Login pane loaded."));
+  webview.addEventListener?.("did-navigate", () => updateFromWebview());
+  webview.addEventListener?.("did-navigate-in-page", () => updateFromWebview());
+  webview.addEventListener?.("did-fail-load", (event) => {
+    const status = document.querySelector("#account-login-browser-status");
+    if (status) status.textContent = event?.errorDescription || "The platform blocked or failed to load in the pane.";
+  });
+  updateFromWebview(account.sessionNote || "Ready to load login page.");
 }
 
 function renderAccountCreationPanel(account, plan) {
@@ -1407,6 +1436,9 @@ async function handleAccountDetailClick(event) {
   if (!account) return;
   if (button.dataset.accountAction === "save-login") saveAccountForm(account);
   if (button.dataset.accountAction === "open-login") await openAccountLogin(account);
+  if (button.dataset.accountAction === "reload-login-panel") reloadAccountLoginPanel();
+  if (button.dataset.accountAction === "load-public-profile") loadAccountPublicProfile(account);
+  if (button.dataset.accountAction === "check-login-panel") checkAccountLoginPanel(account);
   if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
   if (button.dataset.accountAction === "copy-login-password") await copyAccountLoginPassword();
   if (button.dataset.accountAction === "mark-logged-in") markAccountLoggedIn(account);
@@ -1432,7 +1464,64 @@ async function openAccountLogin(account) {
   account.sessionStatus = account.sessionStatus === "ready" ? "ready" : "needs_login";
   account.loginOpenedAt = new Date().toISOString();
   const loginUrl = resolveLoginUrl(account);
-  if (loginUrl) await window.diamond?.openExternal?.(loginUrl);
+  account.loginPanelUrl = loginUrl || "about:blank";
+  loadAccountLoginPanelUrl(account.loginPanelUrl);
+  account.sessionNote = loginUrl ? "Loaded official login page in the pane." : "No login URL is configured.";
+}
+
+function reloadAccountLoginPanel() {
+  const webview = document.querySelector("#account-login-webview");
+  if (typeof webview?.reload === "function") webview.reload();
+}
+
+function loadAccountPublicProfile(account) {
+  const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
+  if (!publicUrl) return;
+  account.loginPanelUrl = publicUrl;
+  loadAccountLoginPanelUrl(publicUrl);
+  account.sessionNote = "Loaded public profile page in the pane.";
+}
+
+function loadAccountLoginPanelUrl(url) {
+  const webview = document.querySelector("#account-login-webview");
+  if (!webview || !url) return;
+  webview.setAttribute("src", url);
+  webview.src = url;
+  const status = document.querySelector("#account-login-browser-status");
+  if (status) status.textContent = `Loading ${safeUrlLabel(url)}...`;
+}
+
+function accountLoginWebviewUrl() {
+  const webview = document.querySelector("#account-login-webview");
+  if (!webview) return "";
+  if (typeof webview.getURL === "function") return webview.getURL();
+  return webview.getAttribute("src") || webview.src || "";
+}
+
+function checkAccountLoginPanel(account) {
+  const currentUrl = accountLoginWebviewUrl();
+  const inferred = inferSessionStatusFromUrl(currentUrl, account);
+  account.currentUrl = currentUrl;
+  account.loginPanelUrl = currentUrl || account.loginPanelUrl;
+  account.sessionStatus = inferred.status;
+  account.sessionNote = inferred.note;
+  account.lastSessionCheckAt = new Date().toISOString();
+  if (inferred.status === "ready") markAccountLoggedIn(account);
+  updateAccountLoginBrowserStatus(`${titleCase(account.sessionStatus)} - ${account.sessionNote}`);
+}
+
+function updateAccountLoginBrowserStatus(message) {
+  const status = document.querySelector("#account-login-browser-status");
+  if (status) status.textContent = message;
+}
+
+function safeUrlLabel(url = "") {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname || url;
+  } catch {
+    return url || "page";
+  }
 }
 
 async function copyAccountLoginUsername(account) {
