@@ -215,6 +215,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Platform proof queue with missing proof actions
   - [x] Platform proof dashboard with next proof target
   - [x] Actionable proof dashboard and proof queue account focus
+  - [x] Manual Operator controls for login, media, and manual proof
   - [x] Platform-specific proof kind capture updates proof counters
   - [x] Candidate composer/media selector registry beyond X
   - [ ] Assisted composer adapters beyond X

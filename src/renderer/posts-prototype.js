@@ -2268,8 +2268,11 @@ function renderOperatorDrawer() {
       <div class="operator-action-grid">
         ${renderOperatorAction("Open Account", resolveLoginUrl(account) || "Login URL missing", "open-account", !resolveLoginUrl(account))}
         ${renderOperatorAction("Check Session", `Current state: ${statusLabel(account?.sessionStatus || "unknown")}`, "check-session", !account)}
+        ${renderOperatorAction("Record Login Proof", "Marks this account login as proven.", "record-login-proof", !account)}
         ${renderOperatorAction("Stage In Browser", resolveComposeUrl(account) || "Compose URL missing", "stage-browser", !account)}
         ${renderOperatorAction("Capture Proof", `${account?.proofCount || 0} proof captures saved`, "capture-proof", !account)}
+        ${renderOperatorAction("Record Media Proof", "Counts a verified media upload proof.", "record-media-proof", !account)}
+        ${renderOperatorAction("Record Manual Proof", "Counts a manual staging proof for non-X platforms.", "record-manual-proof", !account)}
         ${account?.platform === "reddit" ? renderOperatorAction("Capture Reddit", "Capture a Reddit thread or comment into the response queue.", "capture-reddit", !account) : ""}
       </div>
     </section>
@@ -2385,11 +2388,20 @@ async function runOperatorAction(action, dataset = {}) {
     renderAccounts(selectedAccountId);
     return setOperatorMessage(`${platformLabel(account.platform)} session marked ${titleCase(account.sessionStatus)}.`);
   }
+  if (action === "record-login-proof") {
+    return recordOperatorProofRequirement(account, "login");
+  }
   if (action === "stage-browser") {
     return stageOperatorDraft(account, draft);
   }
   if (action === "capture-proof") {
     return captureOperatorProof(account, draft);
+  }
+  if (action === "record-media-proof") {
+    return recordOperatorProofRequirement(account, "media");
+  }
+  if (action === "record-manual-proof") {
+    return recordOperatorProofRequirement(account, "manual");
   }
   if (action === "capture-reddit") {
     return captureRedditFromOperator(account);
@@ -2413,6 +2425,22 @@ async function runOperatorAction(action, dataset = {}) {
     await window.diamond?.writeClipboard?.(platformProofQueueMarkdown(buildPlatformProofQueue(state)));
     return setOperatorMessage("Copied the platform proof queue.");
   }
+}
+
+async function recordOperatorProofRequirement(account, type) {
+  if (!account) return setOperatorMessage("Proof update blocked: no active account.");
+  const proof = getPlatformProofForAccount(account);
+  const notes = `${titleCase(type)} proof recorded manually from Operator.`;
+  const next = type === "login"
+    ? markPlatformLoginProof(proof, notes)
+    : markPlatformProof(proof, type, notes);
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.id ? next : item);
+  account.proofCount = Number(account.proofCount || 0) + 1;
+  account.lastProofAt = next.lastProofAt || next.lastLoginProofAt || new Date().toISOString();
+  await saveProductionState();
+  await refreshProductionViews();
+  renderOperatorDrawer();
+  return setOperatorMessage(`${platformLabel(account.platform)} ${type} proof recorded.`);
 }
 
 async function focusProofAccount(accountId) {
