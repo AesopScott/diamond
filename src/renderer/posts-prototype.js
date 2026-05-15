@@ -575,6 +575,7 @@ function wirePrototypeControls() {
   document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
+  document.querySelector("#templates-workspace")?.addEventListener("change", handleTemplateScopeChange);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
   document.querySelector("#settings-workspace")?.addEventListener("input", handleSettingsInput);
@@ -1739,19 +1740,21 @@ async function ensureStrategyRecord(campaign) {
 function renderTemplates() {
   const target = document.querySelector("#templates-workspace");
   if (!target) return;
-  const templates = state.socialTemplates || [];
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id || "";
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+  const templates = templatesForScope(companyId, brandId);
   const templateGroups = groupSocialTemplates(templates);
-  const assets = state.assetLibrary || [];
-  const slots = state.editorialSlots || [];
+  const assets = assetsForScope(companyId, brandId);
+  const slots = creativeNeedsForScope(companyId, brandId);
   target.innerHTML = `
     <aside class="template-summary" aria-label="Template summary">
       <article>
         <span class="eyebrow">Company</span>
-        <strong>${escapeHtml(companyName(state.context?.companyId))}</strong>
+        <select data-template-scope-field="companyId">${companyOptions(companyId)}</select>
       </article>
       <article>
         <span class="eyebrow">Brand</span>
-        <strong>${escapeHtml(brandName(state.context?.brandId))}</strong>
+        <select data-template-scope-field="brandId">${brandOptions(companyId, brandId)}</select>
       </article>
       <article>
         <span class="eyebrow">Templates</span>
@@ -1792,6 +1795,50 @@ function renderTemplates() {
       </article>
     </section>
   `;
+}
+
+async function handleTemplateScopeChange(event) {
+  const field = event.target.closest("[data-template-scope-field]");
+  if (!field) return;
+  if (field.dataset.templateScopeField === "companyId") {
+    const companyId = normalizeId(field.value, "companyId");
+    const brandId = (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+    state.context = {
+      ...state.context,
+      companyId,
+      brandId,
+    };
+  }
+  if (field.dataset.templateScopeField === "brandId") {
+    state.context = {
+      ...state.context,
+      brandId: normalizeId(field.value, "brandId"),
+    };
+  }
+  await saveProductionState();
+  renderTemplates();
+}
+
+function templatesForScope(companyId, brandId) {
+  return (state.socialTemplates || []).filter((template) => {
+    return (!companyId || template.companyId === companyId)
+      && (!brandId || template.brandId === brandId);
+  });
+}
+
+function assetsForScope(companyId, brandId) {
+  return (state.assetLibrary || []).filter((asset) => {
+    return (!companyId || asset.companyId === companyId)
+      && (!brandId || asset.brandId === brandId);
+  });
+}
+
+function creativeNeedsForScope(companyId, brandId) {
+  return (state.editorialSlots || []).filter((slot) => {
+    const context = slot.context || slot;
+    return (!companyId || context.companyId === companyId)
+      && (!brandId || context.brandId === brandId);
+  });
 }
 
 function groupSocialTemplates(templates = []) {
