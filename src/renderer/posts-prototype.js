@@ -1236,19 +1236,21 @@ function companyOptions(selectedId) {
 }
 
 function brandOptions(companyId, selectedId) {
-  return (state.brands || [])
+  const options = (state.brands || [])
     .filter((brand) => !companyId || brand.companyId === companyId)
     .map((brand) => `
       <option value="${escapeHtml(brand.id)}" ${brand.id === selectedId ? "selected" : ""}>${escapeHtml(brand.name || brand.id)}</option>
     `).join("");
+  return options || `<option value="">No brands yet</option>`;
 }
 
 function campaignOptions(companyId, brandId, selectedId) {
-  return (state.campaigns || [])
+  const options = (state.campaigns || [])
     .filter((campaign) => (!companyId || campaign.companyId === companyId) && (!brandId || campaign.brandId === brandId))
     .map((campaign) => `
       <option value="${escapeHtml(campaign.id)}" ${campaign.id === selectedId ? "selected" : ""}>${escapeHtml(campaign.name || campaign.id)}</option>
     `).join("");
+  return options || `<option value="">No campaigns yet</option>`;
 }
 
 function platformOptions(selectedPlatform) {
@@ -1262,11 +1264,15 @@ function renderBrands() {
   const target = document.querySelector("#brand-workspace");
   if (!target) return;
   const company = (state.companies || []).find((item) => item.id === state.context?.companyId) || (state.companies || [])[0] || {};
-  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId) || (state.brands || [])[0] || {};
-  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId) || (state.campaigns || [])[0] || {};
-  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || (state.contentStrategies || [])[0] || {};
-  const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || (state.brandLibraries || [])[0] || {};
-  const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || (state.claimLibraries || [])[0] || {};
+  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId && item.companyId === company.id)
+    || (state.brands || []).find((item) => item.companyId === company.id)
+    || {};
+  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId && item.companyId === company.id && item.brandId === brand.id)
+    || (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id)
+    || {};
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || {};
+  const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || {};
+  const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || {};
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Brand overview">
       <article class="brand-identity-card">
@@ -1329,25 +1335,26 @@ function renderBrandPanel(title, items = []) {
 }
 
 async function addCompanyRecord() {
-  const name = promptForText("Company name", "New company");
-  if (!name) return;
+  const name = uniqueRecordName("New company", state.companies);
   const company = createCompanyRecord({ name });
   state.companies ||= [];
   state.companies.push(company);
   state.context = {
     ...state.context,
     companyId: company.id,
+    brandId: "",
+    campaignId: "",
   };
   await saveProductionState();
   renderBrands();
   renderAccounts(selectedAccountId);
+  renderTemplates();
 }
 
 async function addBrandRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   if (!companyId) return;
-  const name = promptForText("Brand name", "New brand");
-  if (!name) return;
+  const name = uniqueRecordName("New brand", state.brands?.filter((brand) => brand.companyId === companyId));
   const brand = createBrandRecord({ name, companyId });
   state.brands ||= [];
   state.brands.push(brand);
@@ -1355,19 +1362,20 @@ async function addBrandRecord() {
     ...state.context,
     companyId,
     brandId: brand.id,
+    campaignId: "",
   };
   await ensureBrandSupportRecords(brand);
   await saveProductionState();
   renderBrands();
   renderAccounts(selectedAccountId);
+  renderTemplates();
 }
 
 async function addCampaignRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
-  const brandId = state.context?.brandId || (state.brands || [])[0]?.id;
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
   if (!companyId || !brandId) return;
-  const name = promptForText("Campaign name", "New campaign");
-  if (!name) return;
+  const name = uniqueRecordName("New campaign", state.campaigns?.filter((campaign) => campaign.companyId === companyId && campaign.brandId === brandId));
   const campaign = createCampaignRecord({ name, companyId, brandId });
   state.campaigns ||= [];
   state.campaigns.push(campaign);
@@ -1380,6 +1388,15 @@ async function addCampaignRecord() {
   await ensureStrategyRecord(campaign);
   await saveProductionState();
   renderBrands();
+  renderTemplates();
+}
+
+function uniqueRecordName(baseName, records = []) {
+  const existing = new Set((records || []).map((record) => String(record.name || "").toLowerCase()));
+  if (!existing.has(baseName.toLowerCase())) return baseName;
+  let index = 2;
+  while (existing.has(`${baseName} ${index}`.toLowerCase())) index += 1;
+  return `${baseName} ${index}`;
 }
 
 async function addSocialAccount() {
