@@ -479,12 +479,12 @@ function renderBoard(columns) {
   document.querySelector("#post-detail").classList.add("hidden");
   const target = document.querySelector("#posts-board");
   target.innerHTML = columns.map((column) => `
-    <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}">
+    <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}" data-board-status="${escapeHtml(column.id)}">
       <header>
         <h2 id="column-${escapeHtml(column.id)}">${escapeHtml(t(column.label))}</h2>
         <span class="count">${column.count}</span>
       </header>
-      <div class="post-list">
+      <div class="post-list" data-drop-status="${escapeHtml(column.id)}">
         ${column.posts.length ? column.posts.map(renderCard).join("") : `<div class="empty-column">${escapeHtml(t("No Posts"))}</div>`}
       </div>
     </article>
@@ -496,14 +496,27 @@ function renderCard(post) {
     ? post.platformStatuses
     : (post.platforms || []).map((platform) => ({ platform, status: post.status || "draft" }));
   return `
-    <button class="post-card" type="button" data-package-id="${escapeHtml(post.id)}">
-      <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(statusLabel(post.status || "draft"))}</span>
+    <article class="post-card" data-package-id="${escapeHtml(post.id)}" draggable="true" tabindex="0" role="button" aria-label="Open ${escapeHtml(post.title || post.excerpt || "post")}">
+      <header class="post-card-header">
+        <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(statusLabel(post.status || "draft"))}</span>
+        <button class="post-card-delete" type="button" data-board-action="delete" data-package-id="${escapeHtml(post.id)}" title="Delete post" aria-label="Delete post">Delete</button>
+      </header>
       <strong>${escapeHtml(post.excerpt || post.title)}</strong>
       <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
       ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(statusLabel(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>${escapeHtml(t("Platform Not Set"))}</span></div>`}
       ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-    </button>
+      <div class="post-card-actions" aria-label="Move post">
+        ${boardMoveStatuses(post.status).map((status) => `
+          <button type="button" data-board-action="move" data-package-id="${escapeHtml(post.id)}" data-next-status="${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</button>
+        `).join("")}
+      </div>
+    </article>
   `;
+}
+
+function boardMoveStatuses(currentStatus) {
+  const statuses = ["draft", "needs_review", "scheduled", "staged", "published", "failed"];
+  return statuses.filter((status) => status !== (currentStatus || "draft"));
 }
 
 function wirePrototypeControls() {
@@ -523,10 +536,26 @@ function wirePrototypeControls() {
   document.querySelector("#add-campaign-record")?.addEventListener("click", addCampaignRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector("#posts-board").addEventListener("click", (event) => {
-    const card = event.target.closest("[data-package-id]");
+    const actionButton = event.target.closest("[data-board-action]");
+    if (actionButton) {
+      handleBoardAction(actionButton);
+      return;
+    }
+    const card = event.target.closest(".post-card[data-package-id]");
     if (!card) return;
     openPackageDetail(card.dataset.packageId);
   });
+  document.querySelector("#posts-board").addEventListener("keydown", (event) => {
+    const card = event.target.closest(".post-card[data-package-id]");
+    if (!card || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    openPackageDetail(card.dataset.packageId);
+  });
+  document.querySelector("#posts-board").addEventListener("dragstart", handleBoardDragStart);
+  document.querySelector("#posts-board").addEventListener("dragover", handleBoardDragOver);
+  document.querySelector("#posts-board").addEventListener("dragleave", handleBoardDragLeave);
+  document.querySelector("#posts-board").addEventListener("drop", handleBoardDrop);
+  document.querySelector("#posts-board").addEventListener("dragend", clearBoardDragState);
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
   document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
@@ -598,6 +627,119 @@ async function refreshProductionViews() {
   renderAnalytics();
   renderOperatorDrawer();
   await window.diamond?.saveState?.(state);
+}
+
+async function handleBoardAction(button) {
+  const packageId = button.dataset.packageId;
+  if (!packageId) return;
+  if (button.dataset.boardAction === "move") {
+    await movePostPackageToStatus(packageId, button.dataset.nextStatus || "draft");
+  }
+  if (button.dataset.boardAction === "delete") {
+    await deletePostPackage(packageId);
+  }
+}
+
+function handleBoardDragStart(event) {
+  const card = event.target.closest(".post-card[data-package-id]");
+  if (!card) return;
+  event.dataTransfer?.setData("text/plain", card.dataset.packageId);
+  event.dataTransfer?.setData("application/x-diamond-package-id", card.dataset.packageId);
+  event.dataTransfer.effectAllowed = "move";
+  card.classList.add("dragging");
+}
+
+function handleBoardDragOver(event) {
+  const column = event.target.closest("[data-drop-status]");
+  if (!column) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  column.closest(".post-column")?.classList.add("drag-over");
+}
+
+function handleBoardDragLeave(event) {
+  const column = event.target.closest(".post-column");
+  if (!column || column.contains(event.relatedTarget)) return;
+  column.classList.remove("drag-over");
+}
+
+async function handleBoardDrop(event) {
+  const column = event.target.closest("[data-drop-status]");
+  if (!column) return;
+  event.preventDefault();
+  document.querySelectorAll(".post-column.drag-over").forEach((item) => item.classList.remove("drag-over"));
+  document.querySelectorAll(".post-card.dragging").forEach((item) => item.classList.remove("dragging"));
+  const packageId = event.dataTransfer?.getData("application/x-diamond-package-id") || event.dataTransfer?.getData("text/plain");
+  if (!packageId) return;
+  await movePostPackageToStatus(packageId, column.dataset.dropStatus || "draft");
+}
+
+function clearBoardDragState() {
+  document.querySelectorAll(".post-column.drag-over").forEach((item) => item.classList.remove("drag-over"));
+  document.querySelectorAll(".post-card.dragging").forEach((item) => item.classList.remove("dragging"));
+}
+
+async function movePostPackageToStatus(packageId, nextStatus) {
+  const normalized = normalizeId(nextStatus || "draft", "status").replace(/-/g, "_");
+  const packageRecord = (state.postPackages || []).find((item) => item.id === packageId)
+    || prototypeModel.postPackages.find((item) => item.id === packageId);
+  if (!packageRecord) return;
+  const now = new Date().toISOString();
+  packageRecord.status = normalized;
+  packageRecord.updatedAt = now;
+  state.postPackages ||= [];
+  const statePackageIndex = state.postPackages.findIndex((item) => item.id === packageId);
+  if (statePackageIndex >= 0) {
+    state.postPackages[statePackageIndex] = {
+      ...state.postPackages[statePackageIndex],
+      status: normalized,
+      updatedAt: now,
+    };
+  } else {
+    state.postPackages.push(packageRecord);
+  }
+  (state.platformDrafts || []).filter((draft) => draft.postPackageId === packageId).forEach((draft) => {
+    draft.status = normalized;
+    draft.updatedAt = now;
+  });
+  (state.drafts || []).filter((draft) => packageRecord.sourceDraftIds?.includes(draft.id)).forEach((draft) => {
+    draft.status = normalized === "published" ? "posted" : normalized;
+    draft.updatedAt = now;
+  });
+  (state.scheduledPosts || []).filter((schedule) => schedule.postPackageId === packageId || packageRecord.sourceDraftIds?.includes(schedule.draftId) || packageRecord.platformDraftIds?.includes(schedule.draftId)).forEach((schedule) => {
+    schedule.status = normalized === "published" ? "posted" : normalized;
+    schedule.updatedAt = now;
+  });
+  (state.postRuns || []).filter((run) => run.postPackageId === packageId || packageRecord.sourceDraftIds?.includes(run.draftId) || packageRecord.platformDraftIds?.includes(run.draftId)).forEach((run) => {
+    run.status = normalized === "published" ? "posted" : normalized;
+    run.updatedAt = now;
+  });
+  prototypeModel = buildProductionPostModel(state);
+  board = buildPostBoardView(prototypeModel);
+  await saveProductionState();
+  renderBoard(board);
+  renderCalendar();
+  renderAnalytics();
+}
+
+async function deletePostPackage(packageId) {
+  const confirmed = window.confirm?.("Delete this post package from Diamond? This removes its drafts, schedules, and run records from the local board.");
+  if (confirmed === false) return;
+  const packageRecord = (state.postPackages || []).find((item) => item.id === packageId)
+    || prototypeModel.postPackages.find((item) => item.id === packageId);
+  const sourceDraftIds = packageRecord?.sourceDraftIds || [];
+  const platformDraftIds = packageRecord?.platformDraftIds || [];
+  state.postPackages = (state.postPackages || []).filter((item) => item.id !== packageId);
+  state.platformDrafts = (state.platformDrafts || []).filter((item) => item.postPackageId !== packageId);
+  state.drafts = (state.drafts || []).filter((item) => !sourceDraftIds.includes(item.id));
+  state.scheduledPosts = (state.scheduledPosts || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
+  state.postRuns = (state.postRuns || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
+  prototypeModel = buildProductionPostModel(state);
+  board = buildPostBoardView(prototypeModel);
+  await saveProductionState();
+  renderBoard(board);
+  renderCalendar();
+  renderAnalytics();
 }
 
 function renderCalendar() {

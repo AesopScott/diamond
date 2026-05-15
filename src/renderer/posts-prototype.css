@@ -414,6 +414,12 @@ button:disabled {
   border-radius: 10px;
   min-height: 560px;
   padding: 14px;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.post-column.drag-over {
+  background: color-mix(in srgb, var(--surface) 78%, var(--accent) 22%);
+  border-color: color-mix(in srgb, var(--line-strong) 58%, var(--accent) 42%);
 }
 
 .post-column header {
@@ -458,8 +464,34 @@ button:disabled {
   width: 100%;
 }
 
-.post-card:hover {
+.post-card:hover,
+.post-card:focus-visible {
   border-color: #4a4a52;
+  outline: none;
+}
+
+.post-card.dragging {
+  opacity: 0.55;
+}
+
+.post-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.post-card-delete {
+  background: #351414;
+  border: 1px solid #7a2a2a;
+  border-radius: 999px;
+  color: #ffb0b0;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 1000;
+  min-height: 24px;
+  padding: 3px 7px;
+  text-transform: uppercase;
 }
 
 .post-card strong {
@@ -516,6 +548,30 @@ button:disabled {
 .post-card time {
   display: block;
   margin-top: 8px;
+}
+
+.post-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.post-card-actions button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  min-height: 26px;
+  padding: 4px 8px;
+}
+
+.post-card-actions button:hover,
+.post-card-delete:hover {
+  border-color: var(--line-strong);
 }
 
 .platform-row,
