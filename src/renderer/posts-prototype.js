@@ -99,8 +99,129 @@ const PROFESSIONAL_THEMES = [
   },
 ];
 
+const OPERATOR_LABELS_ES = {
+  "Posts": "Publicaciones",
+  "Analytics": "Analitica",
+  "Templates": "Plantillas",
+  "Calendar": "Calendario",
+  "Accounts": "Cuentas",
+  "Brands": "Marcas",
+  "Settings": "Configuracion",
+  "Operator": "Operador",
+  "Create": "Crear",
+  "Export": "Exportar",
+  "Schedule": "Programar",
+  "Sync": "Sincronizar",
+  "Back": "Volver",
+  "Draft": "Borrador",
+  "Approved": "Aprobado",
+  "Staged": "Preparado",
+  "Scheduled": "Programado",
+  "Published": "Publicado",
+  "Posted": "Publicado",
+  "Failed": "Fallido",
+  "Unknown": "Desconocido",
+  "Blocked": "Bloqueado",
+  "Needs Login": "Necesita inicio",
+  "Monitoring": "Monitoreo",
+  "Needs Review": "Necesita revision",
+  "Needs Attention": "Necesita atencion",
+  "Ready": "Listo",
+  "Evaluate": "Evaluar",
+  "Approve": "Aprobar",
+  "Stage": "Preparar",
+  "Capture Proof": "Capturar prueba",
+  "Copy Proof": "Copiar prueba",
+  "Copy Url": "Copiar URL",
+  "Copy Screenshot": "Copiar captura",
+  "Mark Posted": "Marcar publicado",
+  "Abandon": "Abandonar",
+  "Add Account": "Agregar cuenta",
+  "Add Company": "Agregar empresa",
+  "Add Brand": "Agregar marca",
+  "Add Campaign": "Agregar campana",
+  "Add Template": "Agregar plantilla",
+  "Close": "Cerrar",
+  "Save Settings": "Guardar configuracion",
+  "Check Firebase": "Revisar Firebase",
+  "Sync License": "Sincronizar licencia",
+  "Export Firestore Bundle": "Exportar paquete Firestore",
+  "Copy Legal Summary": "Copiar resumen legal",
+  "Copy User Guide": "Copiar guia",
+  "Copy Tour Script": "Copiar guion",
+  "Generate Voiceovers": "Generar voces",
+  "Start Walkthrough": "Iniciar guia",
+  "Proof": "Prueba",
+  "Proof Status": "Estado de prueba",
+  "Proof Kind": "Tipo de prueba",
+  "Stage Mode": "Modo de preparacion",
+  "Text Insert": "Insercion de texto",
+  "Proof Target": "Objetivo de prueba",
+  "Staged Url": "URL preparada",
+  "Screenshot": "Captura",
+  "Run Id": "ID de ejecucion",
+  "Account Proofs": "Pruebas de cuenta",
+  "Next": "Siguiente",
+  "Social Templates": "Plantillas sociales",
+  "Creative Assets": "Activos creativos",
+  "Planned Needs": "Necesidades planeadas",
+  "Founder": "Fundador",
+  "Campaign": "Campana",
+  "Prize": "Premio",
+  "Country": "Pais",
+  "Leaderboard": "Tabla",
+  "Asset": "Activo",
+  "Template": "Plantilla",
+  "Browser Staging": "Preparacion en navegador",
+  "Assisted": "Asistido",
+  "Manual Paste": "Pegado manual",
+  "Opened": "Abierto",
+  "Text": "Texto",
+  "Inserted": "Insertado",
+  "Manual Paste Required": "Pegado manual requerido",
+  "Not Inserted": "No insertado",
+  "Attached": "Adjunto",
+  "Manual Upload Required": "Carga manual requerida",
+  "No Assisted Upload": "Sin carga asistida",
+  "Review Before Publishing": "Revisar antes de publicar",
+  "Platform": "Plataforma",
+  "Company": "Empresa",
+  "Brand": "Marca",
+  "Account": "Cuenta",
+  "Session": "Sesion",
+  "Approval": "Aprobacion",
+  "Media": "Medios",
+  "Missing": "Falta",
+  "Not Scheduled": "No programado",
+  "No Posts": "Sin publicaciones",
+  "Platform Not Set": "Plataforma no definida",
+  "Validation And Sync": "Validacion y sincronizacion",
+  "Open Account": "Abrir cuenta",
+  "Check Session": "Revisar sesion",
+  "Stage In Browser": "Preparar en navegador",
+  "Validate Package": "Validar paquete",
+  "Export Bundle": "Exportar paquete",
+  "Run Log": "Registro",
+  "Preflight Checks": "Revisiones previas",
+  "License Permits Target": "Licencia permite objetivo",
+  "License permits target": "Licencia permite objetivo",
+  "Firebase Admin Config": "Configuracion admin de Firebase",
+  "Firebase admin config": "Configuracion admin de Firebase",
+  "Account Session": "Sesion de cuenta",
+  "Account session": "Sesion de cuenta",
+  "Active Draft": "Borrador activo",
+  "Active draft": "Borrador activo",
+  "Manual Approval Policy": "Politica de aprobacion manual",
+  "Manual approval policy": "Politica de aprobacion manual",
+  "Browser profile": "Perfil de navegador",
+  "Cadence window": "Ventana de cadencia",
+  "Active Target": "Objetivo activo",
+  "Operator Tools": "Herramientas de operador",
+};
+
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
+state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
 let prototypeModel = buildProductionPostModel(state);
@@ -116,6 +237,7 @@ let activeTourIndex = 0;
 let activeTourTarget = null;
 let activeTourAudio = null;
 applyDiamondTheme(state.themeId);
+applyOperatorLanguage();
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -311,11 +433,11 @@ function renderBoard(columns) {
   target.innerHTML = columns.map((column) => `
     <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}">
       <header>
-        <h2 id="column-${escapeHtml(column.id)}">${escapeHtml(column.label)}</h2>
+        <h2 id="column-${escapeHtml(column.id)}">${escapeHtml(t(column.label))}</h2>
         <span class="count">${column.count}</span>
       </header>
       <div class="post-list">
-        ${column.posts.length ? column.posts.map(renderCard).join("") : `<div class="empty-column">No posts</div>`}
+        ${column.posts.length ? column.posts.map(renderCard).join("") : `<div class="empty-column">${escapeHtml(t("No Posts"))}</div>`}
       </div>
     </article>
   `).join("");
@@ -327,10 +449,10 @@ function renderCard(post) {
     : (post.platforms || []).map((platform) => ({ platform, status: post.status || "draft" }));
   return `
     <button class="post-card" type="button" data-package-id="${escapeHtml(post.id)}">
-      <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(titleCase(post.status || "draft"))}</span>
+      <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(statusLabel(post.status || "draft"))}</span>
       <strong>${escapeHtml(post.excerpt || post.title)}</strong>
       <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
-      ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(titleCase(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>Platform not set</span></div>`}
+      ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(statusLabel(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>${escapeHtml(t("Platform Not Set"))}</span></div>`}
       ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </button>
   `;
@@ -1106,7 +1228,7 @@ function renderTemplateCard(template) {
   return `
     <article class="template-card">
       <header>
-        <strong>${escapeHtml(titleCase(template.type || "template"))}</strong>
+        <strong>${escapeHtml(t(titleCase(template.type || "template")))}</strong>
         <span>${escapeHtml(platformLabel(template.platform))}</span>
       </header>
       <p>${escapeHtml(template.notes || "Reusable social template.")}</p>
@@ -1122,7 +1244,7 @@ function renderAssetCard(asset) {
   return `
     <article class="template-card asset-card">
       <header>
-        <strong>${escapeHtml(titleCase(asset.type || "asset"))}</strong>
+        <strong>${escapeHtml(t(titleCase(asset.type || "asset")))}</strong>
         <span>${escapeHtml(asset.language || "en")}</span>
       </header>
       <p>${escapeHtml(asset.altText || asset.notes || "Creative asset.")}</p>
@@ -1177,16 +1299,16 @@ function renderSettings() {
     : "Using local cache";
   target.innerHTML = `
     <section class="settings-actions" aria-label="Settings actions">
-      <button type="button" data-settings-action="save-settings">Save settings</button>
-      <button type="button" data-settings-action="check-firebase">Check Firebase</button>
-      <button type="button" data-settings-action="sync-license">Sync license</button>
-      <button type="button" data-settings-action="export-sync">Export Firestore bundle</button>
-      <button type="button" data-settings-action="copy-legal">Copy legal summary</button>
-      <button type="button" data-settings-action="copy-guide">Copy user guide</button>
-      <button type="button" data-settings-action="copy-tour-script">Copy tour script</button>
+      <button type="button" data-settings-action="save-settings">${escapeHtml(t("Save Settings"))}</button>
+      <button type="button" data-settings-action="check-firebase">${escapeHtml(t("Check Firebase"))}</button>
+      <button type="button" data-settings-action="sync-license">${escapeHtml(t("Sync License"))}</button>
+      <button type="button" data-settings-action="export-sync">${escapeHtml(t("Export Firestore Bundle"))}</button>
+      <button type="button" data-settings-action="copy-legal">${escapeHtml(t("Copy Legal Summary"))}</button>
+      <button type="button" data-settings-action="copy-guide">${escapeHtml(t("Copy User Guide"))}</button>
+      <button type="button" data-settings-action="copy-tour-script">${escapeHtml(t("Copy Tour Script"))}</button>
       <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
-      <button type="button" data-settings-action="generate-tour-voiceovers">Generate voiceovers</button>
-      <button id="settings-start-tour" type="button" data-settings-action="start-tour">Start walkthrough</button>
+      <button type="button" data-settings-action="generate-tour-voiceovers">${escapeHtml(t("Generate Voiceovers"))}</button>
+      <button id="settings-start-tour" type="button" data-settings-action="start-tour">${escapeHtml(t("Start Walkthrough"))}</button>
     </section>
     <section class="settings-status" aria-live="polite">
       <span>${escapeHtml(licenseSyncLabel)}</span>
@@ -1195,6 +1317,7 @@ function renderSettings() {
     </section>
     <section class="settings-grid">
       ${renderLicenseSettingsPanel(license, licenseCheck, model)}
+      ${renderLanguageSettingsPanel()}
       ${renderSettingsPanel("Firebase", [
         ["Status", firebaseRows.ok || firebaseRows.configured ? "Configured" : "Not configured"],
         ["Admin JSON", firebaseRows.redactedPath || "Missing"],
@@ -1234,6 +1357,19 @@ async function handleSettingsChange(event) {
     applyDiamondTheme(state.themeId);
     await saveProductionState();
     renderSettings();
+  }
+  if (field.dataset.settingsField === "operatorLanguage") {
+    state.operatorLanguage = normalizeOperatorLanguage(field.value);
+    applyOperatorLanguage();
+    await saveProductionState();
+    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderCalendar();
+    renderAnalytics();
+    renderTemplates();
+    renderAccounts(selectedAccountId);
+    renderSettings();
+    renderOperatorDrawer();
+    reopenActiveDetail();
   }
 }
 
@@ -1320,7 +1456,9 @@ function saveSettingsForm() {
   state.licenseCache.userId = getSettingsFieldValue("licenseUserId") || state.licenseCache.userId;
   state.licenseCache.email = getSettingsFieldValue("licenseEmail") || state.licenseCache.email;
   state.themeId = normalizeThemeId(getSettingsFieldValue("themeId") || state.themeId);
+  state.operatorLanguage = normalizeOperatorLanguage(getSettingsFieldValue("operatorLanguage") || state.operatorLanguage);
   applyDiamondTheme(state.themeId);
+  applyOperatorLanguage();
   state.accessibility = {
     keyboardNavigation: getSettingsFieldValue("keyboardNavigation") || "baseline",
     screenReaderLabels: getSettingsFieldValue("screenReaderLabels") || "baseline",
@@ -1421,6 +1559,31 @@ function renderThemeSettingsPanel() {
   `;
 }
 
+function renderLanguageSettingsPanel() {
+  const language = currentOperatorLanguage();
+  return `
+    <article class="settings-panel editable-settings">
+      <header>
+        <h2>${escapeHtml(t("Operator"))}</h2>
+        <span class="count">${escapeHtml(language === "es" ? "Espanol" : "English")}</span>
+      </header>
+      <dl>
+        <div>
+          <dt>${escapeHtml(t("Operator"))} language</dt>
+          <dd>
+            <select data-settings-field="operatorLanguage">
+              <option value="en" ${language === "en" ? "selected" : ""}>English</option>
+              <option value="es" ${language === "es" ? "selected" : ""}>Espanol</option>
+            </select>
+          </dd>
+        </div>
+        <div><dt>Scope</dt><dd>${escapeHtml(language === "es" ? "Revision del operador" : "Operator review")}</dd></div>
+        <div><dt>Status</dt><dd>${escapeHtml(language === "es" ? "Etiquetas principales traducidas" : "Core labels translated")}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
 function renderUserGuidePanel() {
   return `
     <section id="diamond-guide-panel" class="user-guide-panel" aria-labelledby="diamond-guide-heading">
@@ -1492,6 +1655,61 @@ function applyDiamondTheme(themeId) {
   const theme = normalizeThemeId(themeId);
   document.body?.classList.remove(...diamondThemes().map((item) => `theme-${item.id}`));
   document.body?.classList.add(`theme-${theme}`);
+}
+
+function normalizeOperatorLanguage(language) {
+  return language === "es" ? "es" : "en";
+}
+
+function currentOperatorLanguage() {
+  return normalizeOperatorLanguage(state.operatorLanguage);
+}
+
+function t(label) {
+  if (currentOperatorLanguage() !== "es") return label;
+  return OPERATOR_LABELS_ES[label] || label;
+}
+
+function statusLabel(value) {
+  return t(titleCase(value || "draft"));
+}
+
+function applyOperatorLanguage() {
+  const language = currentOperatorLanguage();
+  document.documentElement.lang = language;
+  setStaticText('a[data-view="posts-view"]', "Posts");
+  setStaticText('a[data-view="analytics-view"]', "Analytics");
+  setStaticText('a[data-view="templates-view"]', "Templates");
+  setStaticText('a[data-view="calendar-view"]', "Calendar");
+  setStaticText('a[data-view="accounts-view"]', "Accounts");
+  setStaticText('a[data-view="brands-view"]', "Brands");
+  setStaticText('a[data-view="settings-view"]', "Settings");
+  setStaticText("#operator-toggle", "Operator");
+  setStaticText("#posts-view h1", "Posts");
+  setStaticText("#analytics-heading", "Analytics");
+  setStaticText("#templates-heading", "Templates");
+  setStaticText("#calendar-heading", "Calendar");
+  setStaticText("#accounts-heading", "Accounts");
+  setStaticText("#brands-heading", "Brands");
+  setStaticText("#settings-heading", "Settings");
+  setStaticText("#create-post", "Create");
+  setStaticText("#analytics-export", "Export");
+  setStaticText("#calendar-create-schedule", "Schedule");
+  setStaticText("#settings-sync", "Sync");
+  setStaticText("#add-social-account", "Add Account");
+  setStaticText("#add-company-record", "Add Company");
+  setStaticText("#add-brand-record", "Add Brand");
+  setStaticText("#add-campaign-record", "Add Campaign");
+  setStaticText("#templates-view .create-button", "Add Template");
+  setStaticText("#back-to-board", "Back");
+  setStaticText("#detail-status", "Draft");
+  setStaticText("#operator-close", "Close");
+  setStaticText("#operator-drawer h2", "Operator Tools");
+}
+
+function setStaticText(selector, label) {
+  const node = document.querySelector(selector);
+  if (node) node.textContent = t(label);
 }
 
 function renderAccessibilitySettingsPanel() {
@@ -1589,22 +1807,22 @@ function renderOperatorDrawer() {
     ${latestOperatorMessage ? `<section class="operator-status" aria-live="polite">${escapeHtml(latestOperatorMessage)}</section>` : ""}
     <section class="operator-panel">
       <header>
-        <h3>Active target</h3>
-        <span class="session-pill ${escapeHtml(account?.sessionStatus || "unknown")}">${escapeHtml(titleCase(account?.sessionStatus || "unknown"))}</span>
+        <h3>${escapeHtml(t("Active Target"))}</h3>
+        <span class="session-pill ${escapeHtml(account?.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account?.sessionStatus || "unknown"))}</span>
       </header>
       <dl class="operator-meta">
-        <div><dt>Company</dt><dd>${escapeHtml(companyName(context.companyId))}</dd></div>
-        <div><dt>Brand</dt><dd>${escapeHtml(brandName(context.brandId))}</dd></div>
-        <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(context.campaignId))}</dd></div>
-        <div><dt>Platform</dt><dd>${escapeHtml(platformLabel(account?.platform || context.platform || "x"))}</dd></div>
-        <div><dt>Account</dt><dd>${escapeHtml(account?.handle || account?.id || "No account selected")}</dd></div>
+        <div><dt>${escapeHtml(t("Company"))}</dt><dd>${escapeHtml(companyName(context.companyId))}</dd></div>
+        <div><dt>${escapeHtml(t("Brand"))}</dt><dd>${escapeHtml(brandName(context.brandId))}</dd></div>
+        <div><dt>${escapeHtml(t("Campaign"))}</dt><dd>${escapeHtml(campaignName(context.campaignId))}</dd></div>
+        <div><dt>${escapeHtml(t("Platform"))}</dt><dd>${escapeHtml(platformLabel(account?.platform || context.platform || "x"))}</dd></div>
+        <div><dt>${escapeHtml(t("Account"))}</dt><dd>${escapeHtml(account?.handle || account?.id || "No account selected")}</dd></div>
         <div><dt>Browser profile</dt><dd>${escapeHtml(account?.browserProfileId || "Not assigned")}</dd></div>
       </dl>
     </section>
 
     <section class="operator-panel">
       <header>
-        <h3>Preflight checks</h3>
+        <h3>${escapeHtml(t("Preflight Checks"))}</h3>
         <span class="count">${checks.filter((check) => check.ok).length}/${checks.length}</span>
       </header>
       <div class="operator-checks">
@@ -1614,33 +1832,33 @@ function renderOperatorDrawer() {
 
     <section class="operator-panel">
       <header>
-        <h3>Browser staging</h3>
+        <h3>${escapeHtml(t("Browser Staging"))}</h3>
         <span class="count">4</span>
       </header>
       <div class="operator-action-grid">
-        ${renderOperatorAction("Open account", resolveLoginUrl(account) || "Login URL missing", "open-account", !resolveLoginUrl(account))}
-        ${renderOperatorAction("Check session", `Current state: ${titleCase(account?.sessionStatus || "unknown")}`, "check-session", !account)}
-        ${renderOperatorAction("Stage in browser", resolveComposeUrl(account) || "Compose URL missing", "stage-browser", !account)}
-        ${renderOperatorAction("Capture proof", `${account?.proofCount || 0} proof captures saved`, "capture-proof", !account)}
+        ${renderOperatorAction("Open Account", resolveLoginUrl(account) || "Login URL missing", "open-account", !resolveLoginUrl(account))}
+        ${renderOperatorAction("Check Session", `Current state: ${statusLabel(account?.sessionStatus || "unknown")}`, "check-session", !account)}
+        ${renderOperatorAction("Stage In Browser", resolveComposeUrl(account) || "Compose URL missing", "stage-browser", !account)}
+        ${renderOperatorAction("Capture Proof", `${account?.proofCount || 0} proof captures saved`, "capture-proof", !account)}
       </div>
     </section>
 
     <section class="operator-panel">
       <header>
-        <h3>Validation and sync</h3>
+        <h3>${escapeHtml(t("Validation And Sync"))}</h3>
         <span class="count">${Object.keys(syncSummary).length}</span>
       </header>
       <div class="operator-action-grid">
-        ${renderOperatorAction("Validate package", "Checks policy, platform limits, and missing media.", "validate-package")}
-        ${renderOperatorAction("Sync license", "Reads the Firebase license cache and offline grace window.", "sync-license")}
+        ${renderOperatorAction("Validate Package", "Checks policy, platform limits, and missing media.", "validate-package")}
+        ${renderOperatorAction("Sync License", "Reads the Firebase license cache and offline grace window.", "sync-license")}
         ${renderOperatorAction("Check Firebase", "Validates admin config and expected collection paths.", "check-firebase")}
-        ${renderOperatorAction("Export bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`, "export-bundle")}
+        ${renderOperatorAction("Export Bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`, "export-bundle")}
       </div>
     </section>
 
     <section class="operator-panel operator-log-panel">
       <header>
-        <h3>Run log</h3>
+        <h3>${escapeHtml(t("Run Log"))}</h3>
         <span class="count">${recentLogs.length}</span>
       </header>
       <ol class="operator-log">
@@ -1859,8 +2077,8 @@ function operatorChecks(account) {
 function renderOperatorCheck(check) {
   return `
     <article class="operator-check ${check.ok ? "ready" : "blocked"}">
-      <span>${check.ok ? "Ready" : "Needs attention"}</span>
-      <strong>${escapeHtml(check.label)}</strong>
+      <span>${escapeHtml(check.ok ? t("Ready") : t("Needs Attention"))}</span>
+      <strong>${escapeHtml(t(check.label))}</strong>
       <p>${escapeHtml(check.note)}</p>
     </article>
   `;
@@ -1869,7 +2087,7 @@ function renderOperatorCheck(check) {
 function renderOperatorAction(label, note, action, disabled = false) {
   return `
     <button class="operator-action" type="button" data-operator-action="${escapeHtml(action)}" ${disabled ? "disabled" : ""}>
-      <strong>${escapeHtml(label)}</strong>
+      <strong>${escapeHtml(t(label))}</strong>
       <span>${escapeHtml(note)}</span>
     </button>
   `;
@@ -2009,10 +2227,10 @@ function renderSettingsPanel(title, rows) {
   return `
     <article class="settings-panel">
       <header>
-        <h2>${escapeHtml(title)}</h2>
+        <h2>${escapeHtml(t(title))}</h2>
       </header>
       <dl>
-        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
       </dl>
     </article>
   `;
@@ -2088,7 +2306,7 @@ function openDetail(postPackage, drafts) {
   document.querySelector(".prototype-toolbar").classList.add("hidden");
   document.querySelector("#post-detail").classList.remove("hidden");
   document.querySelector("#post-detail-heading").textContent = postPackage.title || "Draft";
-  document.querySelector("#detail-status").textContent = titleCase(postPackage.status);
+  document.querySelector("#detail-status").textContent = statusLabel(postPackage.status);
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
   document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
@@ -2116,8 +2334,8 @@ function renderPlatformPreview(draft) {
       <header>
         <div>
           <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
-          <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(titleCase(draft.status || "draft"))}</em>
-          <em class="session-pill ${preflight.ok ? "ready" : "needs_login"}">${preflight.ok ? "Ready" : "Needs attention"}</em>
+          <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(statusLabel(draft.status || "draft"))}</em>
+          <em class="session-pill ${preflight.ok ? "ready" : "needs_login"}">${escapeHtml(preflight.ok ? t("Ready") : t("Needs Attention"))}</em>
         </div>
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
@@ -2131,16 +2349,16 @@ function renderPlatformPreview(draft) {
       </div>
       ${renderDraftMediaList(draft)}
       <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
-        <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
-        <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">Approve</button>
-        <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">Schedule</button>
-        <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">Stage</button>
-        <button type="button" data-platform-action="proof" data-platform-draft-id="${escapeHtml(draft.id)}">Capture proof</button>
-        <button type="button" data-platform-action="copy-proof" data-platform-draft-id="${escapeHtml(draft.id)}">Copy proof</button>
-        <button type="button" data-platform-action="copy-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy URL</button>
-        <button type="button" data-platform-action="copy-screenshot" data-platform-draft-id="${escapeHtml(draft.id)}">Copy screenshot</button>
-        <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">Mark posted</button>
-        <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">Abandon</button>
+        <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Evaluate"))}</button>
+        <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Approve"))}</button>
+        <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Schedule"))}</button>
+        <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Stage"))}</button>
+        <button type="button" data-platform-action="proof" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Capture Proof"))}</button>
+        <button type="button" data-platform-action="copy-proof" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Proof"))}</button>
+        <button type="button" data-platform-action="copy-url" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Url"))}</button>
+        <button type="button" data-platform-action="copy-screenshot" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Screenshot"))}</button>
+        <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Mark Posted"))}</button>
+        <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Abandon"))}</button>
       </div>
       ${renderDraftEvaluation(draft)}
       ${renderDraftProofPanel(draft)}
@@ -2173,11 +2391,11 @@ function renderDraftProofPanel(draft) {
   return `
     <section class="draft-proof-panel" aria-label="${escapeHtml(platformLabel(draft.platform))} proof">
       <header>
-        <strong>Proof</strong>
+        <strong>${escapeHtml(t("Proof"))}</strong>
         <span>${escapeHtml(draft.proofNote || "Capture proof after staging or manual posting.")}</span>
       </header>
       <dl>
-        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(t(value))}</dd></div>`).join("")}
       </dl>
       <p>${escapeHtml(buildDraftProofSummary(draft))}</p>
     </section>
@@ -2205,19 +2423,19 @@ function renderDraftMediaList(draft) {
 
 function renderStagingPlan(draft, plan = platformStagingPlan(draft.platform, { media: draft.media || [] })) {
   const rows = [
-    ["Stage mode", titleCase(plan.stageMode)],
-    ["Text insert", plan.supportsTextInsert ? "Assisted" : "Manual paste"],
+    ["Stage Mode", titleCase(plan.stageMode)],
+    ["Text Insert", plan.supportsTextInsert ? "Assisted" : "Manual Paste"],
     ["Media", titleCase(plan.mediaState)],
-    ["Proof target", plan.proofTarget],
+    ["Proof Target", plan.proofTarget],
   ];
   return `
     <section class="staging-plan" aria-label="${escapeHtml(plan.label)} staging plan">
       <header>
-        <strong>${escapeHtml(plan.label)} staging</strong>
+        <strong>${escapeHtml(`${plan.label} ${t("Browser Staging")}`)}</strong>
         <span>${escapeHtml(plan.composeUrl || "Account compose URL")}</span>
       </header>
       <dl>
-        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(t(value))}</dd></div>`).join("")}
       </dl>
       ${draft.stageResult ? renderStageResult(draft.stageResult) : ""}
       ${plan.blockers.length ? `<p class="staging-blockers">${escapeHtml(plan.blockers.join(" "))}</p>` : ""}
@@ -2234,7 +2452,7 @@ function renderStageResult(result = {}) {
   ];
   return `
     <div class="stage-result">
-      ${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value)}</span>`).join("")}
+      ${rows.map(([label, value]) => `<span><strong>${escapeHtml(t(label))}</strong>${escapeHtml(t(value))}</span>`).join("")}
     </div>
   `;
 }
@@ -2244,15 +2462,15 @@ function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)
   const rows = [
     ["Platform", platformLabel(draft.platform)],
     ["Account", account?.handle || account?.id || "Missing"],
-    ["Session", titleCase(account?.sessionStatus || "unknown")],
-    ["Approval", titleCase(draft.status || "draft")],
+    ["Session", statusLabel(account?.sessionStatus || "unknown")],
+    ["Approval", statusLabel(draft.status || "draft")],
     ["Schedule", draft.scheduledAt ? formatDateTime(draft.scheduledAt) : "Not scheduled"],
     ["Media", mediaStatus(draft)],
     ["Proof", proofStatus(draft, account)],
   ];
   return `
     <dl class="draft-reliability-grid">
-      ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+      ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
     </dl>
     ${preflight.issues.length ? `<div class="draft-preflight ${preflight.ok ? "ready" : "blocked"}">${preflight.issues.map((issue) => `<span>${escapeHtml(issue)}</span>`).join("")}</div>` : ""}
   `;

@@ -8,12 +8,10 @@ This is the live top-level checklist for the three-build plan. Checked items are
 
 This is the current order for finishing the remaining checklist items.
 
-1. Founder/investor and campaign image templates.
-2. Spanish UI labels needed for operator review.
-3. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-4. Reddit monitoring capture workflow.
-5. Expert checklist review and Scott workflow signoff.
-6. Decide whether `auto_publish` ever becomes available.
+1. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
+2. Reddit monitoring capture workflow.
+3. Expert checklist review and Scott workflow signoff.
+4. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -165,7 +163,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Spanish brand/claim checks
   - [x] Spanish card copy for leaderboard, prize, and country cards
   - [x] Spanish card copy for founder/investor and campaign cards
-  - [ ] Spanish UI labels where needed for operator review
+  - [x] Spanish UI labels where needed for operator review
 - [x] Reply capture and classification
   - [x] Capture replies/comments
   - [x] Classify support, bug, investor, influencer, product, hostile, spam, legal, money, regulatory
@@ -471,7 +469,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Build draft/approval queue | Built | Package queue supports evaluate, approve, stage, schedule, copy, load, remove, posted, and abandoned states. |
 | P1 | Add reply capture and classification | Built | Operators can capture replies, classify them, generate response drafts, approve safe responses, ignore spam, or escalate sensitive replies. |
 | P1 | Add Spanish generation path | Built | Campaign slots and World Cup cards can produce EN/ES variants with Spanish CTA, offer, and claim terms. |
-| P1 | Add image rendering templates | Built | World Cup leaderboard, prize, and country SVG renderers, generated asset records, and template validation. Founder and campaign cards remain queued. |
+| P1 | Add image rendering templates | Built | World Cup leaderboard, prize, country, founder/investor, and campaign SVG renderers, generated asset records, and template validation. |
 | P1 | Add metrics logging | Built | Runs capture URLs, screenshots, impressions, clicks, signups, league joins, league attribution, performance notes, and derived rates. |
 | P1 | Add content quality feedback loop | Built | Scores drafts for CTA, novelty, risk, language, visual fit, and audience value before approval or staging. |
 | P1 | Add asset library and safe-zone metadata | Built | Media library records, template record, alt text, safe zones, filters, attach flow, and do-not-use assets. |
