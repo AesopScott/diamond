@@ -2245,6 +2245,20 @@ textarea {
   margin: 0;
 }
 
+.first-run-actions {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.first-run-actions span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
 .first-run-panel button {
   background: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 80%, white);
@@ -2254,6 +2268,32 @@ textarea {
   font-weight: 1000;
   min-height: 42px;
   padding: 10px 14px;
+}
+
+.first-run-next {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+}
+
+.first-run-next.complete {
+  border-left-color: #53dc8d;
+}
+
+.first-run-next strong {
+  font-size: 13px;
+  font-weight: 1000;
+}
+
+.first-run-next span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .first-run-panel ol {
@@ -2277,6 +2317,16 @@ textarea {
   padding: 10px;
 }
 
+.first-run-panel li.complete {
+  background: color-mix(in srgb, var(--card) 82%, #2b7552 12%);
+  border-color: color-mix(in srgb, var(--line) 62%, #53dc8d 38%);
+}
+
+.first-run-panel li.current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
 .first-run-panel li::before {
   align-items: center;
   background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
@@ -2292,6 +2342,11 @@ textarea {
   width: 26px;
 }
 
+.first-run-panel li.complete::before {
+  border-color: #53dc8d;
+  color: #76f5a8;
+}
+
 .first-run-panel li strong {
   font-size: 13px;
   font-weight: 950;
@@ -2304,6 +2359,25 @@ textarea {
   font-weight: 850;
   grid-column: 2;
   line-height: 1.35;
+}
+
+.first-run-panel li em {
+  align-self: center;
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 1000;
+  grid-column: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.first-run-panel li.current em {
+  color: var(--accent-text);
+}
+
+.first-run-panel li.complete em {
+  color: #76f5a8;
 }
 
 .manual-browser {

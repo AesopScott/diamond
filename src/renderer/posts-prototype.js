@@ -1753,6 +1753,9 @@ function renderUserGuidePanel() {
 }
 
 function renderFirstRunPanel() {
+  const progress = firstRunProgress();
+  const completeCount = progress.filter((item) => item.complete).length;
+  const nextStep = progress.find((item) => !item.complete);
   return `
     <section class="first-run-panel" aria-labelledby="first-run-heading">
       <header>
@@ -1761,18 +1764,104 @@ function renderFirstRunPanel() {
           <h3 id="first-run-heading">Post safely for the first time</h3>
           <p>Use this checklist the first few times you operate Diamond. It keeps company setup, account setup, staging, proof, and posted status in the right order.</p>
         </div>
-        <button type="button" data-settings-action="start-first-run">Start guided flow</button>
+        <div class="first-run-actions">
+          <span>${completeCount}/${progress.length} done</span>
+          <button type="button" data-settings-action="start-first-run">Start guided flow</button>
+        </div>
       </header>
+      <div class="first-run-next ${nextStep ? "current" : "complete"}">
+        <strong>${escapeHtml(nextStep ? `Next: ${nextStep.title}` : "Complete")}</strong>
+        <span>${escapeHtml(nextStep ? nextStep.detail : "The first-run path has enough evidence to call it complete. Keep using proof and metrics as you post more.")}</span>
+      </div>
       <ol>
-        ${firstRunSteps.map((step) => `
-          <li>
+        ${progress.map((step) => `
+          <li class="${step.complete ? "complete" : step.current ? "current" : "pending"}">
             <strong>${escapeHtml(step.title)}</strong>
-            <span>${escapeHtml(step.checklistText)}</span>
+            <span>${escapeHtml(step.complete ? step.doneDetail : step.detail)}</span>
+            <em>${escapeHtml(step.complete ? "Done" : step.current ? "Next" : "Open")}</em>
           </li>
         `).join("")}
       </ol>
     </section>
   `;
+}
+
+function firstRunProgress() {
+  const activeCompany = (state.companies || []).find((company) => company.id === state.context?.companyId);
+  const activeBrand = (state.brands || []).find((brand) => brand.id === state.context?.brandId);
+  const activeCampaign = (state.campaigns || []).find((campaign) => campaign.id === state.context?.campaignId);
+  const activeStrategy = (state.contentStrategies || []).find((strategy) => (
+    strategy.companyId === state.context?.companyId
+    && strategy.brandId === state.context?.brandId
+    && strategy.campaignId === state.context?.campaignId
+  )) || {};
+  const activeAccount = (state.socialAccounts || []).find((account) => account.id === state.context?.socialAccountId)
+    || (state.socialAccounts || []).find((account) => account.platform === state.context?.platform);
+  const platformDrafts = prototypeModel.platformDrafts || [];
+  const evaluatedDraft = platformDrafts.find((draft) => draft.evaluatedAt || Number.isFinite(Number(draft.qualityScore)) || (draft.riskDetails || []).length);
+  const approvedDraft = platformDrafts.find((draft) => ["approved", "scheduled", "staged", "published", "posted"].includes(draft.status) || draft.approvedAt);
+  const stagedDraft = platformDrafts.find((draft) => ["staged", "published", "posted"].includes(draft.status) || draft.stagedAt || draft.stageUrl || draft.stageResult?.openedUrl);
+  const proofedDraft = platformDrafts.find((draft) => draft.proofCapturedAt || draft.proofKind || draft.lastProofRunId);
+  const postedDraft = platformDrafts.find((draft) => ["published", "posted"].includes(draft.status) || draft.publishedAt);
+  const postedRun = (state.postRuns || []).find((run) => run.status === "posted");
+  const metricsRun = (state.postRuns || []).find((run) => run.metrics);
+  const checks = {
+    "first-run-company": {
+      complete: Boolean(activeCompany && activeBrand && activeCampaign && activeStrategy.goals && activeStrategy.audience && (activeStrategy.pillars || []).length),
+      detail: "Open Brands and confirm the active company, brand, campaign, goals, audience, pillars, and voice.",
+      doneDetail: `Active scope is set to ${activeCompany?.name || "company"} / ${activeBrand?.name || "brand"} / ${activeCampaign?.name || "campaign"}.`,
+    },
+    "first-run-account": {
+      complete: Boolean(activeAccount && activeAccount.sessionStatus === "ready"),
+      detail: "Open Accounts, choose the social account, log in manually if needed, and mark the session ready.",
+      doneDetail: `${platformLabel(activeAccount?.platform)} account ${activeAccount?.handle || activeAccount?.id || ""} is marked ready.`,
+    },
+    "first-run-create": {
+      complete: Boolean((prototypeModel.postPackages || []).length),
+      detail: "Create or open a post package so Diamond has one source idea to work from.",
+      doneDetail: `${prototypeModel.postPackages.length} post package${prototypeModel.postPackages.length === 1 ? "" : "s"} exist in the workspace.`,
+    },
+    "first-run-draft": {
+      complete: Boolean(platformDrafts.length),
+      detail: "Open a post package and confirm at least one platform draft exists.",
+      doneDetail: `${platformDrafts.length} platform draft${platformDrafts.length === 1 ? "" : "s"} are available for review.`,
+    },
+    "first-run-evaluate": {
+      complete: Boolean(evaluatedDraft && approvedDraft),
+      detail: evaluatedDraft ? "The draft has been evaluated. Approve it when it is clean enough to stage." : "Click Evaluate, read the result, edit if needed, then click Approve.",
+      doneDetail: `A ${platformLabel(approvedDraft?.platform)} draft has been evaluated and approved or moved beyond approval.`,
+    },
+    "first-run-stage": {
+      complete: Boolean(stagedDraft),
+      detail: "Stage an approved draft in the visible browser. Remember: staging prepares the composer, it does not publish.",
+      doneDetail: `A ${platformLabel(stagedDraft?.platform)} draft has been staged or opened for manual finish.`,
+    },
+    "first-run-proof": {
+      complete: Boolean(proofedDraft),
+      detail: "Capture proof with a screenshot, URL, or run record after staging or posting.",
+      doneDetail: `Proof exists for a ${platformLabel(proofedDraft?.platform)} draft.`,
+    },
+    "first-run-posted": {
+      complete: Boolean(postedDraft || postedRun),
+      detail: "After the post is live, click Mark Posted. Add metrics later when results are available.",
+      doneDetail: metricsRun ? "A post is marked posted and at least one metrics record exists." : "A post is marked posted. Metrics can be added later.",
+    },
+  };
+  let foundCurrent = false;
+  return firstRunSteps.map((step) => {
+    const check = checks[step.id] || {
+      complete: false,
+      detail: step.checklistText,
+      doneDetail: step.checklistText,
+    };
+    const current = !check.complete && !foundCurrent;
+    if (current) foundCurrent = true;
+    return {
+      ...step,
+      ...check,
+      current,
+    };
+  });
 }
 
 function renderOperatorManualBrowser() {
