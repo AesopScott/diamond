@@ -2270,6 +2270,17 @@ textarea {
   padding: 10px 14px;
 }
 
+.first-run-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.first-run-actions button + button {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
 .first-run-next {
   background: var(--card);
   border: 1px solid var(--line);

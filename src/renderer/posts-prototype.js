@@ -1411,6 +1411,10 @@ async function handleSettingsAction(event) {
     goToFirstRunStep(button.dataset.firstRunStep || "");
     return;
   }
+  if (button.dataset.settingsAction === "go-first-run-next") {
+    goToFirstRunNextStep();
+    return;
+  }
   await runSettingsAction(button.dataset.settingsAction);
 }
 
@@ -1770,6 +1774,7 @@ function renderFirstRunPanel() {
         </div>
         <div class="first-run-actions">
           <span>${completeCount}/${progress.length} done</span>
+          <button type="button" data-settings-action="go-first-run-next" ${nextStep ? "" : "disabled"}>${nextStep ? "Go to next step" : "First run complete"}</button>
           <button type="button" data-settings-action="start-first-run">Start guided flow</button>
         </div>
       </header>
@@ -1811,6 +1816,11 @@ function goToFirstRunStep(stepId) {
       document.querySelector(step.focusSelector)?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
     });
   }
+}
+
+function goToFirstRunNextStep() {
+  const nextStep = firstRunProgress().find((item) => !item.complete);
+  if (nextStep) goToFirstRunStep(nextStep.id);
 }
 
 function navigatePrototypeView(viewId) {
