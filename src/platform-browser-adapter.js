@@ -8,23 +8,56 @@ export const PLATFORM_BROWSER_ADAPTERS = Object.freeze({
     platform: "x",
     label: "X",
     stageMode: "assisted",
+    composeUrl: "https://x.com/compose/post",
     composerSelector: X_COMPOSER_SELECTOR,
     mediaInputSelector: X_MEDIA_INPUT_SELECTOR,
     supportsTextInsert: true,
     supportsMediaPicker: true,
+    mediaRequired: false,
+    proofTarget: "Composer or posted tweet URL",
+    manualFinish: "Review the composer, confirm media, then post manually.",
     note: "X has the proven assisted composer adapter.",
   },
-  instagram: manualAdapter("instagram", "Instagram"),
-  tiktok: manualAdapter("tiktok", "TikTok"),
-  linkedin: manualAdapter("linkedin", "LinkedIn"),
-  "youtube-shorts": manualAdapter("youtube-shorts", "YouTube Shorts"),
-  facebook: manualAdapter("facebook", "Facebook"),
+  instagram: manualAdapter("instagram", "Instagram", {
+    composeUrl: "https://www.instagram.com/",
+    mediaRequired: true,
+    proofTarget: "Composer screenshot or published post URL",
+    manualFinish: "Open Create, attach the image or video, review crop/caption, then publish manually.",
+  }),
+  tiktok: manualAdapter("tiktok", "TikTok", {
+    composeUrl: "https://www.tiktok.com/upload",
+    mediaRequired: true,
+    proofTarget: "Upload screen or published video URL",
+    manualFinish: "Upload video media, verify caption and cover, then publish manually.",
+  }),
+  linkedin: manualAdapter("linkedin", "LinkedIn", {
+    composeUrl: "https://www.linkedin.com/feed/",
+    mediaRequired: false,
+    proofTarget: "Composer screenshot or published post URL",
+    manualFinish: "Start a post, paste the copied draft, review formatting/link preview, then publish manually.",
+  }),
+  "youtube-shorts": manualAdapter("youtube-shorts", "YouTube Shorts", {
+    composeUrl: "https://studio.youtube.com/",
+    mediaRequired: true,
+    proofTarget: "Upload details screen or published Short URL",
+    manualFinish: "Upload short-form video, complete title/details, confirm checks, then publish manually.",
+  }),
+  facebook: manualAdapter("facebook", "Facebook", {
+    composeUrl: "https://www.facebook.com/",
+    mediaRequired: false,
+    proofTarget: "Page composer screenshot or published post URL",
+    manualFinish: "Confirm the correct page/profile, paste the draft, attach media if needed, then publish manually.",
+  }),
   reddit: {
     platform: "reddit",
     label: "Reddit",
     stageMode: "monitoring_only",
+    composeUrl: "https://www.reddit.com/",
     supportsTextInsert: false,
     supportsMediaPicker: false,
+    mediaRequired: false,
+    proofTarget: "Manual subreddit workflow note",
+    manualFinish: "Reddit is monitoring-only until a subreddit posting workflow is configured.",
     note: "Reddit is configured for monitoring and reply capture only.",
   },
 });
@@ -37,6 +70,9 @@ export function getPlatformBrowserAdapter(platform) {
     stageMode: "unsupported",
     supportsTextInsert: false,
     supportsMediaPicker: false,
+    mediaRequired: false,
+    proofTarget: "Manual proof",
+    manualFinish: "No staging workflow exists yet; handle this platform manually.",
     note: "No browser adapter exists for this platform yet.",
   };
 }
@@ -101,13 +137,40 @@ export async function openPlatformMediaPicker(webview, platform = "x") {
   }
 }
 
-function manualAdapter(platform, label) {
+export function platformStagingPlan(platform, input = {}) {
+  const adapter = getPlatformBrowserAdapter(platform);
+  const hasMedia = Array.isArray(input.media) && input.media.length > 0;
+  const blockers = [];
+  if (adapter.stageMode === "unsupported") blockers.push("No platform adapter exists.");
+  if (adapter.stageMode === "monitoring_only") blockers.push(`${adapter.label} is monitoring-only.`);
+  if (adapter.mediaRequired && !hasMedia) blockers.push(`${adapter.label} requires media or a manual upload before publishing.`);
+  return {
+    platform: adapter.platform,
+    label: adapter.label,
+    stageMode: adapter.stageMode,
+    composeUrl: adapter.composeUrl || "",
+    supportsTextInsert: Boolean(adapter.supportsTextInsert),
+    supportsMediaPicker: Boolean(adapter.supportsMediaPicker),
+    mediaRequired: Boolean(adapter.mediaRequired),
+    mediaState: hasMedia ? "attached" : adapter.mediaRequired ? "required" : "optional",
+    proofTarget: adapter.proofTarget || "Manual proof",
+    manualFinish: adapter.manualFinish || adapter.note || "Review the visible composer before publishing.",
+    note: adapter.note || "",
+    blockers,
+  };
+}
+
+function manualAdapter(platform, label, options = {}) {
   return {
     platform,
     label,
     stageMode: "manual",
+    composeUrl: options.composeUrl || "",
     supportsTextInsert: false,
     supportsMediaPicker: false,
+    mediaRequired: Boolean(options.mediaRequired),
+    proofTarget: options.proofTarget || "Manual proof",
+    manualFinish: options.manualFinish || `Paste the copied draft into ${label}, complete any platform checks, then publish manually.`,
     note: `${label} opens in the visible browser and uses clipboard/manual staging until selectors are proven.`,
   };
 }
@@ -144,4 +207,3 @@ function buildInsertContentEditableScript(selector, text) {
 function buildUnsupportedScript(reason) {
   return `(() => ({ ok: false, manual: true, reason: ${JSON.stringify(reason)} }))();`;
 }
-

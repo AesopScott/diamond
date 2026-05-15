@@ -33,6 +33,7 @@ import {
   createElevenLabsSpeechRequest,
   getDiamondGuideSections,
   getDiamondTourSteps,
+  platformStagingPlan,
 } from "../index.js";
 
 const PROFESSIONAL_THEMES = [
@@ -1738,6 +1739,7 @@ async function stageOperatorDraft(account, draft) {
   draft.updatedAt = stagedAt;
   draft.stageUrl = result?.currentUrl || composeUrl;
   draft.stageNote = result?.reason || "Browser staging finished.";
+  draft.stageResult = buildDraftStageResult(draft, result || {});
   draft.screenshotPath = result?.screenshotPath || draft.screenshotPath || "";
   createOperatorRun(draft, {
     status: draft.status,
@@ -2120,6 +2122,7 @@ function renderPlatformPreviews(drafts) {
 
 function renderPlatformPreview(draft) {
   const preflight = platformDraftPreflight(draft);
+  const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   return `
     <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}">
       <header>
@@ -2131,6 +2134,7 @@ function renderPlatformPreview(draft) {
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
       ${renderDraftReliability(draft, preflight)}
+      ${renderStagingPlan(draft, plan)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       <div class="draft-media-row">
         <button type="button" class="media-button">+ Media</button>
@@ -2146,7 +2150,7 @@ function renderPlatformPreview(draft) {
         <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">Abandon</button>
       </div>
       ${renderDraftEvaluation(draft)}
-      <div class="platform-note">${escapeHtml(platformPostingNote(draft.platform))}</div>
+      <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
       <div class="social-preview">
         <div class="avatar"></div>
         <div>
@@ -2156,6 +2160,42 @@ function renderPlatformPreview(draft) {
         <p>${escapeHtml(draft.text)}</p>
       </div>
     </article>
+  `;
+}
+
+function renderStagingPlan(draft, plan = platformStagingPlan(draft.platform, { media: draft.media || [] })) {
+  const rows = [
+    ["Stage mode", titleCase(plan.stageMode)],
+    ["Text insert", plan.supportsTextInsert ? "Assisted" : "Manual paste"],
+    ["Media", titleCase(plan.mediaState)],
+    ["Proof target", plan.proofTarget],
+  ];
+  return `
+    <section class="staging-plan" aria-label="${escapeHtml(plan.label)} staging plan">
+      <header>
+        <strong>${escapeHtml(plan.label)} staging</strong>
+        <span>${escapeHtml(plan.composeUrl || "Account compose URL")}</span>
+      </header>
+      <dl>
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+      </dl>
+      ${draft.stageResult ? renderStageResult(draft.stageResult) : ""}
+      ${plan.blockers.length ? `<p class="staging-blockers">${escapeHtml(plan.blockers.join(" "))}</p>` : ""}
+    </section>
+  `;
+}
+
+function renderStageResult(result = {}) {
+  const rows = [
+    ["Opened", result.openedUrl || "Not opened yet"],
+    ["Text", result.textInserted ? "Inserted" : result.textManual ? "Manual paste required" : "Not inserted"],
+    ["Media", result.mediaAttached ? "Attached" : result.mediaManual ? "Manual upload required" : "No assisted upload"],
+    ["Next", result.nextAction || "Review before publishing"],
+  ];
+  return `
+    <div class="stage-result">
+      ${rows.map(([label, value]) => `<span><strong>${escapeHtml(label)}</strong>${escapeHtml(value)}</span>`).join("")}
+    </div>
   `;
 }
 
@@ -2353,15 +2393,37 @@ function stagePlatformDraft(draft) {
   if (!preflight.ok) {
     draft.status = draft.status === "published" ? draft.status : "needs_review";
     draft.stageNote = `Staging blocked: ${preflight.issues.join(" ")}`;
+    draft.stageResult = buildDraftStageResult(draft, { ok: false, reason: draft.stageNote });
     draft.updatedAt = new Date().toISOString();
     return false;
   }
+  const account = accountForDraft(draft);
+  const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   draft.status = "staged";
   draft.stagedAt = new Date().toISOString();
-  draft.stageUrl = resolveComposeUrl(accountForDraft(draft)) || "";
-  draft.stageNote = "Ready for browser staging in Operator tools.";
+  draft.stageUrl = resolveComposeUrl(account) || plan.composeUrl || "";
+  draft.stageNote = plan.stageMode === "assisted"
+    ? "Ready for assisted browser staging in Operator tools."
+    : plan.manualFinish;
+  draft.stageResult = buildDraftStageResult(draft, { ok: plan.stageMode === "assisted", manual: plan.stageMode === "manual", currentUrl: draft.stageUrl });
   draft.updatedAt = draft.stagedAt;
   return true;
+}
+
+function buildDraftStageResult(draft, result = {}) {
+  const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
+  const hasMedia = Boolean((draft.media || []).length);
+  return {
+    ok: Boolean(result.ok),
+    openedUrl: result.currentUrl || draft.stageUrl || resolveComposeUrl(accountForDraft(draft)) || plan.composeUrl || "",
+    textInserted: Boolean(result.fillResult?.ok || (result.ok && plan.supportsTextInsert)),
+    textManual: Boolean(result.manual || !plan.supportsTextInsert),
+    mediaAttached: Boolean(result.mediaResult?.ok && hasMedia),
+    mediaManual: Boolean(hasMedia && !plan.supportsMediaPicker),
+    nextAction: result.ok
+      ? "Review composer, publish manually, then capture proof."
+      : result.reason || plan.manualFinish,
+  };
 }
 
 function markPlatformDraftPosted(draft) {
@@ -2563,6 +2625,8 @@ function platformDraftPreflight(draft) {
   if (account && account.sessionStatus !== "ready") issues.push(`${platformLabel(account.platform)} session is ${titleCase(account.sessionStatus || "unknown")}.`);
   if (account && !resolveComposeUrl(account)) issues.push("Compose URL is missing.");
   if (!licenseCheck.ok) issues.push(licenseCheck.reason || "License does not allow this brand/platform.");
+  const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
+  issues.push(...plan.blockers);
   return {
     ok: issues.length === 0,
     issues,
@@ -2572,9 +2636,10 @@ function platformDraftPreflight(draft) {
 }
 
 function mediaStatus(draft) {
+  const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   const count = (draft.media || []).length;
   if (count) return `${count} media file${count === 1 ? "" : "s"} attached`;
-  if (["instagram", "tiktok", "youtube-shorts"].includes(draft.platform)) return "Media required or manual";
+  if (plan.mediaRequired) return "Media required or manual";
   return "No media attached";
 }
 
@@ -2582,18 +2647,6 @@ function proofStatus(draft, account) {
   if (draft.proofCapturedAt) return `Captured ${formatDateTime(draft.proofCapturedAt)}`;
   if (account?.lastProofAt) return `Account proof ${formatDateTime(account.lastProofAt)}`;
   return `${account?.proofCount || 0} account proofs`;
-}
-
-function platformPostingNote(platform) {
-  return {
-    x: "X: stage text, review the composer, then post manually before marking posted.",
-    facebook: "Facebook: confirm the selected page/profile before posting.",
-    tiktok: "TikTok: media is usually required; use the browser to finish upload and caption checks.",
-    instagram: "Instagram: media is usually required; verify the account and crop before posting.",
-    linkedin: "LinkedIn: review formatting and link previews before publishing.",
-    reddit: "Reddit: treat as monitoring or manual posting unless a subreddit workflow is configured.",
-    "youtube-shorts": "YouTube Shorts: video media is required; finish upload details manually.",
-  }[platform] || "Review the visible composer before publishing.";
 }
 
 function brandLibraryFor(draft) {
