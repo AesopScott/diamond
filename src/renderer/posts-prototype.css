@@ -2228,6 +2228,28 @@ textarea {
   padding: 13px;
 }
 
+.template-purpose-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.template-purpose-grid article {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+}
+
+.template-purpose-grid strong {
+  color: var(--text);
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+
 .template-card p {
   color: #dedee3;
   font-weight: 750;
@@ -2239,6 +2261,10 @@ textarea {
   display: grid;
   gap: 8px;
   margin: 0;
+}
+
+.template-meta {
+  margin-bottom: 12px !important;
 }
 
 .template-card dt {
@@ -2256,6 +2282,43 @@ textarea {
   line-height: 1.35;
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.template-platforms {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.template-platforms h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.template-platforms p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.template-platform-list {
+  display: grid;
+  gap: 8px;
+}
+
+.template-platform-variant {
+  background: #08090c;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.template-platform-variant summary {
+  min-height: 42px;
+  padding: 9px 10px;
+}
+
+.template-platform-variant dl {
+  border-top: 1px solid var(--line);
+  padding: 10px;
 }
 
 .settings-workspace {
@@ -3620,6 +3683,7 @@ textarea {
   .brand-panels,
   .template-summary,
   .template-columns,
+  .template-purpose-grid,
   .settings-grid,
   .settings-actions,
   .legal-list,

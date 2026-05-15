@@ -1740,6 +1740,7 @@ function renderTemplates() {
   const target = document.querySelector("#templates-workspace");
   if (!target) return;
   const templates = state.socialTemplates || [];
+  const templateGroups = groupSocialTemplates(templates);
   const assets = state.assetLibrary || [];
   const slots = state.editorialSlots || [];
   target.innerHTML = `
@@ -1754,7 +1755,7 @@ function renderTemplates() {
       </article>
       <article>
         <span class="eyebrow">Templates</span>
-        <strong>${templates.length}</strong>
+        <strong>${templateGroups.length}</strong>
       </article>
       <article>
         <span class="eyebrow">Assets</span>
@@ -1764,11 +1765,11 @@ function renderTemplates() {
     <section class="template-columns" aria-label="Reusable template columns">
       <article class="template-column">
         <header>
-          <h2>Social templates</h2>
-          <span class="count">${templates.length}</span>
+          <h2>Creative templates</h2>
+          <span class="count">${templateGroups.length}</span>
         </header>
         <div class="template-list">
-          ${templates.map(renderTemplateCard).join("") || `<div class="empty-column">No templates</div>`}
+          ${templateGroups.map(renderTemplateCard).join("") || `<div class="empty-column">No templates</div>`}
         </div>
       </article>
       <article class="template-column">
@@ -1793,22 +1794,144 @@ function renderTemplates() {
   `;
 }
 
-function renderTemplateCard(template) {
+function groupSocialTemplates(templates = []) {
+  const groups = new Map();
+  templates.forEach((template) => {
+    const key = [
+      template.companyId || "company",
+      template.brandId || "brand",
+      template.campaignId || "campaign",
+      template.type || "template",
+    ].join("::");
+    const existing = groups.get(key) || {
+      ...template,
+      platforms: [],
+      variants: [],
+    };
+    existing.platforms.push(template.platform || "x");
+    existing.variants.push(template);
+    groups.set(key, existing);
+  });
+  return [...groups.values()].sort((left, right) => templateTitle(left).localeCompare(templateTitle(right)));
+}
+
+function renderTemplateCard(templateGroup) {
+  const info = templateInfo(templateGroup.type);
+  const variants = [...(templateGroup.variants || [])].sort((left, right) => platformLabel(left.platform).localeCompare(platformLabel(right.platform)));
   return `
     <details class="template-card">
       <summary>
-        <strong>${escapeHtml(t(titleCase(template.type || "template")))}</strong>
-        <span>${escapeHtml(platformLabel(template.platform))}</span>
+        <strong>${escapeHtml(templateTitle(templateGroup))}</strong>
+        <span>${variants.length} platforms</span>
       </summary>
       <div class="template-card-body">
-        <p>${escapeHtml(template.notes || "Reusable social template.")}</p>
-        <dl>
-          <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(template.campaignId))}</dd></div>
-          <div><dt>Safe zone</dt><dd>${escapeHtml(template.safeZone || "Not set")}</dd></div>
+        <p>${escapeHtml(info.description)}</p>
+        <section class="template-purpose-grid" aria-label="Template purpose">
+          <article>
+            <span class="eyebrow">Creates</span>
+            <strong>${escapeHtml(info.creates)}</strong>
+          </article>
+          <article>
+            <span class="eyebrow">Good for</span>
+            <strong>${escapeHtml(info.goodFor)}</strong>
+          </article>
+          <article>
+            <span class="eyebrow">Needs</span>
+            <strong>${escapeHtml(info.needs)}</strong>
+          </article>
+          <article>
+            <span class="eyebrow">Output</span>
+            <strong>${escapeHtml(info.output)}</strong>
+          </article>
+        </section>
+        <dl class="template-meta">
+          <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(templateGroup.campaignId))}</dd></div>
+          <div><dt>Safe zone rule</dt><dd>${escapeHtml(templateGroup.safeZone || variants[0]?.safeZone || "Not set")}</dd></div>
         </dl>
+        <section class="template-platforms" aria-label="Platform variants">
+          <h3>Platform variants</h3>
+          <p>Open the platform you plan to use. Each variant keeps the same creative idea but carries its own platform target and crop guidance.</p>
+          <div class="template-platform-list">
+            ${variants.map(renderTemplatePlatformVariant).join("")}
+          </div>
+        </section>
       </div>
     </details>
   `;
+}
+
+function renderTemplatePlatformVariant(template) {
+  return `
+    <details class="template-platform-variant">
+      <summary>
+        <strong>${escapeHtml(platformLabel(template.platform))}</strong>
+        <span>${escapeHtml(template.id || "template")}</span>
+      </summary>
+      <dl>
+        <div><dt>Use this for</dt><dd>${escapeHtml(template.notes || templateInfo(template.type).goodFor)}</dd></div>
+        <div><dt>Safe zone</dt><dd>${escapeHtml(template.safeZone || "Not set")}</dd></div>
+        <div><dt>Template ID</dt><dd>${escapeHtml(template.id || "Not set")}</dd></div>
+      </dl>
+    </details>
+  `;
+}
+
+function templateTitle(template = {}) {
+  const labels = {
+    leaderboard: "Leaderboard Graphic",
+    prize: "Prize Payout Graphic",
+    country: "Country Pride Graphic",
+    founder: "Founder / Investor Graphic",
+    campaign: "Campaign Explainer Graphic",
+  };
+  return labels[template.type] || `${titleCase(template.type || "Creative")} Template`;
+}
+
+function templateInfo(type = "") {
+  const info = {
+    leaderboard: {
+      description: "Creates a social image that makes the leaderboard feel active and competitive.",
+      creates: "Leaderboard card",
+      goodFor: "Showing top players, country movement, and proof that the game is alive.",
+      needs: "Leaderboard rows, countries, scores, CTA",
+      output: "1200x675 social image",
+    },
+    prize: {
+      description: "Creates a prize graphic that makes payouts easy to understand at a glance.",
+      creates: "Prize payout card",
+      goodFor: "Announcing the prize pool, payout places, and why users should join.",
+      needs: "Prize amounts, placement labels, CTA",
+      output: "1200x675 social image",
+    },
+    country: {
+      description: "Creates a country-pride campaign graphic for World Cup audience targeting.",
+      creates: "Country campaign card",
+      goodFor: "Calling out fans by country and pushing them toward the leaderboard.",
+      needs: "Country name, flag/icon, headline, CTA",
+      output: "1200x675 social image",
+    },
+    founder: {
+      description: "Creates a founder or investor outreach graphic connected to the campaign.",
+      creates: "Founder/investor card",
+      goodFor: "Investor updates, partner outreach, and founder-led campaign posts.",
+      needs: "Founder name, proof points, investor CTA",
+      output: "1200x675 social image",
+    },
+    campaign: {
+      description: "Creates a simple explainer graphic that tells users how the campaign works.",
+      creates: "Campaign explainer card",
+      goodFor: "Explaining the three-step user flow: join, pick, climb.",
+      needs: "Steps, campaign headline, CTA",
+      output: "1200x675 social image",
+    },
+  };
+  return info[type] || {
+    description: "Reusable creative template for campaign social media.",
+    creates: "Social creative",
+    goodFor: "Repeated campaign posts with consistent structure.",
+    needs: "Campaign copy, CTA, asset rules",
+    output: "Platform-ready creative",
+  };
 }
 
 function renderAssetCard(asset) {
