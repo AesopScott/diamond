@@ -1324,8 +1324,7 @@ function renderBrands() {
           <div><dt>Languages</dt><dd><input data-brand-field="brandLanguages" type="text" value="${escapeHtml((brand.languages || []).join(", ") || "en")}"></dd></div>
         </dl>
         <section class="account-actions" aria-label="Brand actions">
-          <button type="button" data-brand-action="save">Save brand workspace</button>
-          <button type="button" data-brand-action="set-active">Set active scope</button>
+          <button type="button" data-brand-action="save">Save brand</button>
         </section>
       </article>
       <article class="strategy-card">
@@ -1701,15 +1700,9 @@ function setActiveAccount(account) {
 async function handleBrandWorkspaceClick(event) {
   const button = event.target.closest("[data-brand-action]");
   if (!button) return;
+  if (button.dataset.brandAction !== "save") return;
   const scope = saveBrandWorkspace();
-  if (button.dataset.brandAction === "set-active") {
-    state.context = {
-      ...state.context,
-      companyId: scope.companyId,
-      brandId: scope.brandId,
-      campaignId: scope.campaignId,
-    };
-  }
+  state.context = { ...state.context, companyId: scope.companyId, brandId: scope.brandId };
   await saveProductionState();
   renderBrands();
   renderAccounts(selectedAccountId);
