@@ -1988,18 +1988,39 @@ textarea {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 7px;
-  padding: 13px;
+  overflow: hidden;
 }
 
-.template-card header {
+.template-card summary {
   align-items: center;
+  cursor: pointer;
   display: flex;
   gap: 10px;
   justify-content: space-between;
-  margin-bottom: 10px;
+  list-style: none;
+  min-height: 54px;
+  padding: 13px;
 }
 
-.template-card header span {
+.template-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.template-card summary::before {
+  color: var(--muted);
+  content: "+";
+  font-weight: 1000;
+}
+
+.template-card[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.template-card[open] summary::before {
+  content: "-";
+}
+
+.template-card summary span {
   background: var(--pill);
   border-radius: 999px;
   color: #dfdfe4;
@@ -2007,6 +2028,18 @@ textarea {
   font-weight: 1000;
   padding: 4px 8px;
   text-transform: uppercase;
+}
+
+.template-card summary strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-card-body {
+  padding: 13px;
 }
 
 .template-card p {

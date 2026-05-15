@@ -1487,49 +1487,55 @@ function renderTemplates() {
 
 function renderTemplateCard(template) {
   return `
-    <article class="template-card">
-      <header>
+    <details class="template-card">
+      <summary>
         <strong>${escapeHtml(t(titleCase(template.type || "template")))}</strong>
         <span>${escapeHtml(platformLabel(template.platform))}</span>
-      </header>
-      <p>${escapeHtml(template.notes || "Reusable social template.")}</p>
-      <dl>
-        <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(template.campaignId))}</dd></div>
-        <div><dt>Safe zone</dt><dd>${escapeHtml(template.safeZone || "Not set")}</dd></div>
-      </dl>
-    </article>
+      </summary>
+      <div class="template-card-body">
+        <p>${escapeHtml(template.notes || "Reusable social template.")}</p>
+        <dl>
+          <div><dt>Campaign</dt><dd>${escapeHtml(campaignName(template.campaignId))}</dd></div>
+          <div><dt>Safe zone</dt><dd>${escapeHtml(template.safeZone || "Not set")}</dd></div>
+        </dl>
+      </div>
+    </details>
   `;
 }
 
 function renderAssetCard(asset) {
   return `
-    <article class="template-card asset-card">
-      <header>
+    <details class="template-card asset-card">
+      <summary>
         <strong>${escapeHtml(t(titleCase(asset.type || "asset")))}</strong>
         <span>${escapeHtml(asset.language || "en")}</span>
-      </header>
-      <p>${escapeHtml(asset.altText || asset.notes || "Creative asset.")}</p>
-      <dl>
-        <div><dt>File</dt><dd>${escapeHtml(asset.filePath || "Not linked")}</dd></div>
-        <div><dt>Safe zone</dt><dd>${escapeHtml(asset.safeZone || "Not set")}</dd></div>
-      </dl>
-    </article>
+      </summary>
+      <div class="template-card-body">
+        <p>${escapeHtml(asset.altText || asset.notes || "Creative asset.")}</p>
+        <dl>
+          <div><dt>File</dt><dd>${escapeHtml(asset.filePath || "Not linked")}</dd></div>
+          <div><dt>Safe zone</dt><dd>${escapeHtml(asset.safeZone || "Not set")}</dd></div>
+        </dl>
+      </div>
+    </details>
   `;
 }
 
 function renderCreativeNeedCard(slot) {
   return `
-    <article class="template-card">
-      <header>
+    <details class="template-card">
+      <summary>
         <strong>${escapeHtml(platformLabel(slot.platform))}</strong>
         <span>${escapeHtml(titleCase(slot.status || "planned"))}</span>
-      </header>
-      <p>${escapeHtml(slot.assetNeed || slot.topic || "Creative needed.")}</p>
-      <dl>
-        <div><dt>Topic</dt><dd>${escapeHtml(slot.topic || "No topic")}</dd></div>
-        <div><dt>Language</dt><dd>${escapeHtml(slot.language || "en")}</dd></div>
-      </dl>
-    </article>
+      </summary>
+      <div class="template-card-body">
+        <p>${escapeHtml(slot.assetNeed || slot.topic || "Creative needed.")}</p>
+        <dl>
+          <div><dt>Topic</dt><dd>${escapeHtml(slot.topic || "No topic")}</dd></div>
+          <div><dt>Language</dt><dd>${escapeHtml(slot.language || "en")}</dd></div>
+        </dl>
+      </div>
+    </details>
   `;
 }
 
