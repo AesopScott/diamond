@@ -254,6 +254,7 @@ This is the current order for finishing the remaining checklist items.
   - [ ] Future product decision on whether `auto_publish` ever becomes enabled
 - [ ] User onboarding and guided help
   - [x] In-app user guide
+  - [x] Detailed operator manual with examples for every major workflow
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

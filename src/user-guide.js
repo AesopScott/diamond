@@ -102,6 +102,16 @@ const guideSections = [
       "Use the run log as the audit trail for what happened.",
     ],
   },
+  {
+    id: "operator-manual",
+    title: "11. Use the full operator manual",
+    summary: "The detailed manual lives at docs/DIAMOND_OPERATOR_MANUAL.md and explains every major screen, button, workflow, proof type, platform, and common blocker with examples.",
+    steps: [
+      "Read the one-page version first when you need the fastest reminder.",
+      "Use the platform examples when posting to X, Instagram, TikTok, LinkedIn, YouTube Shorts, Facebook, or Reddit.",
+      "Use the common problems section when Diamond blocks a session, media upload, license, proof, or review step.",
+    ],
+  },
 ];
 
 const tourSteps = [
