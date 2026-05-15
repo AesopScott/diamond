@@ -570,6 +570,7 @@ function wirePrototypeControls() {
     selectedAccountId = card.dataset.accountId;
     renderAccounts(card.dataset.accountId);
   });
+  document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
@@ -900,14 +901,25 @@ function renderAccounts(selectedAccountId) {
   const detail = document.querySelector("#account-detail");
   const scope = document.querySelector("#account-scope-strip");
   if (!target || !detail) return;
-  const accounts = state.socialAccounts || [];
-  const selected = accounts.find((account) => account.id === selectedAccountId) || accounts.find((account) => account.id === state.context?.socialAccountId) || accounts[0];
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id || "";
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+  const accounts = accountsForScope(companyId, brandId);
+  const selected = accounts.find((account) => account.id === selectedAccountId)
+    || accounts.find((account) => account.id === state.context?.socialAccountId)
+    || accounts[0];
   if (selected) selectedAccountId = selected.id;
-  if (scope) scope.innerHTML = renderAccountScope(selected);
-  target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("");
+  if (scope) scope.innerHTML = renderAccountScope(companyId, brandId, accounts);
+  target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("") || `<div class="empty-column">No accounts for this company and brand yet.</div>`;
   detail.innerHTML = accountCreatorOpen
     ? renderAccountCreator(selected)
     : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
+}
+
+function accountsForScope(companyId, brandId) {
+  return (state.socialAccounts || []).filter((account) => {
+    return (!companyId || account.companyId === companyId)
+      && (!brandId || account.brandId === brandId);
+  });
 }
 
 function renderAccountCard(account, selectedAccountId) {
@@ -927,20 +939,19 @@ function renderAccountCard(account, selectedAccountId) {
   `;
 }
 
-function renderAccountScope(account) {
-  if (!account) return "";
+function renderAccountScope(companyId, brandId, accounts = []) {
   return `
-    <article>
+    <label>
       <span class="eyebrow">Company</span>
-      <strong>${escapeHtml(companyName(account.companyId))}</strong>
-    </article>
-    <article>
+      <select data-account-scope-field="companyId">${companyOptions(companyId)}</select>
+    </label>
+    <label>
       <span class="eyebrow">Brand</span>
-      <strong>${escapeHtml(brandName(account.brandId))}</strong>
-    </article>
+      <select data-account-scope-field="brandId">${brandOptions(companyId, brandId)}</select>
+    </label>
     <article>
-      <span class="eyebrow">Campaign</span>
-      <strong>${escapeHtml(campaignName(state.context?.campaignId))}</strong>
+      <span class="eyebrow">Connected accounts</span>
+      <strong>${accounts.length}</strong>
     </article>
     <article>
       <span class="eyebrow">Rule</span>
@@ -969,7 +980,6 @@ function renderAccountDetail(account) {
       <dl class="account-meta">
         <div><dt>Company</dt><dd><select data-account-field="companyId">${companyOptions(account.companyId)}</select></dd></div>
         <div><dt>Brand</dt><dd><select data-account-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></dd></div>
-        <div><dt>Campaign context</dt><dd>${escapeHtml(campaign?.name || campaign?.id || "No campaign")}</dd></div>
         <div><dt>Platform</dt><dd><select data-account-field="platform">${platformOptions(account.platform)}</select></dd></div>
         <div><dt>Handle</dt><dd><input data-account-field="handle" type="text" value="${escapeHtml(account.handle || "")}"></dd></div>
         <div><dt>Browser profile</dt><dd><input data-account-field="browserProfileId" type="text" value="${escapeHtml(account.browserProfileId || "")}"></dd></div>
@@ -1076,6 +1086,47 @@ function renderAccountCreator(selectedAccount = {}) {
       </section>
     </article>
   `;
+}
+
+async function handleAccountScopeChange(event) {
+  const field = event.target.closest("[data-account-scope-field]");
+  if (!field) return;
+  if (field.dataset.accountScopeField === "companyId") {
+    const companyId = normalizeId(field.value, "companyId");
+    const brandId = (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+    state.context = {
+      ...state.context,
+      companyId,
+      brandId,
+    };
+  }
+  if (field.dataset.accountScopeField === "brandId") {
+    state.context = {
+      ...state.context,
+      brandId: normalizeId(field.value, "brandId"),
+    };
+  }
+  const scopedAccounts = accountsForScope(state.context?.companyId, state.context?.brandId);
+  const selected = scopedAccounts[0] || null;
+  selectedAccountId = selected?.id || null;
+  if (selected) {
+    state.context = {
+      ...state.context,
+      platform: selected.platform,
+      socialAccountId: selected.id,
+      browserProfileId: selected.browserProfileId,
+    };
+  } else {
+    state.context = {
+      ...state.context,
+      socialAccountId: "",
+      browserProfileId: "",
+    };
+  }
+  accountCreatorOpen = false;
+  await saveProductionState();
+  renderAccounts(selectedAccountId);
+  renderOperatorDrawer();
 }
 
 function companyName(companyId) {

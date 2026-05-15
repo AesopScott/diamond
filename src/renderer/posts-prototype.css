@@ -1464,17 +1464,31 @@ textarea {
   margin: -12px 0 24px;
 }
 
-.account-scope-strip article {
+.account-scope-strip article,
+.account-scope-strip label {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
+  display: block;
   padding: 14px;
 }
 
-.account-scope-strip strong {
+.account-scope-strip strong,
+.account-scope-strip select {
   display: block;
   font-size: 15px;
   margin-top: 5px;
+}
+
+.account-scope-strip select {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-weight: 850;
+  min-height: 38px;
+  padding: 7px 9px;
+  width: 100%;
 }
 
 .accounts-layout h2 {
