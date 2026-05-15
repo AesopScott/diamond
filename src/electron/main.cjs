@@ -230,6 +230,10 @@ ipcMain.handle("diamond:pick-media", async () => {
   });
   return result.canceled ? [] : result.filePaths;
 });
+ipcMain.handle("diamond:inspect-media", (_event, paths = []) => {
+  return (Array.isArray(paths) ? paths : [])
+    .map((filePath) => inspectMediaPath(filePath));
+});
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();
   const { stagePostWithPlaywright } = await import(pathToFileURL(path.join(PROJECT_ROOT, "src", "playwright-worker.js")).href);
@@ -284,6 +288,31 @@ function audioFileRecord(filePath) {
     name: path.basename(filePath),
     path: filePath,
     url: pathToFileURL(filePath).href,
+  };
+}
+
+function inspectMediaPath(filePath) {
+  const value = String(filePath || "");
+  const extension = path.extname(value).replace(/^\./, "").toLowerCase();
+  const kind = ["mp4", "mov", "webm"].includes(extension)
+    ? "video"
+    : ["png", "jpg", "jpeg", "webp", "gif"].includes(extension) ? "image" : "file";
+  let size = 0;
+  let exists = false;
+  try {
+    const stat = fs.statSync(value);
+    exists = stat.isFile();
+    size = stat.size;
+  } catch {
+    exists = false;
+  }
+  return {
+    path: value,
+    name: path.basename(value),
+    extension,
+    kind,
+    exists,
+    size,
   };
 }
 

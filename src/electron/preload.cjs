@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld("diamond", {
   saveScreenshot: (input) => ipcRenderer.invoke("diamond:save-screenshot", input),
   saveGeneratedAsset: (input) => ipcRenderer.invoke("diamond:save-generated-asset", input),
   pickMedia: () => ipcRenderer.invoke("diamond:pick-media"),
+  inspectMedia: (paths) => ipcRenderer.invoke("diamond:inspect-media", paths),
   stageWithPlaywright: (input) => ipcRenderer.invoke("diamond:stage-with-playwright", input),
 });

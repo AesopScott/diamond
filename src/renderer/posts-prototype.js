@@ -516,6 +516,7 @@ async function handleCalendarAction(event) {
     return;
   }
   if (button.dataset.calendarAction === "stage" && draft) {
+    await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
     schedule.status = draft.status === "staged" ? "staged" : schedule.status;
     schedule.stagedAt = draft.stagedAt;
@@ -1698,6 +1699,7 @@ async function runOperatorAction(action) {
 async function stageOperatorDraft(account, draft) {
   if (!account) return setOperatorMessage("Browser staging blocked: no active account.");
   if (!draft) return setOperatorMessage("Browser staging blocked: no active draft.");
+  await inspectDraftMedia(draft);
   if (!stagePlatformDraft(draft)) {
     await saveProductionState();
     reopenActiveDetail();
@@ -2137,9 +2139,11 @@ function renderPlatformPreview(draft) {
       ${renderStagingPlan(draft, plan)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       <div class="draft-media-row">
-        <button type="button" class="media-button">+ Media</button>
+        <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
+        <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
+      ${renderDraftMediaList(draft)}
       <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
         <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
         <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">Approve</button>
@@ -2160,6 +2164,25 @@ function renderPlatformPreview(draft) {
         <p>${escapeHtml(draft.text)}</p>
       </div>
     </article>
+  `;
+}
+
+function renderDraftMediaList(draft) {
+  const media = draft.media || [];
+  if (!media.length) return "";
+  const inspections = mediaInspectionMap(draft);
+  return `
+    <ul class="draft-media-list" aria-label="${escapeHtml(platformLabel(draft.platform))} media files">
+      ${media.map((filePath) => {
+        const item = inspections.get(filePath) || mediaPathFallback(filePath);
+        return `
+          <li class="${item.exists === false ? "missing" : ""}">
+            <strong>${escapeHtml(item.name)}</strong>
+            <span>${escapeHtml(titleCase(item.kind || "file"))} / ${item.exists === false ? "missing" : item.exists ? "ready" : "unchecked"}</span>
+          </li>
+        `;
+      }).join("")}
+    </ul>
   `;
 }
 
@@ -2245,7 +2268,12 @@ async function handlePlatformDraftAction(event) {
   if (action === "evaluate") evaluatePlatformDraft(draft);
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") schedulePlatformDraft(draft);
-  if (action === "stage") stagePlatformDraft(draft);
+  if (action === "add-media") await attachMediaToDraft(draft);
+  if (action === "copy-media") await copyDraftMediaPaths(draft);
+  if (action === "stage") {
+    await inspectDraftMedia(draft);
+    stagePlatformDraft(draft);
+  }
   if (action === "proof") capturePlatformDraftProof(draft);
   if (action === "posted") markPlatformDraftPosted(draft);
   if (action === "abandoned") markPlatformDraftAbandoned(draft);
@@ -2266,8 +2294,38 @@ async function attachMediaToActiveDrafts() {
       draft.media = [...(draft.media || []), ...files];
       draft.updatedAt = now;
     });
+  await Promise.all(prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId)
+    .map((draft) => inspectDraftMedia(draft)));
   await saveProductionState();
   reopenActiveDetail();
+}
+
+async function attachMediaToDraft(draft) {
+  const files = await window.diamond?.pickMedia?.();
+  if (!files?.length) return;
+  draft.media = [...new Set([...(draft.media || []), ...files])];
+  draft.updatedAt = new Date().toISOString();
+  await inspectDraftMedia(draft);
+}
+
+async function copyDraftMediaPaths(draft) {
+  await window.diamond?.writeClipboard?.((draft.media || []).join("\n"));
+  draft.stageNote = (draft.media || []).length
+    ? `Copied ${draft.media.length} media path(s) for manual upload.`
+    : "No media paths to copy.";
+  draft.updatedAt = new Date().toISOString();
+}
+
+async function inspectDraftMedia(draft) {
+  const media = draft.media || [];
+  if (!media.length) {
+    draft.mediaInspection = [];
+    return [];
+  }
+  const inspected = await window.diamond?.inspectMedia?.(media);
+  draft.mediaInspection = Array.isArray(inspected) ? inspected : media.map(mediaPathFallback);
+  return draft.mediaInspection;
 }
 
 async function addPlatformToActivePackage() {
@@ -2627,6 +2685,7 @@ function platformDraftPreflight(draft) {
   if (!licenseCheck.ok) issues.push(licenseCheck.reason || "License does not allow this brand/platform.");
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   issues.push(...plan.blockers);
+  issues.push(...mediaReadinessIssues(draft, plan));
   return {
     ok: issues.length === 0,
     issues,
@@ -2637,10 +2696,55 @@ function platformDraftPreflight(draft) {
 
 function mediaStatus(draft) {
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
+  const readiness = mediaReadiness(draft, plan);
   const count = (draft.media || []).length;
+  if (count && readiness.missingCount) return `${count} media file${count === 1 ? "" : "s"}, ${readiness.missingCount} missing`;
   if (count) return `${count} media file${count === 1 ? "" : "s"} attached`;
   if (plan.mediaRequired) return "Media required or manual";
   return "No media attached";
+}
+
+function mediaReadinessIssues(draft, plan = platformStagingPlan(draft.platform, { media: draft.media || [] })) {
+  const readiness = mediaReadiness(draft, plan);
+  const issues = [];
+  if (readiness.requiredMissing) issues.push(`${plan.label} requires media before staging.`);
+  if (readiness.missingCount) issues.push(`${readiness.missingCount} attached media file${readiness.missingCount === 1 ? "" : "s"} could not be found.`);
+  if (readiness.typeMismatch) issues.push(readiness.typeMismatch);
+  return issues;
+}
+
+function mediaReadiness(draft, plan = platformStagingPlan(draft.platform, { media: draft.media || [] })) {
+  const media = draft.media || [];
+  const inspections = mediaInspectionMap(draft);
+  const inspectedItems = media.map((filePath) => inspections.get(filePath) || mediaPathFallback(filePath));
+  const missingCount = inspectedItems.filter((item) => item.exists === false).length;
+  const kinds = new Set(inspectedItems.map((item) => item.kind));
+  let typeMismatch = "";
+  if (draft.platform === "youtube-shorts" && media.length && !kinds.has("video")) {
+    typeMismatch = "YouTube Shorts needs video media.";
+  }
+  if (draft.platform === "tiktok" && media.length && !kinds.has("video")) {
+    typeMismatch = "TikTok should use video media.";
+  }
+  return {
+    requiredMissing: Boolean(plan.mediaRequired && !media.length),
+    missingCount,
+    typeMismatch,
+  };
+}
+
+function mediaInspectionMap(draft) {
+  return new Map((draft.mediaInspection || []).map((item) => [item.path, item]));
+}
+
+function mediaPathFallback(filePath) {
+  const value = String(filePath || "");
+  const name = value.split(/[\\/]/).filter(Boolean).pop() || value || "media";
+  const extension = (name.split(".").pop() || "").toLowerCase();
+  const kind = ["mp4", "mov", "webm"].includes(extension)
+    ? "video"
+    : ["png", "jpg", "jpeg", "webp", "gif"].includes(extension) ? "image" : "file";
+  return { path: value, name, extension, kind, exists: undefined, size: 0 };
 }
 
 function proofStatus(draft, account) {

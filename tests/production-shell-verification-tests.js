@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const html = readFileSync(new URL("../src/renderer/posts-prototype.html", import.meta.url), "utf8");
 const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/renderer/posts-prototype.css", import.meta.url), "utf8");
+const preload = readFileSync(new URL("../src/electron/preload.cjs", import.meta.url), "utf8");
 
 const staticButtons = [...html.matchAll(/<button\b[^>]*>/g)].map((match) => match[0]);
 const riskyButtons = staticButtons.filter((button) => {
@@ -17,6 +18,7 @@ assert.match(js, /analytics-export/);
 assert.match(js, /attachMediaToActiveDrafts/);
 assert.match(js, /addPlatformToActivePackage/);
 assert.match(js, /pickMedia/);
+assert.match(preload, /inspectMedia/);
 assert.match(html, /disabled title="Filtering lands after the default shell flip\."/);
 assert.match(html, /disabled title="List view lands after the default shell flip\."/);
 assert.match(css, /button:disabled/);

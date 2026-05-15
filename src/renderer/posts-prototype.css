@@ -860,6 +860,43 @@ textarea {
   line-height: 1.35;
 }
 
+.draft-media-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.draft-media-list li {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px 10px;
+}
+
+.draft-media-list li.missing {
+  border-color: #7a2a2a;
+}
+
+.draft-media-list strong {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-media-list span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .platform-note {
   background: var(--card);
   border: 1px solid var(--line);
