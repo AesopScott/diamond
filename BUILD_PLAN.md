@@ -43,6 +43,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Draft text area
   - [x] Numbered action buttons
   - [x] Equal-size action button grid
+  - [x] Button-level explanations and hover help
   - [x] Evaluate draft
   - [x] Approve draft
   - [x] Stage in browser
@@ -259,6 +260,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Searchable in-app operator manual browser
   - [x] Contextual next-step help cards in platform drafts
   - [x] Active draft workflow checklist with next-step state
+  - [x] Button-level workflow explanations
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

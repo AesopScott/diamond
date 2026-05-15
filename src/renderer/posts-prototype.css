@@ -1157,19 +1157,60 @@ textarea {
 }
 
 .platform-action-row button {
+  align-items: center;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
   cursor: pointer;
+  display: grid;
   font-size: 13px;
   font-weight: 900;
-  min-height: 36px;
-  padding: 8px;
+  gap: 8px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  min-height: 64px;
+  padding: 9px 10px;
+  text-align: left;
 }
 
 .platform-action-row button:hover {
   border-color: #e5e5e8;
+}
+
+.action-number {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
+  border-radius: 999px;
+  color: var(--accent-text);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 1000;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.action-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.action-copy strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.action-copy small {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .platform-evaluation {
@@ -2806,6 +2847,14 @@ textarea {
 
   .platform-action-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .action-copy strong {
+    font-size: 12px;
+  }
+
+  .action-copy small {
+    font-size: 10px;
   }
 
   .draft-reliability-grid {

@@ -2694,18 +2694,7 @@ function renderPlatformPreview(draft) {
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
       ${renderDraftMediaList(draft)}
-      <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
-        <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Evaluate"))}</button>
-        <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Approve"))}</button>
-        <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Schedule"))}</button>
-        <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Stage"))}</button>
-        <button type="button" data-platform-action="proof" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Capture Proof"))}</button>
-        <button type="button" data-platform-action="copy-proof" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Proof"))}</button>
-        <button type="button" data-platform-action="copy-url" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Url"))}</button>
-        <button type="button" data-platform-action="copy-screenshot" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Copy Screenshot"))}</button>
-        <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Mark Posted"))}</button>
-        <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">${escapeHtml(t("Abandon"))}</button>
-      </div>
+      ${renderPlatformActionRow(draft, preflight, plan)}
       ${renderDraftEvaluation(draft)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
@@ -2719,6 +2708,93 @@ function renderPlatformPreview(draft) {
       </div>
     </article>
   `;
+}
+
+function renderPlatformActionRow(draft, preflight, plan) {
+  const actions = platformActionHelpItems(draft, preflight, plan);
+  return `
+    <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
+      ${actions.map((item, index) => `
+        <button type="button"
+          data-platform-action="${escapeHtml(item.action)}"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          title="${escapeHtml(item.help)}"
+          aria-label="${escapeHtml(`${item.label}: ${item.help}`)}">
+          <span class="action-number">${index + 1}</span>
+          <span class="action-copy">
+            <strong>${escapeHtml(t(item.label))}</strong>
+            <small>${escapeHtml(item.shortHelp)}</small>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function platformActionHelpItems(draft, preflight, plan) {
+  const platform = platformLabel(draft.platform);
+  return [
+    {
+      action: "evaluate",
+      label: "Evaluate",
+      shortHelp: "Check risk",
+      help: "Checks the draft for brand fit, claims, duplicate ideas, quality, and risk before approval.",
+    },
+    {
+      action: "approve",
+      label: "Approve",
+      shortHelp: "Allow staging",
+      help: "Marks the draft ready to stage if the evaluation is not blocked.",
+    },
+    {
+      action: "schedule",
+      label: "Schedule",
+      shortHelp: "Put on calendar",
+      help: "Adds this draft to Diamond's schedule so it can be staged or posted at the planned time.",
+    },
+    {
+      action: "stage",
+      label: "Stage",
+      shortHelp: "Open composer",
+      help: `Opens the ${platform} composer and prepares the post. You still publish manually inside the social site.`,
+    },
+    {
+      action: "proof",
+      label: "Capture Proof",
+      shortHelp: "Save evidence",
+      help: "Records proof after staging or manual posting, usually a screenshot, URL, or run record.",
+    },
+    {
+      action: "copy-proof",
+      label: "Copy Proof",
+      shortHelp: "Copy summary",
+      help: "Copies the proof summary so you can paste it into notes, support, or a review thread.",
+    },
+    {
+      action: "copy-url",
+      label: "Copy Url",
+      shortHelp: "Copy link",
+      help: "Copies the staged or published platform URL when Diamond has one.",
+    },
+    {
+      action: "copy-screenshot",
+      label: "Copy Screenshot",
+      shortHelp: "Copy path",
+      help: "Copies the screenshot path when a proof screenshot has been captured.",
+    },
+    {
+      action: "posted",
+      label: "Mark Posted",
+      shortHelp: "Finish record",
+      help: "Use this only after the post is live. It moves the draft into posted status for queues and metrics.",
+    },
+    {
+      action: "abandoned",
+      label: "Abandon",
+      shortHelp: "Stop draft",
+      help: "Stops this draft from moving forward when you decide not to publish it.",
+    },
+  ];
 }
 
 function renderContextHelpCard(draft, preflight, plan) {
