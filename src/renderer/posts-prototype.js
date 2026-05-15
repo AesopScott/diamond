@@ -279,7 +279,9 @@ applyBeginnerMode();
 renderBoard(board);
 renderCalendar();
 renderAccounts();
+renderCompanies();
 renderBrands();
+renderCampaigns();
 renderTemplates();
 renderSettings();
 renderAnalytics();
@@ -574,7 +576,10 @@ function wirePrototypeControls() {
   });
   document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
+  document.querySelector("#company-workspace")?.addEventListener("click", handleCompanyWorkspaceClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
+  document.querySelector("#campaign-workspace")?.addEventListener("click", handleCampaignWorkspaceClick);
+  document.querySelector("#campaign-workspace")?.addEventListener("change", handleCampaignWorkspaceChange);
   document.querySelector("#templates-workspace")?.addEventListener("change", handleTemplateScopeChange);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
@@ -621,7 +626,9 @@ function showPrototypeView(viewId) {
   if (viewId === "calendar-view") renderCalendar();
   if (viewId === "templates-view") renderTemplates();
   if (viewId === "accounts-view") renderAccounts();
+  if (viewId === "companies-view") renderCompanies();
   if (viewId === "brands-view") renderBrands();
+  if (viewId === "campaigns-view") renderCampaigns();
   if (viewId === "settings-view") renderSettings();
 }
 
@@ -640,7 +647,9 @@ function destroyAccountLoginWebview() {
 async function refreshProductionViews() {
   board = buildPostBoardView(prototypeModel);
   renderAccounts(selectedAccountId);
+  renderCompanies();
   renderBrands();
+  renderCampaigns();
   renderCalendar();
   renderSettings();
   renderAnalytics();
@@ -1260,6 +1269,40 @@ function platformOptions(selectedPlatform) {
   `).join("");
 }
 
+function renderCompanies() {
+  const target = document.querySelector("#company-workspace");
+  if (!target) return;
+  const company = (state.companies || []).find((item) => item.id === state.context?.companyId) || (state.companies || [])[0] || {};
+  const brands = (state.brands || []).filter((brand) => brand.companyId === company.id);
+  const campaigns = (state.campaigns || []).filter((campaign) => campaign.companyId === company.id);
+  target.innerHTML = `
+    <aside class="brand-overview" aria-label="Company overview">
+      <article class="brand-identity-card">
+        <span class="eyebrow">Company</span>
+        <h2>${escapeHtml(company.name || company.id || "Company")}</h2>
+        <dl class="brand-facts">
+          <div><dt>Company</dt><dd><select data-company-field="contextCompanyId">${companyOptions(company.id)}</select></dd></div>
+          <div><dt>Company name</dt><dd><input data-company-field="companyName" type="text" value="${escapeHtml(company.name || "")}"></dd></div>
+        </dl>
+        <section class="account-actions" aria-label="Company actions">
+          <button type="button" data-company-action="save">Save company</button>
+          <button type="button" data-company-action="set-active">Set active company</button>
+        </section>
+      </article>
+    </aside>
+    <section class="brand-panels" aria-label="Company relationships">
+      <article class="brand-panel">
+        <header><h3>Brands owned by this company</h3><span class="count">${brands.length}</span></header>
+        ${renderSimpleList(brands.map((brand) => brand.name || brand.id), "No brands assigned yet.")}
+      </article>
+      <article class="brand-panel">
+        <header><h3>Campaigns under this company</h3><span class="count">${campaigns.length}</span></header>
+        ${renderSimpleList(campaigns.map((campaign) => `${campaign.name || campaign.id} / ${brandName(campaign.brandId)}`), "No campaigns assigned yet.")}
+      </article>
+    </section>
+  `;
+}
+
 function renderBrands() {
   const target = document.querySelector("#brand-workspace");
   if (!target) return;
@@ -1267,25 +1310,18 @@ function renderBrands() {
   const brand = (state.brands || []).find((item) => item.id === state.context?.brandId && item.companyId === company.id)
     || (state.brands || []).find((item) => item.companyId === company.id)
     || {};
-  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId && item.companyId === company.id && item.brandId === brand.id)
-    || (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id)
-    || {};
-  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || {};
   const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || {};
   const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || {};
+  const campaigns = (state.campaigns || []).filter((item) => item.companyId === company.id && item.brandId === brand.id);
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Brand overview">
       <article class="brand-identity-card">
-        <span class="eyebrow">Company</span>
-        <h2>${escapeHtml(company.name || company.id || "Company")}</h2>
+        <span class="eyebrow">Brand</span>
+        <h2>${escapeHtml(brand.name || brand.id || "Brand")}</h2>
         <dl class="brand-facts">
           <div><dt>Company</dt><dd><select data-brand-field="contextCompanyId">${companyOptions(company.id)}</select></dd></div>
           <div><dt>Brand</dt><dd><select data-brand-field="contextBrandId">${brandOptions(company.id, brand.id)}</select></dd></div>
-          <div><dt>Campaign</dt><dd><select data-brand-field="contextCampaignId">${campaignOptions(company.id, brand.id, campaign.id)}</select></dd></div>
-          <div><dt>Company name</dt><dd><input data-brand-field="companyName" type="text" value="${escapeHtml(company.name || "")}"></dd></div>
           <div><dt>Brand name</dt><dd><input data-brand-field="brandName" type="text" value="${escapeHtml(brand.name || "")}"></dd></div>
-          <div><dt>Campaign name</dt><dd><input data-brand-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
-          <div><dt>Status</dt><dd><input data-brand-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
           <div><dt>Languages</dt><dd><input data-brand-field="brandLanguages" type="text" value="${escapeHtml((brand.languages || []).join(", ") || "en")}"></dd></div>
         </dl>
         <section class="account-actions" aria-label="Brand actions">
@@ -1294,16 +1330,11 @@ function renderBrands() {
         </section>
       </article>
       <article class="strategy-card">
-        <h3>Primary CTA</h3>
-        <textarea data-brand-field="strategyCta" rows="3">${escapeHtml(strategy.cta || "")}</textarea>
-        <h3>Offer</h3>
-        <textarea data-brand-field="strategyOffer" rows="3">${escapeHtml(strategy.offer || "")}</textarea>
+        <h3>Campaigns assigned to this brand</h3>
+        ${renderSimpleList(campaigns.map((campaign) => campaign.name || campaign.id), "No campaigns assigned. Use the Campaigns tab to create one.")}
       </article>
     </aside>
     <section class="brand-panels" aria-label="Brand operating rules">
-      ${renderEditableBrandPanel("Goals", "strategyGoals", strategy.goals, "One goal per line")}
-      ${renderEditableBrandPanel("Audience", "strategyAudience", strategy.audience, "One audience segment per line")}
-      ${renderEditableBrandPanel("Pillars", "strategyPillars", strategy.pillars, "One content pillar per line")}
       ${renderEditableBrandPanel("Voice", "brandVoice", [library.voice].filter(Boolean), "Describe how the brand should sound")}
       ${renderEditableBrandPanel("Approved phrases", "approvedPhrases", library.approvedPhrases, "One approved phrase per line")}
       ${renderEditableBrandPanel("Banned phrases", "bannedPhrases", library.bannedPhrases, "One banned phrase per line")}
@@ -1311,9 +1342,14 @@ function renderBrands() {
       ${renderEditableBrandPanel("Free-to-play language", "freeToPlayLanguage", claims.freeToPlayLanguage, "One approved free-play phrase per line")}
       ${renderEditableBrandPanel("Requires review", "requiresReviewClaims", claims.requiresReviewClaims, "One review trigger per line")}
       ${renderEditableBrandPanel("Blocked claims", "blockedClaims", claims.blockedClaims, "One blocked claim per line")}
-      ${renderEditableBrandPanel("Reference accounts", "referenceAccounts", strategy.referenceAccounts, "One reference account per line")}
     </section>
   `;
+}
+
+function renderSimpleList(items = [], emptyText = "Nothing assigned yet.") {
+  const values = (items || []).filter(Boolean);
+  if (!values.length) return `<p>${escapeHtml(emptyText)}</p>`;
+  return `<ul>${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
 function renderEditableBrandPanel(title, field, items = [], placeholder = "") {
@@ -1334,6 +1370,28 @@ function renderBrandPanel(title, items = []) {
   return renderEditableBrandPanel(title, normalizeId(title, "brandPanel"), items);
 }
 
+async function handleCompanyWorkspaceClick(event) {
+  const button = event.target.closest("[data-company-action]");
+  if (!button) return;
+  const workspace = document.querySelector("#company-workspace");
+  const companyId = normalizeId(workspace?.querySelector('[data-company-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  if (company && button.dataset.companyAction === "save") {
+    company.name = workspace?.querySelector('[data-company-field="companyName"]')?.value || company.name;
+  }
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId: (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "",
+    campaignId: "",
+  };
+  await saveProductionState();
+  renderCompanies();
+  renderBrands();
+  renderCampaigns();
+  renderTemplates();
+}
+
 async function addCompanyRecord() {
   const name = uniqueRecordName("New company", state.companies);
   const company = createCompanyRecord({ name });
@@ -1346,7 +1404,9 @@ async function addCompanyRecord() {
     campaignId: "",
   };
   await saveProductionState();
+  renderCompanies();
   renderBrands();
+  renderCampaigns();
   renderAccounts(selectedAccountId);
   renderTemplates();
 }
@@ -1366,7 +1426,9 @@ async function addBrandRecord() {
   };
   await ensureBrandSupportRecords(brand);
   await saveProductionState();
+  renderCompanies();
   renderBrands();
+  renderCampaigns();
   renderAccounts(selectedAccountId);
   renderTemplates();
 }
@@ -1387,7 +1449,8 @@ async function addCampaignRecord() {
   };
   await ensureStrategyRecord(campaign);
   await saveProductionState();
-  renderBrands();
+  renderCompanies();
+  renderCampaigns();
   renderTemplates();
 }
 
@@ -1650,6 +1713,8 @@ async function handleBrandWorkspaceClick(event) {
   await saveProductionState();
   renderBrands();
   renderAccounts(selectedAccountId);
+  renderCampaigns();
+  renderTemplates();
   renderOperatorDrawer();
 }
 
@@ -1659,28 +1724,11 @@ function saveBrandWorkspace() {
   const listValueFor = (field) => listValueForBrandField(workspace, field);
   const companyId = normalizeId(valueFor("contextCompanyId") || state.context?.companyId, "companyId");
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
-  const campaignId = normalizeId(valueFor("contextCampaignId") || state.context?.campaignId, "campaignId");
   const company = (state.companies || []).find((item) => item.id === companyId);
   const brand = (state.brands || []).find((item) => item.id === brandId);
-  const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
-  if (company) company.name = valueFor("companyName") || company.name;
   if (brand) {
     brand.name = valueFor("brandName") || brand.name;
     brand.languages = valueFor("brandLanguages").split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  if (campaign) {
-    campaign.name = valueFor("campaignName") || campaign.name;
-    campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
-  }
-  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
-  if (strategy) {
-    strategy.cta = valueFor("strategyCta") || strategy.cta;
-    strategy.offer = valueFor("strategyOffer") || strategy.offer;
-    strategy.goals = listValueFor("strategyGoals");
-    strategy.audience = listValueFor("strategyAudience");
-    strategy.pillars = listValueFor("strategyPillars");
-    strategy.referenceAccounts = listValueFor("referenceAccounts");
-    strategy.updatedAt = new Date().toISOString();
   }
   const library = (state.brandLibraries || []).find((item) => item.brandId === brandId);
   if (library) {
@@ -1696,6 +1744,132 @@ function saveBrandWorkspace() {
     claims.requiresReviewClaims = listValueFor("requiresReviewClaims");
     claims.blockedClaims = listValueFor("blockedClaims");
     claims.updatedAt = new Date().toISOString();
+  }
+  return { companyId, brandId };
+}
+
+function renderCampaigns() {
+  const target = document.querySelector("#campaign-workspace");
+  if (!target) return;
+  const company = (state.companies || []).find((item) => item.id === state.context?.companyId) || (state.companies || [])[0] || {};
+  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId && item.companyId === company.id)
+    || (state.brands || []).find((item) => item.companyId === company.id)
+    || {};
+  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId && item.companyId === company.id && item.brandId === brand.id)
+    || (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id)
+    || {};
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || {};
+  target.innerHTML = `
+    <aside class="brand-overview" aria-label="Campaign overview">
+      <article class="brand-identity-card">
+        <span class="eyebrow">Campaign</span>
+        <h2>${escapeHtml(campaign.name || campaign.id || "Campaign")}</h2>
+        <dl class="brand-facts">
+          <div><dt>Company</dt><dd><select data-campaign-field="contextCompanyId">${companyOptions(company.id)}</select></dd></div>
+          <div><dt>Brand</dt><dd><select data-campaign-field="contextBrandId">${brandOptions(company.id, brand.id)}</select></dd></div>
+          <div><dt>Campaign</dt><dd><select data-campaign-field="contextCampaignId">${campaignOptions(company.id, brand.id, campaign.id)}</select></dd></div>
+          <div><dt>Campaign name</dt><dd><input data-campaign-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
+          <div><dt>Status</dt><dd><input data-campaign-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
+          <div><dt>Assigned brand</dt><dd>${escapeHtml(brand.name || brand.id || "No brand selected")}</dd></div>
+        </dl>
+        <section class="account-actions" aria-label="Campaign actions">
+          <button type="button" data-campaign-action="save">Save campaign</button>
+          <button type="button" data-campaign-action="set-active">Set active campaign</button>
+        </section>
+      </article>
+      <article class="strategy-card">
+        <h3>Primary CTA</h3>
+        <textarea data-campaign-field="strategyCta" rows="3">${escapeHtml(strategy.cta || "")}</textarea>
+        <h3>Offer</h3>
+        <textarea data-campaign-field="strategyOffer" rows="3">${escapeHtml(strategy.offer || "")}</textarea>
+      </article>
+    </aside>
+    <section class="brand-panels" aria-label="Campaign strategy">
+      ${renderEditableCampaignPanel("Goals", "strategyGoals", strategy.goals, "One campaign goal per line")}
+      ${renderEditableCampaignPanel("Audience", "strategyAudience", strategy.audience, "One audience segment per line")}
+      ${renderEditableCampaignPanel("Pillars", "strategyPillars", strategy.pillars, "One campaign content pillar per line")}
+      ${renderEditableCampaignPanel("Reference accounts", "referenceAccounts", strategy.referenceAccounts, "One reference account per line")}
+    </section>
+  `;
+}
+
+function renderEditableCampaignPanel(title, field, items = [], placeholder = "") {
+  const list = (items || []).filter(Boolean);
+  return `
+    <article class="brand-panel editable-brand-panel">
+      <header>
+        <h3>${escapeHtml(title)}</h3>
+        <span class="count">${list.length}</span>
+      </header>
+      <textarea data-campaign-field="${escapeHtml(field)}" rows="5" placeholder="${escapeHtml(placeholder)}">${escapeHtml(list.join("\n"))}</textarea>
+    </article>
+  `;
+}
+
+async function handleCampaignWorkspaceChange(event) {
+  const field = event.target.closest("[data-campaign-field]");
+  if (!field || !["contextCompanyId", "contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
+  if (field.dataset.campaignField === "contextCompanyId") {
+    const companyId = normalizeId(field.value, "companyId");
+    const brandId = (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === companyId && campaign.brandId === brandId)?.id || "";
+    state.context = { ...state.context, companyId, brandId, campaignId };
+  }
+  if (field.dataset.campaignField === "contextBrandId") {
+    const brandId = normalizeId(field.value, "brandId");
+    const campaignId = (state.campaigns || []).find((campaign) => campaign.brandId === brandId)?.id || "";
+    state.context = { ...state.context, brandId, campaignId };
+  }
+  if (field.dataset.campaignField === "contextCampaignId") {
+    state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+  }
+  await saveProductionState();
+  renderCampaigns();
+}
+
+async function handleCampaignWorkspaceClick(event) {
+  const button = event.target.closest("[data-campaign-action]");
+  if (!button) return;
+  const scope = saveCampaignWorkspace();
+  state.context = { ...state.context, ...scope };
+  await saveProductionState();
+  renderCampaigns();
+  renderTemplates();
+  renderOperatorDrawer();
+}
+
+function saveCampaignWorkspace() {
+  const workspace = document.querySelector("#campaign-workspace");
+  const valueFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.value || "";
+  const listValueFor = (field) => (valueFor(field) || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const companyId = normalizeId(valueFor("contextCompanyId") || state.context?.companyId, "companyId");
+  const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
+  const campaignId = normalizeId(valueFor("contextCampaignId") || state.context?.campaignId, "campaignId");
+  const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
+  if (campaign) {
+    campaign.companyId = companyId;
+    campaign.brandId = brandId;
+    campaign.name = valueFor("campaignName") || campaign.name;
+    campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
+  }
+  let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
+  if (!strategy && campaign) {
+    ensureStrategyRecord(campaign);
+    strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
+  }
+  if (strategy) {
+    strategy.companyId = companyId;
+    strategy.brandId = brandId;
+    strategy.cta = valueFor("strategyCta") || strategy.cta;
+    strategy.offer = valueFor("strategyOffer") || strategy.offer;
+    strategy.goals = listValueFor("strategyGoals");
+    strategy.audience = listValueFor("strategyAudience");
+    strategy.pillars = listValueFor("strategyPillars");
+    strategy.referenceAccounts = listValueFor("referenceAccounts");
+    strategy.updatedAt = new Date().toISOString();
   }
   return { companyId, brandId, campaignId };
 }
@@ -2811,7 +2985,9 @@ function applyOperatorLanguage() {
   setStaticText('a[data-view="templates-view"]', "Templates");
   setStaticText('a[data-view="calendar-view"]', "Calendar");
   setStaticText('a[data-view="accounts-view"]', "Accounts");
+  setStaticText('a[data-view="companies-view"]', "Companies");
   setStaticText('a[data-view="brands-view"]', "Brands");
+  setStaticText('a[data-view="campaigns-view"]', "Campaigns");
   setStaticText('a[data-view="settings-view"]', "Settings");
   setStaticText("#operator-toggle", "Operator");
   setStaticText("#posts-view h1", "Posts");
@@ -2819,7 +2995,9 @@ function applyOperatorLanguage() {
   setStaticText("#templates-heading", "Templates");
   setStaticText("#calendar-heading", "Calendar");
   setStaticText("#accounts-heading", "Accounts");
+  setStaticText("#companies-heading", "Companies");
   setStaticText("#brands-heading", "Brands");
+  setStaticText("#campaigns-heading", "Campaigns");
   setStaticText("#settings-heading", "Settings");
   setStaticText("#create-post", "Create");
   setStaticText("#analytics-export", "Export");

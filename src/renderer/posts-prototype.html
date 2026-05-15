@@ -19,7 +19,9 @@
           <a href="#templates" data-view="templates-view">Templates</a>
           <a href="#calendar" data-view="calendar-view">Calendar</a>
           <a href="#accounts" data-view="accounts-view">Accounts</a>
+          <a href="#companies" data-view="companies-view">Companies</a>
           <a href="#brands" data-view="brands-view">Brands</a>
+          <a href="#campaigns" data-view="campaigns-view">Campaigns</a>
           <a href="#settings" data-view="settings-view">Settings</a>
         </nav>
         <button id="operator-toggle" class="operator-toggle" type="button" aria-controls="operator-drawer" aria-expanded="false">
@@ -163,25 +165,46 @@
             <div id="account-detail" class="account-detail"></div>
           </section>
         </section>
+        <section id="companies-view" class="prototype-view hidden" aria-labelledby="companies-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="companies-heading">Companies</h1>
+              <p>Create and manage the legal or operating company that owns brands.</p>
+            </div>
+            <div class="header-actions">
+              <button id="add-company-record" class="create-button" type="button">Add company</button>
+            </div>
+          </header>
+          <section id="company-workspace" class="brand-workspace company-workspace" aria-label="Company workspace"></section>
+        </section>
         <section id="brands-view" class="prototype-view hidden" aria-labelledby="brands-heading">
           <header class="prototype-header">
             <div>
               <h1 id="brands-heading">Brands</h1>
-              <p>Keep company identity, campaign strategy, voice, and claim rules in one place.</p>
+              <p>Manage brand identity, voice, approved language, and claim rules.</p>
             </div>
             <div class="header-actions">
-              <button id="add-company-record" class="create-button secondary" type="button">Add company</button>
-              <button id="add-brand-record" class="create-button secondary" type="button">Add brand</button>
-              <button id="add-campaign-record" class="create-button" type="button">Add campaign</button>
+              <button id="add-brand-record" class="create-button" type="button">Add brand</button>
             </div>
           </header>
           <section class="prototype-toolbar" aria-label="Brand filters">
             <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Active company</button>
-            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Campaigns</button>
             <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Claim rules</button>
             <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Voice</button>
           </section>
           <section id="brand-workspace" class="brand-workspace" aria-label="Brand strategy workspace"></section>
+        </section>
+        <section id="campaigns-view" class="prototype-view hidden" aria-labelledby="campaigns-heading">
+          <header class="prototype-header">
+            <div>
+              <h1 id="campaigns-heading">Campaigns</h1>
+              <p>Create campaigns, assign them to brands, and define campaign-specific strategy.</p>
+            </div>
+            <div class="header-actions">
+              <button id="add-campaign-record" class="create-button" type="button">Add campaign</button>
+            </div>
+          </header>
+          <section id="campaign-workspace" class="brand-workspace campaign-workspace" aria-label="Campaign workspace"></section>
         </section>
         <section id="settings-view" class="prototype-view hidden" aria-labelledby="settings-heading">
           <header class="prototype-header">
