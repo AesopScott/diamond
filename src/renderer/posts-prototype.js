@@ -2327,6 +2327,7 @@ function renderPlatformProofDashboardPanel(dashboard) {
       <div class="platform-proof-next ${dashboard.complete ? "ready" : "needs_proof"}">
         <strong>${escapeHtml(dashboard.complete ? "All platform proof gates are complete" : `Next proof target: ${dashboard.nextPlatform || "No platform"}`)}</strong>
         <span>${escapeHtml(dashboard.complete ? "Keep recording proof as platforms change." : (dashboard.nextActions || [])[0] || "Record the next platform proof requirement.")}</span>
+        ${dashboard.complete ? "" : `<button type="button" data-operator-action="focus-proof-account" data-proof-account-id="${escapeHtml(dashboard.queue?.find((item) => item.status === "needs_proof")?.accountId || "")}">Open proof target</button>`}
       </div>
     </section>
   `;
@@ -2350,6 +2351,7 @@ function renderPlatformProofQueuePanel(queue = []) {
             <ul>
               ${(item.nextActions || []).slice(0, 4).map((action) => `<li>${escapeHtml(action)}</li>`).join("") || `<li>${escapeHtml(item.status === "monitoring_only" ? "Monitoring only. No publishing proof required." : "Proof requirements are complete.")}</li>`}
             </ul>
+            <button type="button" data-operator-action="focus-proof-account" data-proof-account-id="${escapeHtml(item.accountId || "")}">${escapeHtml(item.status === "ready" || item.status === "monitoring_only" ? "Review account" : "Work proof")}</button>
           </article>
         `).join("")}
       </div>
@@ -2360,12 +2362,15 @@ function renderPlatformProofQueuePanel(queue = []) {
 async function handleOperatorAction(event) {
   const button = event.target.closest("[data-operator-action]");
   if (!button || button.disabled) return;
-  await runOperatorAction(button.dataset.operatorAction);
+  await runOperatorAction(button.dataset.operatorAction, button.dataset);
 }
 
-async function runOperatorAction(action) {
+async function runOperatorAction(action, dataset = {}) {
   const account = activeSocialAccount();
   const draft = activeOperatorDraft(account);
+  if (action === "focus-proof-account") {
+    return focusProofAccount(dataset.proofAccountId || "");
+  }
   if (action === "open-account") {
     const url = resolveLoginUrl(account);
     if (!url) return setOperatorMessage("Open account blocked: login URL is missing.");
@@ -2408,6 +2413,24 @@ async function runOperatorAction(action) {
     await window.diamond?.writeClipboard?.(platformProofQueueMarkdown(buildPlatformProofQueue(state)));
     return setOperatorMessage("Copied the platform proof queue.");
   }
+}
+
+async function focusProofAccount(accountId) {
+  const account = (state.socialAccounts || []).find((item) => item.id === accountId);
+  if (!account) return setOperatorMessage("Proof target blocked: account was not found.");
+  setActiveAccount(account);
+  const draft = activeOperatorDraft(account);
+  if (draft?.postPackageId) {
+    openPackageDetail(draft.postPackageId);
+  } else {
+    navigatePrototypeView("posts-view");
+  }
+  renderAccounts(account.id);
+  renderOperatorDrawer();
+  window.requestAnimationFrame(() => {
+    document.querySelector(".proof-session-panel")?.scrollIntoView({ block: "start", inline: "nearest", behavior: "smooth" });
+  });
+  return setOperatorMessage(`Active proof target set to ${platformLabel(account.platform)} ${account.handle || account.id}.`);
 }
 
 async function stageOperatorDraft(account, draft) {

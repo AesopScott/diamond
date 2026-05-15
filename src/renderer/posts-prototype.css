@@ -2942,6 +2942,29 @@ textarea {
   line-height: 1.35;
 }
 
+.platform-proof-next button,
+.platform-proof-queue-item button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 1000;
+  min-height: 34px;
+  padding: 8px 10px;
+}
+
+.platform-proof-next button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.platform-proof-next button:hover,
+.platform-proof-queue-item button:hover {
+  border-color: var(--accent);
+}
+
 .platform-proof-queue-item {
   background: var(--card);
   border: 1px solid var(--line);
@@ -2986,6 +3009,11 @@ textarea {
   line-height: 1.35;
   margin: 0;
   padding-left: 18px;
+}
+
+.platform-proof-queue-item button {
+  margin-top: 10px;
+  width: 100%;
 }
 
 .operator-check {
