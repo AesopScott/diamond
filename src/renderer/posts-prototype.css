@@ -1752,6 +1752,55 @@ textarea {
   margin: 0;
 }
 
+.auto-publish-gate-panel {
+  grid-column: span 1;
+}
+
+.settings-note {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0 0 14px;
+}
+
+.auto-publish-checks {
+  display: grid;
+  gap: 8px;
+}
+
+.auto-publish-check {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid #ff6969;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.auto-publish-check.ready {
+  border-left-color: #53dc8d;
+}
+
+.auto-publish-check header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.auto-publish-check span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.auto-publish-check p {
+  color: var(--muted);
+  line-height: 1.35;
+  margin: 0;
+}
+
 .editable-settings input,
 .editable-settings select {
   background: var(--input-bg);
@@ -2443,6 +2492,10 @@ textarea {
   }
 
   .expert-checklist-panel {
+    grid-column: auto;
+  }
+
+  .auto-publish-gate-panel {
     grid-column: auto;
   }
 

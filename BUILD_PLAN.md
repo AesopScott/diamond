@@ -10,7 +10,7 @@ This is the current order for finishing the remaining checklist items.
 
 1. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
 2. Scott workflow signoff.
-3. Decide whether `auto_publish` ever becomes available.
+3. Revisit whether `auto_publish` should ever move from locked to enabled after proof/signoff.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -246,7 +246,9 @@ This is the current order for finishing the remaining checklist items.
   - [x] Copyable expert checklist report
   - [ ] Scott workflow signoff
   - [ ] Repeated staging proof
-  - [ ] Decision on whether `auto_publish` ever becomes available
+  - [x] `auto_publish` decision gate built and locked by default
+  - [x] Copyable `auto_publish` readiness report
+  - [ ] Future product decision on whether `auto_publish` ever becomes enabled
 - [ ] User onboarding and guided help
   - [x] In-app user guide
   - [x] Screen-highlight tour scaffold
@@ -358,7 +360,7 @@ Until those checks pass, the plan is a strong hypothesis, not a final operating 
 |---|---|
 | `draft_only` | Generate copy and assets only. |
 | `stage_for_review` | Fill the platform composer, attach media, screenshot, and stop before publish. |
-| `auto_publish` | Publish only trusted, pre-approved categories after staged posting proves reliable. |
+| `auto_publish` | Locked by default. It can only become ready after explicit policy enablement, Scott workflow signoff, platform proof, automation licensing, and draft-level approval/quality gates. |
 
 ## Platform Skills
 

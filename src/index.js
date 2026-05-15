@@ -1,5 +1,6 @@
 export * from "./cadence.js";
 export * from "./account-setup.js";
+export * from "./auto-publish-policy.js";
 export * from "./constants.js";
 export * from "./content-generation.js";
 export * from "./draft.js";

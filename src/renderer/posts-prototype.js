@@ -32,7 +32,9 @@ import {
   buildFirestoreSyncBundle,
   buildTourVoiceoverScript,
   createElevenLabsSpeechRequest,
+  autoPublishDecisionMarkdown,
   expertChecklistMarkdown,
+  evaluateAutoPublishReadiness,
   getDiamondGuideSections,
   getDiamondTourSteps,
   captureRedditMonitoringItem,
@@ -158,6 +160,7 @@ const OPERATOR_LABELS_ES = {
   "Export Firestore Bundle": "Exportar paquete Firestore",
   "Copy Legal Summary": "Copiar resumen legal",
   "Copy Expert Checklist": "Copiar lista experta",
+  "Copy Auto-Publish Decision": "Copiar decision auto-publicar",
   "Copy User Guide": "Copiar guia",
   "Copy Tour Script": "Copiar guion",
   "Generate Voiceovers": "Generar voces",
@@ -172,6 +175,7 @@ const OPERATOR_LABELS_ES = {
   "Screenshot": "Captura",
   "Run Id": "ID de ejecucion",
   "Expert Checklist": "Lista experta",
+  "Auto-Publish Gate": "Control auto-publicar",
   "Account Proofs": "Pruebas de cuenta",
   "Next": "Siguiente",
   "Social Templates": "Plantillas sociales",
@@ -1299,6 +1303,11 @@ function renderSettings() {
     requestedBrands: [state.context?.brandId].filter(Boolean),
     requestedPlatforms: [state.context?.platform].filter(Boolean),
   });
+  const automationLicenseCheck = evaluateDiamondLicense(license, {
+    requestedBrands: [state.context?.brandId].filter(Boolean),
+    requestedPlatforms: [state.context?.platform].filter(Boolean),
+    requestedAutomationPlatforms: [state.context?.platform].filter(Boolean),
+  });
   const model = buildDiamondLicenseModel();
   const firebase = resolveFirebaseAdminConfig({
     env: {},
@@ -1309,6 +1318,11 @@ function renderSettings() {
   const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
   const cadencePolicy = (state.cadencePolicies || [])[0] || {};
   const expertReview = evaluateExpertChecklist(state);
+  const autoPublishReadiness = evaluateAutoPublishReadiness({
+    workspace: state,
+    context: state.context,
+    licenseCheck: automationLicenseCheck,
+  });
   const firebaseRows = latestFirebaseStatus || firebase;
   const licenseSyncLabel = latestLicenseSync
     ? latestLicenseSync.ok ? "Synced from Firebase" : "Firebase sync unavailable"
@@ -1321,6 +1335,7 @@ function renderSettings() {
       <button type="button" data-settings-action="export-sync">${escapeHtml(t("Export Firestore Bundle"))}</button>
       <button type="button" data-settings-action="copy-legal">${escapeHtml(t("Copy Legal Summary"))}</button>
       <button type="button" data-settings-action="copy-expert-checklist">${escapeHtml(t("Copy Expert Checklist"))}</button>
+      <button type="button" data-settings-action="copy-auto-publish-decision">${escapeHtml(t("Copy Auto-Publish Decision"))}</button>
       <button type="button" data-settings-action="copy-guide">${escapeHtml(t("Copy User Guide"))}</button>
       <button type="button" data-settings-action="copy-tour-script">${escapeHtml(t("Copy Tour Script"))}</button>
       <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
@@ -1347,6 +1362,7 @@ function renderSettings() {
       ${renderAccessibilitySettingsPanel()}
       ${renderSettingsPanel("Firestore sync", Object.entries(syncSummary).map(([key, value]) => [titleCase(key), String(value)]))}
       ${renderExpertChecklistPanel(expertReview)}
+      ${renderAutoPublishGatePanel(autoPublishReadiness)}
     </section>
     <section class="legal-settings" aria-label="Legal drafts">
       <header>
@@ -1434,6 +1450,25 @@ async function runSettingsAction(action) {
   if (action === "copy-expert-checklist") {
     await window.diamond?.writeClipboard?.(expertChecklistMarkdown(evaluateExpertChecklist(state)));
     latestGuideMessage = "Copied the expert checklist review.";
+    renderSettings();
+  }
+  if (action === "copy-auto-publish-decision") {
+    const license = state.licenseCache || createTemporaryUnlimitedDiamondLicense({
+      userId: "scott",
+      brands: [state.context?.brandId].filter(Boolean),
+      platforms: (state.socialAccounts || []).map((account) => account.platform),
+    });
+    const automationLicenseCheck = evaluateDiamondLicense(license, {
+      requestedBrands: [state.context?.brandId].filter(Boolean),
+      requestedPlatforms: [state.context?.platform].filter(Boolean),
+      requestedAutomationPlatforms: [state.context?.platform].filter(Boolean),
+    });
+    await window.diamond?.writeClipboard?.(autoPublishDecisionMarkdown(evaluateAutoPublishReadiness({
+      workspace: state,
+      context: state.context,
+      licenseCheck: automationLicenseCheck,
+    })));
+    latestGuideMessage = "Copied the auto-publish decision.";
     renderSettings();
   }
   if (action === "copy-guide") {
@@ -2377,6 +2412,29 @@ function renderExpertChecklistPanel(review) {
               <span>${escapeHtml(statusLabel(item.status))}</span>
             </header>
             <p>${escapeHtml(item.summary)}</p>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderAutoPublishGatePanel(readiness) {
+  return `
+    <article class="settings-panel auto-publish-gate-panel">
+      <header>
+        <h2>${escapeHtml(t("Auto-Publish Gate"))}</h2>
+        <span class="session-pill ${escapeHtml(readiness.status)}">${escapeHtml(statusLabel(readiness.status))}</span>
+      </header>
+      <p class="settings-note">${escapeHtml(readiness.summary)}</p>
+      <div class="auto-publish-checks">
+        ${(readiness.checks || []).map((check) => `
+          <section class="auto-publish-check ${check.ok ? "ready" : "blocked"}">
+            <header>
+              <strong>${escapeHtml(check.label)}</strong>
+              <span>${escapeHtml(check.ok ? t("Ready") : t("Blocked"))}</span>
+            </header>
+            <p>${escapeHtml(check.reason)}</p>
           </section>
         `).join("")}
       </div>
