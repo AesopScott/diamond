@@ -273,6 +273,7 @@ let activeTourSteps = tourSteps;
 let activeTourTarget = null;
 let activeTourAudio = null;
 let accountCreatorOpen = false;
+let accountLoginResizeObserver = null;
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -633,6 +634,10 @@ function showPrototypeView(viewId) {
 }
 
 function destroyAccountLoginWebview() {
+  if (accountLoginResizeObserver) {
+    accountLoginResizeObserver.disconnect();
+    accountLoginResizeObserver = null;
+  }
   const webview = document.querySelector("#account-login-webview");
   if (!webview) return;
   try {
@@ -1065,13 +1070,43 @@ function initializeAccountLoginWebview(account) {
     if (status) status.textContent = message || (currentUrl ? `Viewing ${safeUrlLabel(currentUrl)}` : "Login pane is ready.");
   };
   webview.addEventListener?.("dom-ready", () => updateFromWebview("Login pane loaded."));
+  webview.addEventListener?.("dom-ready", sizeAccountLoginWebview);
   webview.addEventListener?.("did-navigate", () => updateFromWebview());
   webview.addEventListener?.("did-navigate-in-page", () => updateFromWebview());
   webview.addEventListener?.("did-fail-load", (event) => {
     const status = document.querySelector("#account-login-browser-status");
     if (status) status.textContent = event?.errorDescription || "The platform blocked or failed to load in the pane.";
   });
+  if (accountLoginResizeObserver) accountLoginResizeObserver.disconnect();
+  const shell = document.querySelector(".account-login-webview-shell");
+  if (shell && typeof ResizeObserver !== "undefined") {
+    accountLoginResizeObserver = new ResizeObserver(() => requestAnimationFrame(sizeAccountLoginWebview));
+    accountLoginResizeObserver.observe(shell);
+  }
+  window.addEventListener("resize", () => requestAnimationFrame(sizeAccountLoginWebview), { once: true });
+  requestAnimationFrame(sizeAccountLoginWebview);
+  setTimeout(sizeAccountLoginWebview, 250);
   updateFromWebview(account.sessionNote || "Ready to load login page.");
+}
+
+function sizeAccountLoginWebview() {
+  const webview = document.querySelector("#account-login-webview");
+  const shell = document.querySelector(".account-login-webview-shell");
+  if (!webview || !shell) return;
+  const rect = shell.getBoundingClientRect();
+  const width = Math.max(360, Math.floor(rect.width));
+  const height = Math.max(560, Math.floor(rect.height));
+  webview.style.width = `${width}px`;
+  webview.style.height = `${height}px`;
+  webview.style.minWidth = `${width}px`;
+  webview.style.minHeight = `${height}px`;
+  webview.setAttribute("width", String(width));
+  webview.setAttribute("height", String(height));
+  if (typeof webview.executeJavaScript === "function") {
+    webview.executeJavaScript(
+      "window.dispatchEvent(new Event('resize')); document.documentElement.style.minHeight='100vh'; document.body.style.minHeight='100vh';",
+    ).catch(() => {});
+  }
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
@@ -1093,13 +1128,15 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
         <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
       </div>
-      <webview
-        id="account-login-webview"
-        title="${escapeHtml(platformLabel(account.platform))} login preview"
-        partition="${escapeHtml(partition)}"
-        src="${escapeHtml(previewUrl)}"
-        allowpopups
-      ></webview>
+      <div class="account-login-webview-shell">
+        <webview
+          id="account-login-webview"
+          title="${escapeHtml(platformLabel(account.platform))} login preview"
+          partition="${escapeHtml(partition)}"
+          src="${escapeHtml(previewUrl)}"
+          allowpopups
+        ></webview>
+      </div>
     </section>
   `;
 }
@@ -1572,6 +1609,7 @@ async function openAccountLogin(account) {
 
 function reloadAccountLoginPanel() {
   const webview = document.querySelector("#account-login-webview");
+  sizeAccountLoginWebview();
   if (typeof webview?.reload === "function") webview.reload();
 }
 
@@ -1588,6 +1626,7 @@ function loadAccountLoginPanelUrl(url) {
   if (!webview || !url) return;
   webview.setAttribute("src", url);
   webview.src = url;
+  sizeAccountLoginWebview();
   const status = document.querySelector("#account-login-browser-status");
   if (status) status.textContent = `Loading ${safeUrlLabel(url)}...`;
 }
