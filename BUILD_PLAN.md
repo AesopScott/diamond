@@ -154,7 +154,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Do-not-use assets
   - [x] Safe-zone metadata
   - [x] Alt text
-- [ ] Image rendering templates
+- [x] Image rendering templates
   - [x] Leaderboard template record
   - [x] Leaderboard card renderer
   - [x] Prize card
@@ -275,6 +275,16 @@ This is the current order for finishing the remaining checklist items.
   - [x] ElevenLabs audio generation worker
   - [x] Voiceover playback synced to tour steps
   - [ ] User guide review after first full operator session
+
+## Remaining Non-Code Validation
+
+These items are intentionally still open because they require real platform sessions, human workflow signoff, or a future product decision:
+
+- Formal repeated X staging proof across three separate app launches.
+- Repeated staging proof for each writable platform.
+- Scott workflow signoff after a real operator session.
+- User guide review after the first full operator session.
+- Future decision on whether `auto_publish` ever becomes enabled.
 
 ## Current Phase
 Build Diamond as a standalone multitenant social media operating system. Diamond will generate campaign content, render post assets, operate platform web UIs through visible browser surfaces, and manage replies through an approval-aware response queue for multiple companies.
