@@ -261,6 +261,7 @@ let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
 let selectedAccountId = state.context?.socialAccountId || null;
+let activePrototypeView = "posts-view";
 let latestFirebaseStatus = null;
 let latestLicenseSync = null;
 let latestSyncExportPath = state.lastSyncExportPath || "";
@@ -609,9 +610,11 @@ function handlePrototypeNav(event) {
 }
 
 function showPrototypeView(viewId) {
+  activePrototypeView = viewId;
   document.querySelectorAll(".prototype-view").forEach((view) => {
     view.classList.toggle("hidden", view.id !== viewId);
   });
+  if (viewId !== "accounts-view") destroyAccountLoginWebview();
   if (viewId === "posts-view") renderBoard(board);
   if (viewId === "analytics-view") renderAnalytics();
   if (viewId === "calendar-view") renderCalendar();
@@ -619,6 +622,18 @@ function showPrototypeView(viewId) {
   if (viewId === "accounts-view") renderAccounts();
   if (viewId === "brands-view") renderBrands();
   if (viewId === "settings-view") renderSettings();
+}
+
+function destroyAccountLoginWebview() {
+  const webview = document.querySelector("#account-login-webview");
+  if (!webview) return;
+  try {
+    webview.setAttribute("src", "about:blank");
+    webview.src = "about:blank";
+  } catch {
+    // Best effort cleanup for Electron's native webview surface.
+  }
+  webview.remove();
 }
 
 async function refreshProductionViews() {
@@ -914,7 +929,7 @@ function renderAccounts(selectedAccountId) {
   detail.innerHTML = accountCreatorOpen
     ? renderAccountCreator(selected)
     : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
-  if (!accountCreatorOpen && selected) initializeAccountLoginWebview(selected);
+  if (!accountCreatorOpen && selected && activePrototypeView === "accounts-view") initializeAccountLoginWebview(selected);
 }
 
 function accountsForScope(companyId, brandId) {
@@ -974,7 +989,6 @@ function renderAccountDetail(account) {
   const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
   const browserProfileId = normalizeBrowserProfileId(account.browserProfileId || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
   const partition = `persist:${browserProfileId.replace(/[^a-z0-9-]+/gi, "-")}`;
-  const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
   const lastLoginProof = account.lastLoginProofAt || proof?.lastLoginProofAt || proof?.lastProofAt;
   return `
     <article class="account-detail-card account-login-panel">
@@ -987,30 +1001,7 @@ function renderAccountDetail(account) {
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
       </header>
       <p class="account-login-note">Use this pane to log into the official platform page and visually confirm the account is signed in. Diamond does not save social-media passwords or bypass verification.</p>
-      <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
-        <header>
-          <div>
-            <h3 id="account-login-browser-heading">Login page</h3>
-            <p>Use this pane to sign into ${escapeHtml(platformLabel(account.platform))} and confirm the page is actually logged in.</p>
-          </div>
-          <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
-        </header>
-        <div class="account-login-browser-toolbar">
-          <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
-          <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
-          <button type="button" data-account-action="load-public-profile" data-account-id="${escapeHtml(account.id)}">Load profile</button>
-          <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
-          <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
-          <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
-        </div>
-        <webview
-          id="account-login-webview"
-          title="${escapeHtml(platformLabel(account.platform))} login preview"
-          partition="${escapeHtml(partition)}"
-          src="${escapeHtml(previewUrl)}"
-          allowpopups
-        ></webview>
-      </section>
+      ${activePrototypeView === "accounts-view" ? renderAccountLoginBrowser(account, partition, loginUrl) : ""}
       <section class="account-session-panel" aria-label="Login status">
         <div>
           <span class="eyebrow">Login status</span>
@@ -1071,6 +1062,36 @@ function initializeAccountLoginWebview(account) {
     if (status) status.textContent = event?.errorDescription || "The platform blocked or failed to load in the pane.";
   });
   updateFromWebview(account.sessionNote || "Ready to load login page.");
+}
+
+function renderAccountLoginBrowser(account, partition, loginUrl) {
+  const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
+  return `
+    <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
+      <header>
+        <div>
+          <h3 id="account-login-browser-heading">Login page</h3>
+          <p>Use this pane to sign into ${escapeHtml(platformLabel(account.platform))} and confirm the page is actually logged in.</p>
+        </div>
+        <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
+      </header>
+      <div class="account-login-browser-toolbar">
+        <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
+        <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
+        <button type="button" data-account-action="load-public-profile" data-account-id="${escapeHtml(account.id)}">Load profile</button>
+        <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
+        <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
+        <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
+      </div>
+      <webview
+        id="account-login-webview"
+        title="${escapeHtml(platformLabel(account.platform))} login preview"
+        partition="${escapeHtml(partition)}"
+        src="${escapeHtml(previewUrl)}"
+        allowpopups
+      ></webview>
+    </section>
+  `;
 }
 
 function renderAccountCreationPanel(account, plan) {
