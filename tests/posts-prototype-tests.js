@@ -74,6 +74,8 @@ assert.match(css, /\.brand-workspace/);
 assert.match(css, /\.brand-identity-card/);
 assert.match(css, /\.brand-panel/);
 assert.match(css, /\.editable-brand-panel/);
+assert.match(css, /\.brand-facts input/);
+assert.match(css, /min-height: 96px/);
 assert.match(css, /\.templates-workspace/);
 assert.match(css, /\.template-summary/);
 assert.match(css, /\.template-card/);

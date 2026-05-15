@@ -1090,13 +1090,13 @@ textarea {
 
 .brand-workspace {
   display: grid;
-  gap: 24px;
-  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+  grid-template-columns: minmax(260px, 340px) 1fr;
 }
 
 .brand-overview {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .brand-identity-card,
@@ -1104,19 +1104,19 @@ textarea {
 .brand-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px;
+  border-radius: 8px;
+  padding: 12px;
 }
 
 .brand-identity-card h2 {
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1.1;
-  margin: 6px 0 18px;
+  margin: 4px 0 12px;
 }
 
 .brand-facts {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
 }
 
@@ -1124,14 +1124,14 @@ textarea {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 12px;
+  padding: 8px;
 }
 
 .brand-facts dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .brand-facts dd {
@@ -1139,11 +1139,19 @@ textarea {
   margin: 0;
 }
 
+.brand-facts input,
+.brand-facts select {
+  font-size: 15px;
+  font-weight: 850;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
 .strategy-card h3 {
   color: var(--muted);
   font-size: 12px;
   letter-spacing: 0.08em;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   text-transform: uppercase;
 }
 
@@ -1154,7 +1162,9 @@ textarea {
 }
 
 .strategy-card textarea {
-  margin-bottom: 18px;
+  font-size: 13px;
+  min-height: 76px;
+  margin-bottom: 12px;
 }
 
 .strategy-card p:last-child {
@@ -1163,12 +1173,13 @@ textarea {
 
 .brand-panels {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
+  align-items: start;
 }
 
 .brand-panel {
-  min-height: 180px;
+  min-height: 0;
 }
 
 .brand-panel header {
@@ -1176,11 +1187,11 @@ textarea {
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .brand-panel h3 {
-  font-size: 16px;
+  font-size: 15px;
   margin: 0;
 }
 
@@ -1202,15 +1213,15 @@ textarea {
 }
 
 .editable-brand-panel textarea {
-  background: #090b10;
-  border: 1px solid #2d3441;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
   border-radius: 7px;
-  color: #f8f8fb;
+  color: var(--text);
   font: inherit;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.4;
-  min-height: 138px;
+  min-height: 96px;
   padding: 10px;
   resize: vertical;
   width: 100%;

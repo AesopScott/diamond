@@ -749,9 +749,9 @@ function renderBrands() {
       </article>
       <article class="strategy-card">
         <h3>Primary CTA</h3>
-        <textarea data-brand-field="strategyCta" rows="4">${escapeHtml(strategy.cta || "")}</textarea>
+        <textarea data-brand-field="strategyCta" rows="3">${escapeHtml(strategy.cta || "")}</textarea>
         <h3>Offer</h3>
-        <textarea data-brand-field="strategyOffer" rows="4">${escapeHtml(strategy.offer || "")}</textarea>
+        <textarea data-brand-field="strategyOffer" rows="3">${escapeHtml(strategy.offer || "")}</textarea>
       </article>
     </aside>
     <section class="brand-panels" aria-label="Brand operating rules">
@@ -772,13 +772,14 @@ function renderBrands() {
 
 function renderEditableBrandPanel(title, field, items = [], placeholder = "") {
   const list = (items || []).filter(Boolean);
+  const rows = field === "brandVoice" ? 4 : 5;
   return `
     <article class="brand-panel editable-brand-panel">
       <header>
         <h3>${escapeHtml(title)}</h3>
         <span class="count">${list.length}</span>
       </header>
-      <textarea data-brand-field="${escapeHtml(field)}" rows="${field === "brandVoice" ? 5 : 7}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(list.join("\n"))}</textarea>
+      <textarea data-brand-field="${escapeHtml(field)}" rows="${rows}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(list.join("\n"))}</textarea>
     </article>
   `;
 }
