@@ -1586,6 +1586,10 @@ textarea {
   border-color: color-mix(in srgb, var(--line) 68%, var(--accent) 32%);
 }
 
+.account-login-panel {
+  display: block;
+}
+
 .account-detail-card > header {
   align-items: start;
   display: flex;
@@ -1605,6 +1609,16 @@ textarea {
   margin: 0;
 }
 
+.account-login-note {
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--accent) 22%);
+  border: 1px solid color-mix(in srgb, var(--line) 72%, var(--accent) 28%);
+  border-radius: 8px;
+  color: var(--text) !important;
+  line-height: 1.45;
+  margin: 0 0 16px !important;
+  padding: 12px 14px;
+}
+
 .eyebrow {
   color: var(--muted);
   display: block;
@@ -1612,6 +1626,38 @@ textarea {
   font-weight: 1000;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.account-login-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 16px;
+}
+
+.account-login-fields div,
+.account-session-panel div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.account-login-fields dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.account-login-fields dd {
+  margin: 0;
+}
+
+.account-login-fields input {
+  min-height: 46px;
 }
 
 .account-meta {
@@ -1658,6 +1704,58 @@ textarea {
   font-weight: 900;
   min-height: 42px;
   padding: 8px 10px;
+}
+
+.account-login-actions {
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+}
+
+.account-login-actions button:nth-child(2),
+.account-login-actions button:nth-child(5) {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 72%, #ffffff 28%);
+  color: var(--accent-text);
+}
+
+.account-session-panel {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.account-session-panel strong {
+  display: block;
+  font-size: 16px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.account-session-panel a {
+  color: var(--text);
+}
+
+.account-advanced-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.account-advanced-panel summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 1000;
+  list-style-position: inside;
+  text-transform: uppercase;
+}
+
+.account-advanced-panel[open] summary {
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.account-advanced-actions {
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
 }
 
 .setup-kit {
@@ -3459,6 +3557,8 @@ textarea {
   .analytics-summary,
   .analytics-layout,
   .analytics-run-list,
+  .account-login-fields,
+  .account-session-panel,
   .account-meta,
   .account-actions {
     grid-template-columns: 1fr;

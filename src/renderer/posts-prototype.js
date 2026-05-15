@@ -967,33 +967,69 @@ function renderAccountDetail(account) {
   const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign?.id);
   const kit = buildSocialAccountSetupKit({ company, brand, campaign, account, strategy });
   const creationPlan = buildSocialAccountCreationPlan({ company, brand, campaign, account, strategy });
+  const proof = getPlatformProofForAccount(account);
+  const loginUrl = resolveLoginUrl(account);
+  const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
+  const lastLoginProof = account.lastLoginProofAt || proof?.lastLoginProofAt || proof?.lastProofAt;
   return `
-    <article class="account-detail-card">
+    <article class="account-detail-card account-login-panel">
       <header>
         <div>
-          <span class="eyebrow">Active account</span>
+          <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
-          <p>${escapeHtml(account.handle || account.accountUrl || account.id)}</p>
+          <p>${escapeHtml(account.handle || "Add the username for this account")}</p>
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
       </header>
+      <p class="account-login-note">Use this panel to log into the official platform page. Diamond can help you open the right place, but it does not save social-media passwords or bypass verification.</p>
+      <dl class="account-login-fields">
+        <div>
+          <dt>Username / handle</dt>
+          <dd><input data-account-field="handle" type="text" value="${escapeHtml(account.handle || "")}" placeholder="@parentalcareguide" autocomplete="username"></dd>
+        </div>
+        <div>
+          <dt>Temporary password</dt>
+          <dd><input data-account-field="temporaryPassword" type="password" value="" placeholder="Not saved by Diamond" autocomplete="current-password"></dd>
+        </div>
+      </dl>
+      <section class="account-actions account-login-actions" aria-label="Login actions">
+        <button type="button" data-account-action="save-login" data-account-id="${escapeHtml(account.id)}">Save username</button>
+        <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Open login</button>
+        <button type="button" data-account-action="copy-login-username" data-account-id="${escapeHtml(account.id)}">Copy username</button>
+        <button type="button" data-account-action="copy-login-password" data-account-id="${escapeHtml(account.id)}">Copy password</button>
+        <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
+        <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
+      </section>
+      <section class="account-session-panel" aria-label="Login status">
+        <div>
+          <span class="eyebrow">Login status</span>
+          <strong>${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Last proof</span>
+          <strong>${lastLoginProof ? escapeHtml(formatDateTime(lastLoginProof)) : "No login proof yet"}</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Public page</span>
+          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(account.handle || platformLabel(account.platform))}</a>` : "Not set"}</strong>
+        </div>
+      </section>
+      <details class="account-advanced-panel">
+        <summary>Advanced connection details</summary>
       <dl class="account-meta">
         <div><dt>Company</dt><dd><select data-account-field="companyId">${companyOptions(account.companyId)}</select></dd></div>
         <div><dt>Brand</dt><dd><select data-account-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></dd></div>
         <div><dt>Platform</dt><dd><select data-account-field="platform">${platformOptions(account.platform)}</select></dd></div>
-        <div><dt>Handle</dt><dd><input data-account-field="handle" type="text" value="${escapeHtml(account.handle || "")}"></dd></div>
         <div><dt>Browser profile</dt><dd><input data-account-field="browserProfileId" type="text" value="${escapeHtml(account.browserProfileId || "")}"></dd></div>
         <div><dt>Public account</dt><dd><input data-account-field="accountUrl" type="url" value="${escapeHtml(account.accountUrl || "")}"></dd></div>
-        <div><dt>Login URL</dt><dd><input data-account-field="loginUrl" type="url" value="${escapeHtml(resolveLoginUrl(account) || "")}"></dd></div>
+        <div><dt>Login URL</dt><dd><input data-account-field="loginUrl" type="url" value="${escapeHtml(loginUrl || "")}"></dd></div>
         <div><dt>Compose URL</dt><dd><input data-account-field="composeUrl" type="url" value="${escapeHtml(resolveComposeUrl(account) || "")}"></dd></div>
         <div><dt>Expected host</dt><dd><input data-account-field="expectedHost" type="text" value="${escapeHtml(account.expectedHost || "")}"></dd></div>
         <div><dt>Mode</dt><dd>${account.monitoringOnly ? "Monitoring only" : "Posting enabled"}</dd></div>
       </dl>
-      <section class="account-actions" aria-label="Account actions">
-        <button type="button" data-account-action="save" data-account-id="${escapeHtml(account.id)}">Save account</button>
+      <section class="account-actions account-advanced-actions" aria-label="Advanced account actions">
+        <button type="button" data-account-action="save" data-account-id="${escapeHtml(account.id)}">Save all</button>
         <button type="button" data-account-action="set-active" data-account-id="${escapeHtml(account.id)}">Set active</button>
-        <button type="button" data-account-action="ready" data-account-id="${escapeHtml(account.id)}">Mark ready</button>
-        <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
       </section>
       ${renderAccountCreationPanel(account, creationPlan)}
       <section class="setup-kit" aria-labelledby="setup-kit-heading">
@@ -1003,6 +1039,7 @@ function renderAccountDetail(account) {
           ${kit.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
         </ul>
       </section>
+      </details>
     </article>
   `;
 }
@@ -1368,6 +1405,11 @@ async function handleAccountDetailClick(event) {
   if (!button) return;
   const account = (state.socialAccounts || []).find((item) => item.id === button.dataset.accountId);
   if (!account) return;
+  if (button.dataset.accountAction === "save-login") saveAccountForm(account);
+  if (button.dataset.accountAction === "open-login") await openAccountLogin(account);
+  if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
+  if (button.dataset.accountAction === "copy-login-password") await copyAccountLoginPassword();
+  if (button.dataset.accountAction === "mark-logged-in") markAccountLoggedIn(account);
   if (button.dataset.accountAction === "save") saveAccountForm(account);
   if (button.dataset.accountAction === "set-active") setActiveAccount(account);
   if (button.dataset.accountAction === "ready") account.sessionStatus = "ready";
@@ -1382,6 +1424,37 @@ async function handleAccountDetailClick(event) {
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
+}
+
+async function openAccountLogin(account) {
+  saveAccountForm(account);
+  setActiveAccount(account);
+  account.sessionStatus = account.sessionStatus === "ready" ? "ready" : "needs_login";
+  account.loginOpenedAt = new Date().toISOString();
+  const loginUrl = resolveLoginUrl(account);
+  if (loginUrl) await window.diamond?.openExternal?.(loginUrl);
+}
+
+async function copyAccountLoginUsername(account) {
+  saveAccountForm(account);
+  await window.diamond?.writeClipboard?.(account.handle || "");
+  account.loginNote = account.handle ? "Copied username for manual login." : "No username saved yet.";
+}
+
+async function copyAccountLoginPassword() {
+  const detail = document.querySelector("#account-detail");
+  const password = detail?.querySelector('[data-account-field="temporaryPassword"]')?.value || "";
+  if (password) await window.diamond?.writeClipboard?.(password);
+}
+
+function markAccountLoggedIn(account) {
+  const proof = getPlatformProofForAccount(account);
+  const next = markPlatformLoginProof(proof, `Login proof recorded manually for ${platformLabel(account.platform)}.`);
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.id ? next : item);
+  account.sessionStatus = "ready";
+  account.proofCount = Number(account.proofCount || 0) + 1;
+  account.lastLoginProofAt = next.lastLoginProofAt || new Date().toISOString();
+  account.lastProofAt = next.lastProofAt || account.lastLoginProofAt;
 }
 
 async function openAccountSignup(account) {
@@ -1414,8 +1487,8 @@ function saveAccountForm(account) {
   account.companyId = normalizeId(valueFor("companyId") || account.companyId, "companyId");
   account.brandId = normalizeId(valueFor("brandId") || account.brandId, "brandId");
   account.platform = normalizeId(valueFor("platform") || account.platform, "platform");
-  account.handle = valueFor("handle");
-  account.accountUrl = normalizeAccountUrl(valueFor("accountUrl") || account.handle, account.platform);
+  account.handle = valueFor("handle") || account.handle || "";
+  account.accountUrl = normalizeAccountUrl(valueFor("accountUrl") || account.accountUrl || account.handle, account.platform);
   account.loginUrl = normalizeLoginUrl(valueFor("loginUrl"), account.platform);
   account.composeUrl = normalizeComposeUrl(valueFor("composeUrl"), account.platform);
   account.expectedHost = normalizeHost(valueFor("expectedHost") || account.accountUrl);
