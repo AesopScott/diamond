@@ -31,7 +31,71 @@ import {
   buildFirestoreSyncBundle,
 } from "../index.js";
 
+const PROFESSIONAL_THEMES = [
+  {
+    id: "graphite-red",
+    label: "Graphite Red",
+    description: "Closest to Diamond now, with sharper contrast and controlled red.",
+    swatches: ["#11161d", "#191e26", "#d84f45", "#e6b85c"],
+  },
+  {
+    id: "slate-blue",
+    label: "Slate Blue",
+    description: "Cool SaaS operating surface with blue action language.",
+    swatches: ["#0f1722", "#18212c", "#4f8cff", "#7fc8ff"],
+  },
+  {
+    id: "evergreen",
+    label: "Evergreen",
+    description: "Calm, focused, and credible without feeling cold.",
+    swatches: ["#0f1713", "#17211a", "#4ca66a", "#83c985"],
+  },
+  {
+    id: "ink-copper",
+    label: "Ink Copper",
+    description: "Editorial warmth with restrained action emphasis.",
+    swatches: ["#15110e", "#211913", "#c77743", "#e0ad67"],
+  },
+  {
+    id: "sportsbook-navy",
+    label: "Sportsbook Navy",
+    description: "Sports-adjacent navy and gold without casino noise.",
+    swatches: ["#0b1420", "#172131", "#6aa6ff", "#f0c96a"],
+  },
+  {
+    id: "burgundy-desk",
+    label: "Burgundy Desk",
+    description: "Distinct but grown-up, good for brand-heavy work.",
+    swatches: ["#171016", "#21171d", "#c75b7b", "#e3b45f"],
+  },
+  {
+    id: "warm-stone",
+    label: "Warm Stone",
+    description: "Neutral, readable, and restrained with quiet gold emphasis.",
+    swatches: ["#151515", "#1e1e1e", "#d0a85c", "#a8c7e5"],
+  },
+  {
+    id: "blue-steel",
+    label: "Blue Steel",
+    description: "Low-saturation color with clear section separation.",
+    swatches: ["#10161c", "#192026", "#71a3a8", "#a8c66c"],
+  },
+  {
+    id: "deep-plum",
+    label: "Deep Plum",
+    description: "A little distinctive, but still muted and structured.",
+    swatches: ["#14111b", "#1f1928", "#8f7ad8", "#d0b36d"],
+  },
+  {
+    id: "executive-neutral",
+    label: "Executive Neutral",
+    description: "Nearly monochrome, with status color doing the work.",
+    swatches: ["#111318", "#1a1d23", "#b7c0ce", "#d6a85c"],
+  },
+];
+
 const state = await loadProductionState();
+state.themeId = normalizeThemeId(state.themeId);
 let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
@@ -40,6 +104,7 @@ let latestFirebaseStatus = null;
 let latestLicenseSync = null;
 let latestSyncExportPath = state.lastSyncExportPath || "";
 let latestOperatorMessage = "";
+applyDiamondTheme(state.themeId);
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -217,7 +282,7 @@ function buildSampleWorkspace() {
     brands: [workspace.context.brandId],
     platforms: workspace.socialAccounts.map((account) => account.platform),
   });
-  workspace.themeId = "custom";
+  workspace.themeId = "graphite-red";
   workspace.accessibility = {
     keyboardNavigation: "baseline",
     screenReaderLabels: "baseline",
@@ -297,6 +362,7 @@ function wirePrototypeControls() {
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
+  document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
 }
@@ -1136,6 +1202,17 @@ async function handleSettingsAction(event) {
   await runSettingsAction(button.dataset.settingsAction);
 }
 
+async function handleSettingsChange(event) {
+  const field = event.target.closest("[data-settings-field]");
+  if (!field) return;
+  if (field.dataset.settingsField === "themeId") {
+    state.themeId = normalizeThemeId(field.value);
+    applyDiamondTheme(state.themeId);
+    await saveProductionState();
+    renderSettings();
+  }
+}
+
 async function runSettingsAction(action) {
   if (action === "save-settings") {
     saveSettingsForm();
@@ -1186,7 +1263,8 @@ function saveSettingsForm() {
   });
   state.licenseCache.userId = getSettingsFieldValue("licenseUserId") || state.licenseCache.userId;
   state.licenseCache.email = getSettingsFieldValue("licenseEmail") || state.licenseCache.email;
-  state.themeId = getSettingsFieldValue("themeId") || state.themeId || "custom";
+  state.themeId = normalizeThemeId(getSettingsFieldValue("themeId") || state.themeId);
+  applyDiamondTheme(state.themeId);
   state.accessibility = {
     keyboardNavigation: getSettingsFieldValue("keyboardNavigation") || "baseline",
     screenReaderLabels: getSettingsFieldValue("screenReaderLabels") || "baseline",
@@ -1259,7 +1337,9 @@ function renderRoutineSettingsPanel(policy = {}) {
 }
 
 function renderThemeSettingsPanel() {
-  const themes = ["broadcast", "custom", "charcoal", "terminal", "studio", "midnight"];
+  const themes = diamondThemes();
+  const selectedTheme = normalizeThemeId(state.themeId);
+  const theme = themes.find((item) => item.id === selectedTheme) || themes[0];
   return `
     <article class="settings-panel editable-settings">
       <header>
@@ -1271,17 +1351,41 @@ function renderThemeSettingsPanel() {
           <dt>Selected</dt>
           <dd>
             <select data-settings-field="themeId">
-              ${themes.map((theme) => `<option value="${escapeHtml(theme)}" ${theme === (state.themeId || "broadcast") ? "selected" : ""}>${escapeHtml(titleCase(theme))}</option>`).join("")}
+              ${themes.map((theme) => `<option value="${escapeHtml(theme.id)}" ${theme.id === selectedTheme ? "selected" : ""}>${escapeHtml(theme.label)}</option>`).join("")}
             </select>
           </dd>
         </div>
-        <div><dt>Shell color</dt><dd>#080808</dd></div>
-        <div><dt>Panel color</dt><dd>#111113</dd></div>
-        <div><dt>Accent color</dt><dd>#f5f5f7</dd></div>
-        <div><dt>Custom swatches</dt><dd>4 editable dots</dd></div>
+        <div><dt>Current</dt><dd>${escapeHtml(theme.label)}</dd></div>
+        <div><dt>Preview</dt><dd>Applies immediately and saves to this workspace.</dd></div>
+        <div><dt>Use case</dt><dd>${escapeHtml(theme.description)}</dd></div>
+        <div><dt>Swatches</dt><dd><span class="theme-swatch-row">${theme.swatches.map((color) => `<span class="theme-swatch" style="--theme-swatch:${escapeHtml(color)}" title="${escapeHtml(color)}"></span>`).join("")}</span></dd></div>
+        <div><dt>Palette source</dt><dd>Professional mockups set</dd></div>
       </dl>
     </article>
   `;
+}
+
+function diamondThemes() {
+  return PROFESSIONAL_THEMES;
+}
+
+function normalizeThemeId(themeId) {
+  const legacyThemeMap = {
+    broadcast: "graphite-red",
+    custom: "graphite-red",
+    charcoal: "executive-neutral",
+    terminal: "evergreen",
+    studio: "burgundy-desk",
+    midnight: "slate-blue",
+  };
+  const requestedTheme = legacyThemeMap[themeId] || themeId || "graphite-red";
+  return diamondThemes().some((item) => item.id === requestedTheme) ? requestedTheme : "graphite-red";
+}
+
+function applyDiamondTheme(themeId) {
+  const theme = normalizeThemeId(themeId);
+  document.body?.classList.remove(...diamondThemes().map((item) => `theme-${item.id}`));
+  document.body?.classList.add(`theme-${theme}`);
 }
 
 function renderAccessibilitySettingsPanel() {
