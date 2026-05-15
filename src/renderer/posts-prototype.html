@@ -214,6 +214,21 @@
       </aside>
     </div>
 
+    <div id="tour-layer" class="tour-layer hidden" aria-live="polite">
+      <div id="tour-popover" class="tour-popover" role="dialog" aria-modal="false" aria-labelledby="tour-title">
+        <div id="tour-progress" class="tour-progress"></div>
+        <h3 id="tour-title"></h3>
+        <p id="tour-body"></p>
+        <div id="tour-voice" class="tour-voice"></div>
+        <div class="tour-actions">
+          <button id="tour-play-voiceover" type="button">Play voiceover</button>
+          <button id="tour-prev" type="button">Back</button>
+          <button id="tour-next" type="button">Next</button>
+          <button id="tour-close" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="./posts-prototype.js"></script>
   </body>
 </html>

@@ -14,7 +14,7 @@ assert.ok(guideSections.every((section) => section.summary && section.steps.leng
 
 const tourSteps = getDiamondTourSteps();
 assert.ok(tourSteps.length >= 8);
-assert.deepEqual(tourSteps.map((step) => step.order), [1, 2, 3, 4, 5, 6, 7, 8]);
+assert.deepEqual(tourSteps.map((step) => step.order), Array.from({ length: tourSteps.length }, (_value, index) => index + 1));
 
 const validation = validateDiamondTourSteps(tourSteps);
 assert.equal(validation.ok, true);
@@ -27,8 +27,8 @@ assert.match(invalid.issues.join("\n"), /missing a target selector/);
 assert.match(invalid.issues.join("\n"), /missing voiceover text/);
 
 const script = buildTourVoiceoverScript(tourSteps);
-assert.match(script, /Start with the Active target/);
-assert.match(script, /Use the visible browser/);
+assert.match(script, /Start on Posts/);
+assert.match(script, /Open Operator for advanced work/);
 
 const request = createElevenLabsSpeechRequest({
   voiceId: "voice_123",
@@ -53,4 +53,3 @@ assert.equal(missingVoice.ok, false);
 assert.match(missingVoice.reason, /voiceId is required/);
 
 console.log("All Diamond user guide tests passed.");
-

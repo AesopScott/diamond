@@ -29,6 +29,10 @@ import {
   summarizePostMetrics,
   summarizeFirestoreSyncBundle,
   buildFirestoreSyncBundle,
+  buildTourVoiceoverScript,
+  createElevenLabsSpeechRequest,
+  getDiamondGuideSections,
+  getDiamondTourSteps,
 } from "../index.js";
 
 const PROFESSIONAL_THEMES = [
@@ -96,6 +100,8 @@ const PROFESSIONAL_THEMES = [
 
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
+const guideSections = getDiamondGuideSections();
+const tourSteps = getDiamondTourSteps();
 let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
@@ -104,6 +110,10 @@ let latestFirebaseStatus = null;
 let latestLicenseSync = null;
 let latestSyncExportPath = state.lastSyncExportPath || "";
 let latestOperatorMessage = "";
+let latestGuideMessage = "";
+let activeTourIndex = 0;
+let activeTourTarget = null;
+let activeTourAudio = null;
 applyDiamondTheme(state.themeId);
 renderBoard(board);
 renderCalendar();
@@ -365,6 +375,11 @@ function wirePrototypeControls() {
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
+  document.querySelector("#tour-start")?.addEventListener("click", startGuideTour);
+  document.querySelector("#tour-play-voiceover")?.addEventListener("click", playTourVoiceover);
+  document.querySelector("#tour-prev")?.addEventListener("click", () => moveTour(-1));
+  document.querySelector("#tour-next")?.addEventListener("click", () => moveTour(1));
+  document.querySelector("#tour-close")?.addEventListener("click", closeGuideTour);
 }
 
 function toggleOperatorDrawer() {
@@ -1164,6 +1179,11 @@ function renderSettings() {
       <button type="button" data-settings-action="sync-license">Sync license</button>
       <button type="button" data-settings-action="export-sync">Export Firestore bundle</button>
       <button type="button" data-settings-action="copy-legal">Copy legal summary</button>
+      <button type="button" data-settings-action="copy-guide">Copy user guide</button>
+      <button type="button" data-settings-action="copy-tour-script">Copy tour script</button>
+      <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
+      <button type="button" data-settings-action="generate-tour-voiceovers">Generate voiceovers</button>
+      <button id="settings-start-tour" type="button" data-settings-action="start-tour">Start walkthrough</button>
     </section>
     <section class="settings-status" aria-live="polite">
       <span>${escapeHtml(licenseSyncLabel)}</span>
@@ -1193,6 +1213,7 @@ function renderSettings() {
         ${legalDocuments.map(renderLegalCard).join("")}
       </div>
     </section>
+    ${renderUserGuidePanel()}
   `;
 }
 
@@ -1252,6 +1273,38 @@ async function runSettingsAction(action) {
       .join("\n\n");
     await window.diamond?.writeClipboard?.(summary);
     renderSettings();
+  }
+  if (action === "copy-guide") {
+    await window.diamond?.writeClipboard?.(buildGuideMarkdown());
+    latestGuideMessage = "Copied the Diamond user guide.";
+    renderSettings();
+  }
+  if (action === "copy-tour-script") {
+    await window.diamond?.writeClipboard?.(buildTourVoiceoverScript(tourSteps));
+    latestGuideMessage = "Copied the walkthrough voiceover script.";
+    renderSettings();
+  }
+  if (action === "copy-elevenlabs-request") {
+    const request = createElevenLabsSpeechRequest({
+      voiceId: "ELEVENLABS_VOICE_ID",
+      text: buildTourVoiceoverScript(tourSteps),
+    });
+    await window.diamond?.writeClipboard?.(JSON.stringify(request, null, 2));
+    latestGuideMessage = "Copied the ElevenLabs request template.";
+    renderSettings();
+  }
+  if (action === "generate-tour-voiceovers") {
+    latestGuideMessage = "Generating walkthrough voiceovers.";
+    renderSettings();
+    const result = await window.diamond?.generateTourVoiceovers?.({ steps: tourSteps });
+    latestGuideMessage = result?.ok
+      ? `Generated ${result.written?.length || 0} walkthrough voiceover file(s).`
+      : result?.reason || "Voiceover generation is unavailable.";
+    renderSettings();
+    if (!document.querySelector("#tour-layer")?.classList.contains("hidden")) showTourStep();
+  }
+  if (action === "start-tour") {
+    startGuideTour();
   }
 }
 
@@ -1363,6 +1416,56 @@ function renderThemeSettingsPanel() {
       </dl>
     </article>
   `;
+}
+
+function renderUserGuidePanel() {
+  return `
+    <section id="diamond-guide-panel" class="user-guide-panel" aria-labelledby="diamond-guide-heading">
+      <header>
+        <div>
+          <span class="eyebrow">Walkthrough</span>
+          <h2 id="diamond-guide-heading">Diamond user guide</h2>
+          <p>Use this when you need the full operating path instead of guessing what the next button does.</p>
+        </div>
+        <div class="guide-actions">
+          <button type="button" data-settings-action="start-tour">Start walkthrough</button>
+          <button type="button" data-settings-action="copy-guide">Copy guide</button>
+          <button type="button" data-settings-action="copy-tour-script">Copy script</button>
+          <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
+        </div>
+      </header>
+      ${latestGuideMessage ? `<div class="guide-message">${escapeHtml(latestGuideMessage)}</div>` : ""}
+      <div class="guide-grid">
+        ${guideSections.map((section) => `
+          <article class="guide-card" id="guide-${escapeHtml(section.id)}">
+            <h3>${escapeHtml(section.title)}</h3>
+            <p>${escapeHtml(section.summary)}</p>
+            <ol>
+              ${section.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+            </ol>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function buildGuideMarkdown() {
+  return [
+    "# Diamond User Guide",
+    "",
+    ...guideSections.flatMap((section) => [
+      `## ${section.title}`,
+      "",
+      section.summary,
+      "",
+      ...section.steps.map((step, index) => `${index + 1}. ${step}`),
+      "",
+    ]),
+    "## Walkthrough Voiceover Script",
+    "",
+    buildTourVoiceoverScript(tourSteps),
+  ].join("\n");
 }
 
 function diamondThemes() {
@@ -2400,6 +2503,92 @@ function latestValue(values = []) {
 
 function promptForText(label, fallback = "") {
   return String(window.prompt(label, fallback) || "").trim();
+}
+
+function startGuideTour() {
+  activeTourIndex = 0;
+  showTourStep();
+}
+
+function moveTour(delta) {
+  if (activeTourIndex === tourSteps.length - 1 && delta > 0) {
+    closeGuideTour();
+    return;
+  }
+  activeTourIndex = Math.max(0, Math.min(tourSteps.length - 1, activeTourIndex + delta));
+  showTourStep();
+}
+
+async function showTourStep() {
+  const step = tourSteps[activeTourIndex];
+  if (!step) return;
+  const layer = document.querySelector("#tour-layer");
+  const popover = document.querySelector("#tour-popover");
+  layer?.classList.remove("hidden");
+  if (activeTourTarget) activeTourTarget.classList.remove("tour-highlight");
+  activeTourTarget = document.querySelector(step.targetSelector);
+  if (activeTourTarget) {
+    activeTourTarget.classList.add("tour-highlight");
+    activeTourTarget.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+  }
+  document.querySelector("#tour-progress").textContent = `Step ${activeTourIndex + 1} of ${tourSteps.length}`;
+  document.querySelector("#tour-title").textContent = step.title;
+  document.querySelector("#tour-body").textContent = step.voiceoverText;
+  document.querySelector("#tour-voice").textContent = "Voiceover: " + step.voiceoverText;
+  document.querySelector("#tour-prev").disabled = activeTourIndex === 0;
+  document.querySelector("#tour-next").textContent = activeTourIndex === tourSteps.length - 1 ? "Done" : "Next";
+  const audio = await audioForTourStep(step);
+  document.querySelector("#tour-play-voiceover").disabled = !audio;
+  document.querySelector("#tour-play-voiceover").textContent = audio ? "Play voiceover" : "No audio yet";
+  positionTourPopover(popover, activeTourTarget);
+}
+
+function positionTourPopover(popover, target) {
+  if (!popover) return;
+  if (!target) {
+    popover.style.left = "24px";
+    popover.style.top = "24px";
+    return;
+  }
+  const targetRect = target.getBoundingClientRect();
+  const popoverRect = popover.getBoundingClientRect();
+  const gap = 16;
+  const left = Math.min(
+    window.innerWidth - popoverRect.width - gap,
+    Math.max(gap, targetRect.right + gap),
+  );
+  const preferredTop = targetRect.top;
+  const top = Math.min(
+    window.innerHeight - popoverRect.height - gap,
+    Math.max(gap, preferredTop),
+  );
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+function closeGuideTour() {
+  document.querySelector("#tour-layer")?.classList.add("hidden");
+  if (activeTourTarget) activeTourTarget.classList.remove("tour-highlight");
+  activeTourTarget = null;
+  if (activeTourAudio) {
+    activeTourAudio.pause();
+    activeTourAudio = null;
+  }
+}
+
+async function playTourVoiceover() {
+  const step = tourSteps[activeTourIndex];
+  const audioFile = await audioForTourStep(step);
+  if (!audioFile) return;
+  if (activeTourAudio) activeTourAudio.pause();
+  activeTourAudio = new Audio(audioFile.url);
+  await activeTourAudio.play();
+}
+
+async function audioForTourStep(step) {
+  const status = await window.diamond?.getVoiceoverStatus?.();
+  const expected = `${String(step.order).padStart(2, "0")}-${step.id}.mp3`;
+  return (status?.files || []).find((file) => file.name === expected) || null;
 }
 
 function platformIcon(platform) {

@@ -3,59 +3,99 @@ const DEFAULT_OUTPUT_FORMAT = "mp3_44100_128";
 
 const guideSections = [
   {
-    id: "target",
-    title: "1. Choose the account you are operating",
-    summary: "Pick the company, brand, campaign, and social account before touching a post.",
+    id: "posts",
+    title: "1. Start on the Posts board",
+    summary: "The Posts page is the daily workspace for drafts, scheduled posts, published posts, review items, and failures.",
     steps: [
-      "Use the Tenant selectors in the left rail.",
-      "Confirm the Active target banner at the top of the workspace.",
-      "If the active target is wrong, stop and switch it before staging anything.",
-    ],
-  },
-  {
-    id: "session",
-    title: "2. Confirm the browser session",
-    summary: "Diamond uses your visible browser login. It does not store your social password.",
-    steps: [
-      "Open the login or account page for the selected platform.",
-      "Sign in manually when the platform asks for it.",
-      "Use Check session or Mark ready before staging a post.",
+      "Open a card to review the source idea and platform drafts.",
+      "Use Create when you need a new post package.",
+      "Treat Needs Review and Failed as the first things to clear before adding more work.",
     ],
   },
   {
     id: "package",
-    title: "3. Build and review the post package",
-    summary: "The Post Package is the copy, media, approval state, and schedule record for one social post.",
+    title: "2. Build the post package",
+    summary: "A post package is one source idea with one or more platform-specific drafts attached to it.",
     steps: [
-      "Write or generate the draft text.",
-      "Evaluate the draft for risk, quality, claims, and repetition.",
-      "Approve it only after the live precheck looks right.",
+      "Write or edit the source idea in the post detail view.",
+      "Add the platforms that should receive their own draft.",
+      "Use tags, media, and generation style before approval so every platform draft has the right context.",
     ],
   },
   {
-    id: "stage",
-    title: "4. Stage in the browser",
-    summary: "Staging opens the platform composer, inserts the approved text when possible, and stops before publishing.",
+    id: "drafts",
+    title: "3. Review each platform draft",
+    summary: "Each platform gets its own text, limits, approval state, preview, and posting actions.",
     steps: [
-      "Use Stage in browser after approval.",
-      "Review the visible composer yourself.",
-      "Publish manually on the social platform, then capture the run or mark the package posted.",
+      "Read the platform-specific text instead of assuming one draft works everywhere.",
+      "Evaluate for quality, risk, claims, and repetition.",
+      "Approve only the drafts that are ready to schedule or stage.",
+    ],
+  },
+  {
+    id: "accounts",
+    title: "4. Confirm the social account",
+    summary: "Accounts are scoped by company and brand so the wrong browser profile does not post for the wrong client.",
+    steps: [
+      "Open Accounts before staging if the session is unknown, expired, or attached to the wrong platform.",
+      "Use the account page to open the login page, mark the session ready, or capture proof.",
+      "Diamond uses your visible browser session; it should not store social passwords.",
     ],
   },
   {
     id: "calendar",
-    title: "5. Use the calendars when posts are planned ahead",
-    summary: "The editorial calendar creates work. The schedule calendar tracks when approved work should go out.",
+    title: "5. Use Calendar for planned work",
+    summary: "Calendar shows upcoming, overdue, ready, completed, and canceled scheduled posts.",
     steps: [
-      "Use Editorial Calendar for planned content slots.",
-      "Use Schedule Calendar to see upcoming, overdue, ready, and completed posts.",
-      "Keep schedules scoped to the right company, brand, campaign, platform, and account.",
+      "Use Schedule from the header or from an approved platform draft.",
+      "Load a scheduled post when you need to review or stage it.",
+      "Cancel or mark posted only when the schedule really changed.",
+    ],
+  },
+  {
+    id: "brands",
+    title: "6. Maintain brand strategy",
+    summary: "Brands keeps the company, brand, campaign, voice, audience, pillars, and claim rules close to the publishing work.",
+    steps: [
+      "Create companies, brands, and campaigns before connecting accounts.",
+      "Keep goals, audience, pillars, voice, approved phrases, and blocked claims current.",
+      "Use brand strategy as the source of truth before generating campaign content.",
+    ],
+  },
+  {
+    id: "settings",
+    title: "7. Manage operating settings",
+    summary: "Settings holds licensing, Firebase, legal drafts, routine timing, accessibility, and theme choices.",
+    steps: [
+      "Keep the temporary unlimited license until the shop is ready.",
+      "Use Firebase sync and export when you need to inspect or move the Firestore bundle.",
+      "Use Theme and Accessibility when the interface needs to be easier to read or operate.",
+    ],
+  },
+  {
+    id: "operator",
+    title: "8. Use Operator only when needed",
+    summary: "Operator tools are for advanced browser staging, validation, proof capture, sync checks, and run logs.",
+    steps: [
+      "Open Operator when you need to stage in the visible browser or validate a package.",
+      "Read warnings before continuing; Diamond should fail closed when the target or session is unclear.",
+      "Capture proof or export sync data after meaningful publishing actions.",
+    ],
+  },
+  {
+    id: "analytics",
+    title: "9. Review performance",
+    summary: "Analytics explains output, funnel health, platform readiness, and operational blockers.",
+    steps: [
+      "Use totals to see whether publishing is moving signups and league joins.",
+      "Review platform readiness before assigning more work to a stuck account.",
+      "Export when you need to preserve a reporting snapshot.",
     ],
   },
   {
     id: "safety",
-    title: "6. Let Diamond fail closed",
-    summary: "When Diamond is unsure, the correct behavior is to pause instead of publishing wrong.",
+    title: "10. Let Diamond fail closed",
+    summary: "When Diamond is unsure, the correct behavior is to pause instead of publishing the wrong thing.",
     steps: [
       "Treat red warning cards as real blockers.",
       "Fix login, license, target, risk, or media issues before continuing.",
@@ -66,52 +106,64 @@ const guideSections = [
 
 const tourSteps = [
   {
-    id: "active-target",
-    title: "Start with the Active target",
-    targetSelector: ".topbar",
-    voiceoverText: "First, confirm the Active target. This tells you exactly which company, brand, campaign, and social account Diamond is about to operate.",
+    id: "posts-nav",
+    title: "Start on Posts",
+    targetSelector: "#prototype-nav",
+    voiceoverText: "Start with the main navigation. Posts is the daily board, and the other pages hold calendar, accounts, brands, settings, and reporting.",
   },
   {
-    id: "tenant",
-    title: "Choose the tenant context",
-    targetSelector: "#company-select",
-    voiceoverText: "Use the Tenant controls to switch companies, brands, campaigns, and accounts. Every queue item and browser session is scoped to this selection.",
+    id: "create",
+    title: "Create or open a post package",
+    targetSelector: "#create-post",
+    voiceoverText: "Use Create for a new post package, or open a card on the board to continue existing work.",
   },
   {
-    id: "session",
-    title: "Check the social login session",
-    targetSelector: "#session-card",
-    voiceoverText: "Diamond uses the visible browser session for the selected account. If the session is unknown or expired, sign in manually before staging.",
-  },
-  {
-    id: "composer",
-    title: "Review the Post Package",
-    targetSelector: ".composer",
-    voiceoverText: "The Post Package holds the draft text, media, approval state, and next actions for one social post.",
-  },
-  {
-    id: "actions",
-    title: "Use the numbered workflow",
-    targetSelector: ".draft-actions",
-    voiceoverText: "Work through the numbered buttons. Evaluate, approve, stage, upload media, capture the run, schedule, mark posted, or mark abandoned.",
-  },
-  {
-    id: "browser",
-    title: "Use the visible browser",
-    targetSelector: ".browser",
-    voiceoverText: "The browser is intentionally visible. Diamond can stage the post, but you can always take over before anything is published.",
-  },
-  {
-    id: "log",
-    title: "Read the run log",
-    targetSelector: ".log-panel",
-    voiceoverText: "The run log explains what Diamond just did, what it blocked, and what needs your attention.",
+    id: "board",
+    title: "Read the board by status",
+    targetSelector: "#posts-board",
+    voiceoverText: "The board separates drafts, scheduled posts, published posts, review items, and failures so you can see what needs attention.",
   },
   {
     id: "calendar",
-    title: "Plan from the calendars",
-    targetSelector: "#schedule-calendar-panel",
-    voiceoverText: "Use the calendars to plan posts, see what is due, and keep scheduled work tied to the right brand and account.",
+    title: "Plan from Calendar",
+    targetSelector: "#prototype-nav a[data-view=\"calendar-view\"]",
+    voiceoverText: "Calendar shows the publishing schedule. Use it to load, stage, complete, or cancel scheduled work.",
+  },
+  {
+    id: "accounts",
+    title: "Check social accounts",
+    targetSelector: "#prototype-nav a[data-view=\"accounts-view\"]",
+    voiceoverText: "Accounts is where you manage platform logins, browser profiles, proof captures, and setup kits by company and brand.",
+  },
+  {
+    id: "brands",
+    title: "Maintain brand context",
+    targetSelector: "#prototype-nav a[data-view=\"brands-view\"]",
+    voiceoverText: "Brands holds company identity, campaign strategy, voice, audience, pillars, and claim rules so generated work stays on track.",
+  },
+  {
+    id: "settings",
+    title: "Use Settings as the control room",
+    targetSelector: "#prototype-nav a[data-view=\"settings-view\"]",
+    voiceoverText: "Settings holds licensing, Firebase, legal drafts, routine timing, accessibility, and the theme selector.",
+  },
+  {
+    id: "operator",
+    title: "Open Operator for advanced work",
+    targetSelector: "#operator-toggle",
+    voiceoverText: "Operator tools handle browser staging, validation, sync checks, run proof, and audit-style logs when you need deeper control.",
+  },
+  {
+    id: "guide",
+    title: "Return to this guide",
+    targetSelector: "#diamond-guide-panel",
+    voiceoverText: "The user guide stays in Settings so you can come back when the workflow gets complicated.",
+  },
+  {
+    id: "fail-closed",
+    title: "Fail closed",
+    targetSelector: "#settings-workspace",
+    voiceoverText: "If the target, account, license, browser session, or draft quality is unclear, pause and fix the blocker before publishing.",
   },
 ];
 
@@ -186,4 +238,3 @@ export function createElevenLabsSpeechRequest({
     },
   };
 }
-

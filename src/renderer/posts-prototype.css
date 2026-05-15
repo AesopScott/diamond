@@ -1489,6 +1489,158 @@ textarea {
   background: var(--card);
 }
 
+.user-guide-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.user-guide-panel > header {
+  align-items: start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.user-guide-panel h2 {
+  font-size: 22px;
+  margin: 4px 0 6px;
+}
+
+.user-guide-panel p {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.guide-actions button,
+.tour-actions button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.guide-actions button:hover,
+.tour-actions button:hover {
+  border-color: var(--accent);
+}
+
+.guide-message {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--metric);
+  font-weight: 900;
+  margin-bottom: 16px;
+  padding: 12px;
+}
+
+.guide-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
+.guide-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.guide-card h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.guide-card ol {
+  color: var(--text);
+  display: grid;
+  font-weight: 750;
+  gap: 7px;
+  line-height: 1.4;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.tour-layer {
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 100;
+}
+
+.tour-popover {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  color: var(--text);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 16px;
+  pointer-events: auto;
+  position: fixed;
+}
+
+.tour-popover h3 {
+  font-size: 18px;
+  margin: 6px 0 8px;
+}
+
+.tour-popover p,
+.tour-voice {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.tour-progress {
+  color: var(--metric);
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tour-voice {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.tour-highlight {
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(0, 0, 0, 0.38);
+  position: relative;
+  z-index: 101;
+}
+
 .legal-card header {
   align-items: center;
   display: flex;
@@ -1923,6 +2075,7 @@ textarea {
   .settings-grid,
   .settings-actions,
   .legal-list,
+  .guide-grid,
   .analytics-summary,
   .analytics-layout,
   .analytics-run-list,
@@ -1941,5 +2094,9 @@ textarea {
 
   .platform-action-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-guide-panel > header {
+    display: grid;
   }
 }
