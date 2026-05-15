@@ -3,65 +3,66 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Diamond Color Mockups</title>
+    <title>Diamond Professional Theme Mockups</title>
     <style>
       * { box-sizing: border-box; }
+      :root { color-scheme: dark; }
       body {
-        background: #07080b;
-        color: #f7f8fb;
+        background: #0b0d10;
+        color: #f4f6f8;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         margin: 0;
       }
-      header.page {
-        border-bottom: 1px solid #242832;
-        padding: 30px 34px 20px;
+      .page-header {
+        background: #0f1217;
+        border-bottom: 1px solid #252b34;
+        padding: 30px 36px 22px;
       }
       h1 {
-        font-size: 34px;
+        font-size: 32px;
         letter-spacing: 0;
-        line-height: 1;
+        line-height: 1.05;
         margin: 0 0 10px;
       }
-      .page p {
-        color: #aeb6c6;
+      .page-header p {
+        color: #a9b2bf;
         font-size: 15px;
-        font-weight: 750;
+        font-weight: 700;
         line-height: 1.45;
         margin: 0;
-        max-width: 880px;
+        max-width: 920px;
       }
-      .mock-grid {
+      .grid {
         display: grid;
         gap: 26px;
-        grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
-        padding: 28px 34px 42px;
+        grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+        padding: 28px 36px 42px;
       }
-      .mock {
+      .theme {
         background: var(--app);
         border: 1px solid var(--line);
-        border-radius: 12px;
-        box-shadow: 0 26px 90px rgba(0, 0, 0, 0.34);
+        border-radius: 10px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
         color: var(--text);
         overflow: hidden;
       }
-      .mock-head {
+      .theme > header {
         align-items: center;
-        background: var(--head);
+        background: var(--chrome);
         border-bottom: 1px solid var(--line);
         display: flex;
-        gap: 16px;
         justify-content: space-between;
-        padding: 16px 18px;
+        padding: 15px 18px;
       }
-      .mock-head h2 {
-        font-size: 20px;
+      .theme h2 {
+        font-size: 19px;
         line-height: 1.1;
         margin: 0;
       }
-      .mock-head p {
+      .theme header p {
         color: var(--muted);
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 750;
         margin: 5px 0 0;
       }
       .swatches {
@@ -70,14 +71,14 @@
       }
       .swatches span {
         background: var(--swatch);
-        border: 1px solid rgba(255, 255, 255, 0.22);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 999px;
         height: 20px;
         width: 20px;
       }
       .screen {
         display: grid;
-        grid-template-columns: 140px minmax(0, 1fr);
+        grid-template-columns: 150px minmax(0, 1fr);
         min-height: 430px;
       }
       .side {
@@ -91,28 +92,25 @@
         align-items: center;
         display: flex;
         gap: 10px;
-        margin-bottom: 18px;
+        margin-bottom: 20px;
       }
       .mark {
-        background:
-          linear-gradient(135deg, var(--accent), var(--hot)),
-          linear-gradient(45deg, transparent, rgba(255,255,255,0.45));
-        border-radius: 8px;
-        height: 30px;
+        background: var(--accent);
+        border-radius: 7px;
+        height: 28px;
         transform: rotate(45deg);
-        width: 30px;
+        width: 28px;
       }
       .brand strong,
-      .nav strong,
-      .panel strong,
-      .post strong {
+      .nav a.active,
+      .card strong,
+      .panel h3 {
         color: var(--text);
       }
       .brand span,
       .eyebrow,
       .muted,
-      .metric span,
-      .post time {
+      .meta {
         color: var(--muted);
       }
       .brand span {
@@ -122,30 +120,28 @@
       }
       .nav {
         display: grid;
-        gap: 8px;
+        gap: 6px;
         align-content: start;
       }
       .nav a {
-        background: transparent;
         border: 1px solid transparent;
-        border-radius: 8px;
+        border-radius: 7px;
         color: var(--nav);
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 850;
         padding: 10px;
         text-decoration: none;
       }
       .nav a.active {
-        background: var(--navActive);
-        border-color: var(--lineStrong);
-        color: var(--text);
+        background: var(--active);
+        border-color: var(--line-strong);
       }
-      .license {
-        background: var(--sideCard);
+      .tenant {
+        background: var(--side-card);
         border: 1px solid var(--line);
         border-radius: 8px;
         display: grid;
-        gap: 5px;
+        gap: 4px;
         padding: 10px;
       }
       .main {
@@ -158,29 +154,28 @@
       .top {
         align-items: center;
         display: flex;
-        gap: 14px;
         justify-content: space-between;
       }
       .top h3 {
         font-size: 24px;
         line-height: 1;
-        margin: 0;
+        margin: 3px 0 0;
       }
       .eyebrow {
         font-size: 11px;
-        font-weight: 1000;
-        letter-spacing: 0.12em;
+        font-weight: 950;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
       }
-      .primary {
+      button {
         background: var(--accent);
         border: 1px solid var(--accent);
-        border-radius: 8px;
-        color: var(--buttonText);
+        border-radius: 7px;
+        color: var(--button-text);
         font-size: 13px;
-        font-weight: 1000;
-        min-height: 42px;
-        padding: 10px 15px;
+        font-weight: 950;
+        min-height: 40px;
+        padding: 9px 14px;
       }
       .metrics {
         display: grid;
@@ -189,30 +184,31 @@
       }
       .metric,
       .panel,
-      .post,
-      .settings {
+      .field,
+      .card {
         background: var(--panel);
         border: 1px solid var(--line);
-        border-radius: 9px;
+        border-radius: 8px;
       }
       .metric {
-        display: grid;
-        gap: 3px;
         padding: 10px;
+      }
+      .metric span {
+        color: var(--muted);
+        display: block;
+        font-size: 10px;
+        font-weight: 900;
+        margin-bottom: 3px;
+        text-transform: uppercase;
       }
       .metric strong {
         color: var(--metric);
-        font-size: 19px;
-      }
-      .metric span {
-        font-size: 10px;
-        font-weight: 900;
-        text-transform: uppercase;
+        font-size: 20px;
       }
       .workspace {
         display: grid;
         gap: 12px;
-        grid-template-columns: 1fr 1fr 0.82fr;
+        grid-template-columns: 1fr 1fr 0.8fr;
       }
       .panel {
         padding: 12px;
@@ -223,122 +219,125 @@
         justify-content: space-between;
         margin-bottom: 10px;
       }
+      .panel h3 {
+        font-size: 15px;
+        margin: 0;
+      }
       .count,
-      .status {
-        background: var(--chip);
-        border: 1px solid var(--lineStrong);
+      .state {
         border-radius: 999px;
-        color: var(--chipText);
         font-size: 10px;
-        font-weight: 1000;
+        font-weight: 950;
         padding: 5px 8px;
         text-transform: uppercase;
       }
-      .post-list {
+      .count {
+        background: var(--chip);
+        color: var(--chip-text);
+      }
+      .state {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn);
+        color: var(--warn);
+        width: fit-content;
+      }
+      .state.good {
+        background: var(--good-bg);
+        border-color: var(--good);
+        color: var(--good);
+      }
+      .list {
         display: grid;
         gap: 9px;
       }
-      .post {
+      .card {
         display: grid;
         gap: 7px;
         padding: 10px;
       }
-      .post time {
+      .meta {
         font-size: 11px;
-        font-weight: 800;
+        font-weight: 750;
       }
-      .platforms {
+      .chips {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
       }
-      .platforms span {
+      .chips span {
         background: var(--platform);
-        border: 1px solid var(--lineStrong);
+        border: 1px solid var(--line-strong);
         border-radius: 999px;
-        color: var(--platformText);
+        color: var(--platform-text);
         font-size: 10px;
-        font-weight: 1000;
+        font-weight: 950;
         padding: 5px 7px;
         text-transform: uppercase;
       }
-      .settings {
-        display: grid;
-        gap: 10px;
-        padding: 12px;
-      }
       .field {
-        background: var(--input);
-        border: 1px solid var(--line);
-        border-radius: 7px;
         color: var(--text);
         font-size: 12px;
-        font-weight: 800;
-        line-height: 1.35;
-        min-height: 54px;
+        font-weight: 750;
+        line-height: 1.4;
+        margin-bottom: 9px;
+        min-height: 58px;
         padding: 9px;
       }
-      .status.good {
-        background: var(--goodBg);
-        border-color: var(--good);
-        color: var(--good);
-      }
-      .status.warn {
-        background: var(--warnBg);
-        border-color: var(--warn);
-        color: var(--warn);
+      .field:last-child {
+        margin-bottom: 0;
       }
       .notes {
-        background: var(--note);
+        background: var(--notes);
         border-top: 1px solid var(--line);
         color: var(--muted);
         font-size: 13px;
-        font-weight: 750;
+        font-weight: 700;
         line-height: 1.45;
         padding: 14px 18px 16px;
       }
-      .broadcast {
-        --app:#08090d; --head:#12151e; --side:#10192b; --main:#090c13; --panel:#141a25; --sideCard:#162238; --navActive:#202d45; --note:#0f141d; --input:#0a0f17;
-        --line:#2c3749; --lineStrong:#4a5c76; --text:#f8fafc; --muted:#aeb8c8; --nav:#c4cede; --accent:#ff4d45; --hot:#ffd166; --metric:#ffd166; --chip:#2c1f14; --chipText:#ffd166; --platform:#192f4b; --platformText:#9ed0ff; --buttonText:#09090d; --good:#65e29b; --goodBg:#0e2a1b; --warn:#ffd166; --warnBg:#2c230f;
+
+      .graphite {
+        --app:#0d0f12; --chrome:#151920; --side:#11161d; --side-card:#181e27; --main:#0f1217; --panel:#191e26; --active:#232b36; --notes:#12161d;
+        --line:#2d3440; --line-strong:#465160; --text:#f4f6f8; --muted:#a9b2bf; --nav:#c1cad6; --accent:#d84f45; --button-text:#fff7f5; --metric:#e6b85c; --chip:#2b2520; --chip-text:#e6b85c; --platform:#1e2a38; --platform-text:#9bc3f5; --good:#66d394; --good-bg:#11271b; --warn:#e6b85c; --warn-bg:#2b2515;
       }
-      .pitch {
-        --app:#06110d; --head:#10231d; --side:#071c16; --main:#07130f; --panel:#14261f; --sideCard:#17342a; --navActive:#203d31; --note:#0d1d17; --input:#091510;
-        --line:#28483a; --lineStrong:#3e7059; --text:#f5fff9; --muted:#acc9bb; --nav:#c7dfd3; --accent:#35d07f; --hot:#f3c64b; --metric:#35d07f; --chip:#30280e; --chipText:#f3c64b; --platform:#0f3a26; --platformText:#94ffc0; --buttonText:#04100a; --good:#35d07f; --goodBg:#0f2b1b; --warn:#f3c64b; --warnBg:#30280e;
+      .slate {
+        --app:#0c1118; --chrome:#121a24; --side:#0f1722; --side-card:#17212e; --main:#0d131b; --panel:#18212c; --active:#223248; --notes:#101720;
+        --line:#2c3a4a; --line-strong:#455a70; --text:#f2f6fa; --muted:#a7b4c3; --nav:#c2cedb; --accent:#4f8cff; --button-text:#06111f; --metric:#7fc8ff; --chip:#172941; --chip-text:#8fc7ff; --platform:#24301f; --platform-text:#b9df8f; --good:#7bd88f; --good-bg:#122819; --warn:#e8c060; --warn-bg:#2c2515;
       }
-      .market {
-        --app:#071013; --head:#0e242b; --side:#0a1b21; --main:#081217; --panel:#13262d; --sideCard:#153038; --navActive:#183845; --note:#0d1d23; --input:#071116;
-        --line:#254550; --lineStrong:#3c6f7c; --text:#f3fbfb; --muted:#aec4c9; --nav:#c8dde0; --accent:#00c2b8; --hot:#ff6b6b; --metric:#00c2b8; --chip:#321b20; --chipText:#ff8e8e; --platform:#0c3a39; --platformText:#8bf6ef; --buttonText:#041112; --good:#70e6a3; --goodBg:#0e2b1b; --warn:#ffd166; --warnBg:#2f240e;
+      .evergreen {
+        --app:#0b100d; --chrome:#121a16; --side:#0f1713; --side-card:#18241d; --main:#0d130f; --panel:#17211a; --active:#213328; --notes:#101812;
+        --line:#2b3d32; --line-strong:#455f4e; --text:#f4fbf6; --muted:#a9bbae; --nav:#c8d8cc; --accent:#4ca66a; --button-text:#031008; --metric:#83c985; --chip:#1e2d20; --chip-text:#9fd39a; --platform:#1e2836; --platform-text:#a9c7ef; --good:#7dd68e; --good-bg:#112819; --warn:#d6b765; --warn-bg:#292313;
       }
-      .newsroom {
-        --app:#0a0d10; --head:#151a1f; --side:#10151b; --main:#0b0f14; --panel:#1b2028; --sideCard:#1d242b; --navActive:#252b35; --note:#12171d; --input:#0e1319;
-        --line:#303944; --lineStrong:#515c6a; --text:#f7fafc; --muted:#b6c0ca; --nav:#d0d7df; --accent:#f97316; --hot:#0ea5e9; --metric:#f97316; --chip:#14283a; --chipText:#7dd3fc; --platform:#2d1d0f; --platformText:#fdba74; --buttonText:#120804; --good:#65e29b; --goodBg:#10291c; --warn:#facc15; --warnBg:#2d260d;
+      .copper {
+        --app:#100d0b; --chrome:#1a1511; --side:#15110e; --side-card:#211a14; --main:#120f0c; --panel:#211913; --active:#33251b; --notes:#17120e;
+        --line:#3e3026; --line-strong:#654d3d; --text:#fbf5ef; --muted:#c0b1a4; --nav:#d8c8b8; --accent:#c77743; --button-text:#140905; --metric:#e0ad67; --chip:#302313; --chip-text:#e0ad67; --platform:#2b2430; --platform-text:#d9b8ef; --good:#83d69d; --good-bg:#122718; --warn:#dfb75f; --warn-bg:#2d2412;
       }
-      .champion {
-        --app:#0c0a08; --head:#1b1510; --side:#14110e; --main:#0e0b08; --panel:#1f1811; --sideCard:#241b12; --navActive:#322513; --note:#16110c; --input:#100d0a;
-        --line:#453521; --lineStrong:#755a2a; --text:#fff8eb; --muted:#c9b899; --nav:#e6d5b8; --accent:#d4af37; --hot:#b91c1c; --metric:#f7d774; --chip:#321414; --chipText:#ff9b9b; --platform:#322513; --platformText:#f7d774; --buttonText:#12100a; --good:#86efac; --goodBg:#132719; --warn:#f7d774; --warnBg:#31270e;
+      .navy {
+        --app:#090f17; --chrome:#111a27; --side:#0b1420; --side-card:#162235; --main:#0b1119; --panel:#172131; --active:#223653; --notes:#0f1722;
+        --line:#2c3b50; --line-strong:#465f7d; --text:#f3f7fb; --muted:#a9b6c6; --nav:#c6d3e2; --accent:#6aa6ff; --button-text:#05101f; --metric:#f0c96a; --chip:#302713; --chip-text:#f0c96a; --platform:#142b38; --platform-text:#8fd9f0; --good:#7cd493; --good-bg:#112719; --warn:#f0c96a; --warn-bg:#2d2513;
       }
-      .studio {
-        --app:#0b090c; --head:#17101d; --side:#15101b; --main:#0d0b11; --panel:#21131a; --sideCard:#251724; --navActive:#34233c; --note:#151018; --input:#110d13;
-        --line:#3b2b3a; --lineStrong:#694a62; --text:#fff7f4; --muted:#c8b2bd; --nav:#e6d0d8; --accent:#ff5a4f; --hot:#f4c95d; --metric:#f4c95d; --chip:#33250e; --chipText:#f4c95d; --platform:#381c22; --platformText:#ffaaa3; --buttonText:#150706; --good:#83e8a5; --goodBg:#102719; --warn:#f4c95d; --warnBg:#30240e;
+      .burgundy {
+        --app:#100c0f; --chrome:#1b1318; --side:#171016; --side-card:#231920; --main:#120d11; --panel:#21171d; --active:#34232c; --notes:#171016;
+        --line:#3d2d36; --line-strong:#634957; --text:#fbf3f6; --muted:#c2adb7; --nav:#dec9d2; --accent:#c75b7b; --button-text:#16070e; --metric:#e3b45f; --chip:#302412; --chip-text:#e3b45f; --platform:#202b3b; --platform-text:#a9c9f4; --good:#7ed79b; --good-bg:#112719; --warn:#e3b45f; --warn-bg:#2d2311;
       }
-      .electric {
-        --app:#09090f; --head:#151427; --side:#101025; --main:#0b0b16; --panel:#18182c; --sideCard:#20203b; --navActive:#2a2750; --note:#111122; --input:#0e0e1b;
-        --line:#35335d; --lineStrong:#55519b; --text:#fbfbff; --muted:#bbb9d1; --nav:#d9d6f4; --accent:#a855f7; --hot:#22d3ee; --metric:#22d3ee; --chip:#172b3a; --chipText:#67e8f9; --platform:#2d1d4d; --platformText:#d8b4fe; --buttonText:#0d0615; --good:#6ee7b7; --goodBg:#10291f; --warn:#facc15; --warnBg:#2d260d;
+      .stone {
+        --app:#111111; --chrome:#181818; --side:#151515; --side-card:#202020; --main:#121212; --panel:#1e1e1e; --active:#2a2a2a; --notes:#171717;
+        --line:#363636; --line-strong:#555555; --text:#f4f4f2; --muted:#b7b7b0; --nav:#d0d0ca; --accent:#d0a85c; --button-text:#14100a; --metric:#d0a85c; --chip:#292419; --chip-text:#d0a85c; --platform:#1d2730; --platform-text:#a8c7e5; --good:#82d49a; --good-bg:#122719; --warn:#d0a85c; --warn-bg:#292419;
       }
-      .command {
-        --app:#07090f; --head:#101827; --side:#0d1422; --main:#080b12; --panel:#151d2c; --sideCard:#121a28; --navActive:#202b40; --note:#0f1520; --input:#090d15;
-        --line:#2a3448; --lineStrong:#465775; --text:#f4f7fb; --muted:#a9b5c7; --nav:#cbd5e1; --accent:#ef5350; --hot:#38d98a; --metric:#38d98a; --chip:#2e1a1a; --chipText:#ff9999; --platform:#142b20; --platformText:#8ff2ba; --buttonText:#120405; --good:#38d98a; --goodBg:#0d2b1a; --warn:#f2c14e; --warnBg:#2d230e;
+      .steel {
+        --app:#0b0f12; --chrome:#13191f; --side:#10161c; --side-card:#192128; --main:#0d1216; --panel:#192026; --active:#26323c; --notes:#11171c;
+        --line:#303b45; --line-strong:#4d5e6b; --text:#f4f7f8; --muted:#aeb9bf; --nav:#cbd5da; --accent:#71a3a8; --button-text:#031213; --metric:#a8c66c; --chip:#222b19; --chip-text:#bfd779; --platform:#242838; --platform-text:#bfc7f4; --good:#7ed69c; --good-bg:#112719; --warn:#d7b45f; --warn-bg:#2b2312;
       }
-      .aurora {
-        --app:#070b12; --head:#101a27; --side:#0d1b25; --main:#081019; --panel:#12202c; --sideCard:#172936; --navActive:#203849; --note:#0f1822; --input:#09131c;
-        --line:#274353; --lineStrong:#3d6a80; --text:#f3fbff; --muted:#abc1cb; --nav:#cce0e8; --accent:#7cdbff; --hot:#f472b6; --metric:#7cdbff; --chip:#331528; --chipText:#f9a8d4; --platform:#112d3b; --platformText:#bae6fd; --buttonText:#041018; --good:#86efac; --goodBg:#112a1d; --warn:#fcd34d; --warnBg:#2d250e;
+      .plum {
+        --app:#0f0d13; --chrome:#17131f; --side:#14111b; --side-card:#201a2a; --main:#110e16; --panel:#1f1928; --active:#2d253d; --notes:#16111d;
+        --line:#393047; --line-strong:#5c4c73; --text:#faf7ff; --muted:#bcb1cb; --nav:#d7cbe8; --accent:#8f7ad8; --button-text:#0d0818; --metric:#d0b36d; --chip:#2c2514; --chip-text:#d0b36d; --platform:#183034; --platform-text:#9edee3; --good:#7fd59a; --good-bg:#112719; --warn:#d0b36d; --warn-bg:#2c2514;
       }
-      .ember {
-        --app:#100908; --head:#21120f; --side:#1a100d; --main:#120b09; --panel:#241511; --sideCard:#2d1a13; --navActive:#3b2017; --note:#1a100c; --input:#150c09;
-        --line:#4a2b22; --lineStrong:#7c4330; --text:#fff8f5; --muted:#d1b3a8; --nav:#ead1c8; --accent:#ff784f; --hot:#ffd166; --metric:#ffd166; --chip:#31240d; --chipText:#ffd166; --platform:#3b1b13; --platformText:#ffb197; --buttonText:#160604; --good:#8be6a1; --goodBg:#122719; --warn:#ffd166; --warnBg:#31240d;
+      .executive {
+        --app:#0b0c0f; --chrome:#14161b; --side:#111318; --side-card:#1b1f26; --main:#0d0f13; --panel:#1a1d23; --active:#252b35; --notes:#12151a;
+        --line:#303640; --line-strong:#4c5664; --text:#f5f6f8; --muted:#b0b7c1; --nav:#cdd4dd; --accent:#b7c0ce; --button-text:#0c0f13; --metric:#d6a85c; --chip:#2b2215; --chip-text:#d6a85c; --platform:#182638; --platform-text:#9bbde8; --good:#78d596; --good-bg:#112719; --warn:#d6a85c; --warn-bg:#2b2215;
       }
-      @media (max-width: 900px) {
-        .mock-grid { grid-template-columns: 1fr; padding: 18px; }
+      @media (max-width: 920px) {
+        .grid { grid-template-columns: 1fr; padding: 18px; }
         .screen { grid-template-columns: 1fr; }
         .side { border-right: 0; border-bottom: 1px solid var(--line); grid-template-rows: auto; }
         .workspace { grid-template-columns: 1fr; }
@@ -347,51 +346,21 @@
     </style>
   </head>
   <body>
-    <header class="page">
-      <h1>Diamond Color Mockups</h1>
-      <p>Ten stronger color directions for the new Diamond shell. Each mockup uses the same sample content so the differences in readability, emphasis, and panel separation are easier to judge.</p>
+    <header class="page-header">
+      <h1>Diamond Professional Theme Mockups</h1>
+      <p>Ten restrained options built around real product hierarchy: neutral work surfaces, one primary accent, clear status colors, and enough contrast that Cards, Brands, Settings, and Operator panels do not bleed together.</p>
     </header>
-    <main class="mock-grid">
-      <article class="mock broadcast">
-        <header class="mock-head"><div><h2>1. Broadcast Desk</h2><p>Sports media energy, red actions, gold emphasis.</p></div><div class="swatches"><span style="--swatch:#10192b"></span><span style="--swatch:#141a25"></span><span style="--swatch:#ff4d45"></span><span style="--swatch:#ffd166"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Probably the best fit for The Card: readable, energetic, and immediately sports-adjacent.</div>
-      </article>
-      <article class="mock pitch">
-        <header class="mock-head"><div><h2>2. World Cup Pitch</h2><p>Green field surfaces with gold matchday cues.</p></div><div class="swatches"><span style="--swatch:#071c16"></span><span style="--swatch:#14261f"></span><span style="--swatch:#35d07f"></span><span style="--swatch:#f3c64b"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best for the World Cup push if you want the event to be felt in the product chrome.</div>
-      </article>
-      <article class="mock market">
-        <header class="mock-head"><div><h2>3. Market Pulse</h2><p>Prediction-market confidence with coral risk signals.</p></div><div class="swatches"><span style="--swatch:#0a1b21"></span><span style="--swatch:#13262d"></span><span style="--swatch:#00c2b8"></span><span style="--swatch:#ff6b6b"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best if you want Diamond to feel analytical and operational without becoming sterile.</div>
-      </article>
-      <article class="mock newsroom">
-        <header class="mock-head"><div><h2>4. Newsroom Heat</h2><p>Editorial workflow with orange urgency and blue clarity.</p></div><div class="swatches"><span style="--swatch:#10151b"></span><span style="--swatch:#1b2028"></span><span style="--swatch:#f97316"></span><span style="--swatch:#0ea5e9"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best if Diamond should feel like a daily sports desk where things move quickly.</div>
-      </article>
-      <article class="mock champion">
-        <header class="mock-head"><div><h2>5. Champion Gold</h2><p>Prize, winner, and leaderboard moments feel premium.</p></div><div class="swatches"><span style="--swatch:#14110e"></span><span style="--swatch:#1f1811"></span><span style="--swatch:#d4af37"></span><span style="--swatch:#b91c1c"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best for prize pages and campaign moments, but maybe too ceremonial for daily ops.</div>
-      </article>
-      <article class="mock studio">
-        <header class="mock-head"><div><h2>6. Studio Console</h2><p>Creative campaign workspace with warm panels.</p></div><div class="swatches"><span style="--swatch:#15101b"></span><span style="--swatch:#21131a"></span><span style="--swatch:#ff5a4f"></span><span style="--swatch:#f4c95d"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best if this is more content studio than command center.</div>
-      </article>
-      <article class="mock electric">
-        <header class="mock-head"><div><h2>7. Electric Rally</h2><p>Creator campaign energy with purple and cyan.</p></div><div class="swatches"><span style="--swatch:#101025"></span><span style="--swatch:#18182c"></span><span style="--swatch:#a855f7"></span><span style="--swatch:#22d3ee"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Most lively. Good for influencer work, less sober for admin-heavy screens.</div>
-      </article>
-      <article class="mock command">
-        <header class="mock-head"><div><h2>8. Command Night</h2><p>Conservative improvement over current dark mode.</p></div><div class="swatches"><span style="--swatch:#0d1422"></span><span style="--swatch:#151d2c"></span><span style="--swatch:#ef5350"></span><span style="--swatch:#38d98a"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Safest if you want readability first and only a moderate style change.</div>
-      </article>
-      <article class="mock aurora">
-        <header class="mock-head"><div><h2>9. Aurora Glass</h2><p>Cool blue surfaces with pink accents for emphasis.</p></div><div class="swatches"><span style="--swatch:#0d1b25"></span><span style="--swatch:#12202c"></span><span style="--swatch:#7cdbff"></span><span style="--swatch:#f472b6"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Readable and polished, but less sports-coded than Broadcast or Pitch.</div>
-      </article>
-      <article class="mock ember">
-        <header class="mock-head"><div><h2>10. Ember Control</h2><p>Warm, high-contrast, and very action-oriented.</p></div><div class="swatches"><span style="--swatch:#1a100d"></span><span style="--swatch:#241511"></span><span style="--swatch:#ff784f"></span><span style="--swatch:#ffd166"></span></div></header>
-        <div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social command center</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="license"><span class="eyebrow">License</span><strong>Unlimited</strong><span class="muted">thecard.bet / X</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>World Cup Campaign</h3></div><button class="primary">Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><strong>Staged</strong><span class="count">6</span></header><div class="post-list"><div class="post"><span class="status warn">Staged</span><strong>Join the free World Cup league...</strong><time>Updated today</time><div class="platforms"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="post"><span class="status good">Ready</span><strong>$1,000 total payouts...</strong><time>May 14</time><div class="platforms"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><strong>Brand rules</strong><span class="count">Editable</span></header><div class="field">Goals<br>Drive free World Cup league signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="settings"><span class="eyebrow">Operator</span><button class="primary">Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Strongest emphasis, but could feel hot if every screen uses it all day.</div>
-      </article>
+    <main class="grid">
+      <article class="theme graphite"><header><div><h2>1. Graphite Red</h2><p>Closest to Diamond now, but with sharper contrast and controlled red.</p></div><div class="swatches"><span style="--swatch:#11161d"></span><span style="--swatch:#191e26"></span><span style="--swatch:#d84f45"></span><span style="--swatch:#e6b85c"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best conservative option. Professional, readable, and the least risky replacement for the current app.</div></article>
+      <article class="theme slate"><header><div><h2>2. Slate Blue</h2><p>Cool SaaS operating surface with blue action language.</p></div><div class="swatches"><span style="--swatch:#0f1722"></span><span style="--swatch:#18212c"></span><span style="--swatch:#4f8cff"></span><span style="--swatch:#7fc8ff"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Strong all-day usability. Less branded, more polished SaaS.</div></article>
+      <article class="theme evergreen"><header><div><h2>3. Evergreen</h2><p>Calm, focused, and credible without feeling cold.</p></div><div class="swatches"><span style="--swatch:#0f1713"></span><span style="--swatch:#17211a"></span><span style="--swatch:#4ca66a"></span><span style="--swatch:#83c985"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Good if you want less red and more trust. Could work well for operations.</div></article>
+      <article class="theme copper"><header><div><h2>4. Ink Copper</h2><p>Editorial warmth with restrained action emphasis.</p></div><div class="swatches"><span style="--swatch:#15110e"></span><span style="--swatch:#211913"></span><span style="--swatch:#c77743"></span><span style="--swatch:#e0ad67"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Professional and mature, but warmer than most dashboards.</div></article>
+      <article class="theme navy"><header><div><h2>5. Sportsbook Navy</h2><p>Navy foundation, gold highlights, but not casino loud.</p></div><div class="swatches"><span style="--swatch:#0b1420"></span><span style="--swatch:#172131"></span><span style="--swatch:#6aa6ff"></span><span style="--swatch:#f0c96a"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Best sports-adjacent option if The Card should feel serious, not playful.</div></article>
+      <article class="theme burgundy"><header><div><h2>6. Burgundy Desk</h2><p>Distinct but still grown-up; good for brand-heavy pages.</p></div><div class="swatches"><span style="--swatch:#171016"></span><span style="--swatch:#21171d"></span><span style="--swatch:#c75b7b"></span><span style="--swatch:#e3b45f"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Good identity, but maybe too boutique unless Diamond itself becomes a brand-led product.</div></article>
+      <article class="theme stone"><header><div><h2>7. Warm Stone</h2><p>Mostly neutral, high readability, quiet gold emphasis.</p></div><div class="swatches"><span style="--swatch:#151515"></span><span style="--swatch:#1e1e1e"></span><span style="--swatch:#d0a85c"></span><span style="--swatch:#a8c7e5"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Very readable. The safest “professional software” option if color should stay restrained.</div></article>
+      <article class="theme steel"><header><div><h2>8. Blue Steel</h2><p>Low-saturation color, clear sections, no novelty.</p></div><div class="swatches"><span style="--swatch:#10161c"></span><span style="--swatch:#192026"></span><span style="--swatch:#71a3a8"></span><span style="--swatch:#a8c66c"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Understated and durable. Good if you want sophistication over brand punch.</div></article>
+      <article class="theme plum"><header><div><h2>9. Deep Plum</h2><p>A little distinctive, but still muted and structured.</p></div><div class="swatches"><span style="--swatch:#14111b"></span><span style="--swatch:#1f1928"></span><span style="--swatch:#8f7ad8"></span><span style="--swatch:#d0b36d"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">This is the most stylized option here, but still disciplined enough for work.</div></article>
+      <article class="theme executive"><header><div><h2>10. Executive Neutral</h2><p>Nearly monochrome, with status color doing the heavy lifting.</p></div><div class="swatches"><span style="--swatch:#111318"></span><span style="--swatch:#1a1d23"></span><span style="--swatch:#b7c0ce"></span><span style="--swatch:#d6a85c"></span></div></header><div class="screen"><aside class="side"><div><div class="brand"><div class="mark"></div><div><strong>DIAMOND</strong><span>Social operations</span></div></div><nav class="nav"><a class="active">Posts</a><a>Brands</a><a>Calendar</a><a>Settings</a></nav></div><div class="tenant"><span class="eyebrow">Tenant</span><strong>thecard.bet</strong><span class="muted">The Card / World Cup</span></div></aside><section class="main"><div class="top"><div><span class="eyebrow">Posts</span><h3>Campaign board</h3></div><button>Create</button></div><div class="metrics"><div class="metric"><span>Drafts</span><strong>18</strong></div><div class="metric"><span>Staged</span><strong>6</strong></div><div class="metric"><span>Posted</span><strong>11</strong></div><div class="metric"><span>Proofs</span><strong>9</strong></div></div><div class="workspace"><section class="panel"><header><h3>Staged</h3><span class="count">6</span></header><div class="list"><div class="card"><span class="state">Staged</span><strong>Join the free World Cup league...</strong><span class="meta">Updated today</span><div class="chips"><span>X / Staged</span><span>Facebook / Scheduled</span></div></div><div class="card"><span class="state good">Ready</span><strong>$1,000 total payouts...</strong><span class="meta">May 14</span><div class="chips"><span>TikTok / Approved</span></div></div></div></section><section class="panel"><header><h3>Brand rules</h3><span class="count">Edit</span></header><div class="field">Goals<br>Drive free World Cup signups.</div><div class="field">Voice<br>Sharp, plainspoken, sports-smart.</div></section><section class="panel"><header><h3>Operator</h3><span class="count">Live</span></header><button>Validate</button><div class="field">Firebase ready<br>Last export saved.</div></section></div></section></div><div class="notes">Maximum professionalism, minimum personality. Useful baseline, not necessarily the final brand.</div></article>
     </main>
   </body>
 </html>
