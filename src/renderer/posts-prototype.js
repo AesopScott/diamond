@@ -1,4 +1,5 @@
 import {
+  buildSocialAccountCreationPlan,
   buildSocialAccountSetupKit,
   buildDiamondLicenseModel,
   buildPostBoardView,
@@ -36,6 +37,7 @@ import {
   autoPublishDecisionMarkdown,
   expertChecklistMarkdown,
   evaluateAutoPublishReadiness,
+  formatSocialAccountCreationPlan,
   getDiamondGuideSections,
   getDiamondFirstRunSteps,
   getDiamondTourSteps,
@@ -808,6 +810,7 @@ function renderAccountDetail(account) {
   const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId);
   const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign?.id);
   const kit = buildSocialAccountSetupKit({ company, brand, campaign, account, strategy });
+  const creationPlan = buildSocialAccountCreationPlan({ company, brand, campaign, account, strategy });
   return `
     <article class="account-detail-card">
       <header>
@@ -837,6 +840,7 @@ function renderAccountDetail(account) {
         <button type="button" data-account-action="ready" data-account-id="${escapeHtml(account.id)}">Mark ready</button>
         <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
       </section>
+      ${renderAccountCreationPanel(account, creationPlan)}
       <section class="setup-kit" aria-labelledby="setup-kit-heading">
         <h3 id="setup-kit-heading">Setup kit</h3>
         <p>${escapeHtml(kit.summary)}</p>
@@ -845,6 +849,42 @@ function renderAccountDetail(account) {
         </ul>
       </section>
     </article>
+  `;
+}
+
+function renderAccountCreationPanel(account, plan) {
+  const opened = account.signupOpenedAt ? `Signup opened ${formatDateTime(account.signupOpenedAt)}` : "Signup not opened yet";
+  const created = account.creationStatus === "created_manually" ? "Account marked created" : "Account not marked created";
+  return `
+    <section class="account-creation-panel" aria-labelledby="account-creation-heading">
+      <header>
+        <div>
+          <h3 id="account-creation-heading">Account creation</h3>
+          <p>Diamond prepares the setup. You complete signup, passwords, CAPTCHA, email, phone, and 2FA on the official platform page.</p>
+        </div>
+        <span>${escapeHtml(plan.platformName)}</span>
+      </header>
+      <dl class="account-creation-summary">
+        <div><dt>Desired handle</dt><dd>${escapeHtml(plan.desiredHandle || account.handle || "Set handle above")}</dd></div>
+        <div><dt>Display name</dt><dd>${escapeHtml(plan.displayName || "Set brand name")}</dd></div>
+        <div><dt>Signup</dt><dd>${escapeHtml(opened)}</dd></div>
+        <div><dt>Status</dt><dd>${escapeHtml(created)}</dd></div>
+      </dl>
+      <section class="account-creation-actions" aria-label="Account creation actions">
+        <button type="button" data-account-action="open-signup" data-account-id="${escapeHtml(account.id)}">Open official signup</button>
+        <button type="button" data-account-action="copy-creation-plan" data-account-id="${escapeHtml(account.id)}">Copy setup plan</button>
+        <button type="button" data-account-action="account-created" data-account-id="${escapeHtml(account.id)}">Mark created</button>
+      </section>
+      <ol class="account-creation-checklist">
+        ${(plan.checklist || []).map((item) => `
+          <li class="account-creation-check ${item.humanRequired ? "human-required" : ""}">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.detail)}</span>
+          </li>
+        `).join("")}
+      </ol>
+      <p class="account-creation-note">Diamond does not store passwords and cannot bypass verification checks.</p>
+    </section>
   `;
 }
 
@@ -1019,7 +1059,10 @@ async function addSocialAccount() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
   if (!companyId || !brandId) return;
-  const handle = promptForText("Handle or page", platform === "x" ? "@thecardbet" : "thecard.bet") || "";
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  const brand = (state.brands || []).find((item) => item.id === brandId);
+  const suggestedHandle = buildSocialAccountCreationPlan({ company, brand, platform }).desiredHandle || "";
+  const handle = promptForText("Handle or page", suggestedHandle) || "";
   const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
   const account = {
     id,
@@ -1062,10 +1105,39 @@ async function handleAccountDetailClick(event) {
   if (button.dataset.accountAction === "set-active") setActiveAccount(account);
   if (button.dataset.accountAction === "ready") account.sessionStatus = "ready";
   if (button.dataset.accountAction === "needs-login") account.sessionStatus = "needs_login";
+  if (button.dataset.accountAction === "open-signup") await openAccountSignup(account);
+  if (button.dataset.accountAction === "copy-creation-plan") await copyAccountCreationPlan(account);
+  if (button.dataset.accountAction === "account-created") {
+    account.creationStatus = "created_manually";
+    account.sessionStatus = account.sessionStatus === "ready" ? "ready" : "needs_login";
+  }
   account.updatedAt = new Date().toISOString();
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
+}
+
+async function openAccountSignup(account) {
+  const plan = buildCreationPlanForAccount(account);
+  if (!plan.signupUrl) return;
+  account.signupUrl = plan.signupUrl;
+  account.signupOpenedAt = new Date().toISOString();
+  await window.diamond?.openExternal?.(plan.signupUrl);
+}
+
+async function copyAccountCreationPlan(account) {
+  const plan = buildCreationPlanForAccount(account);
+  await window.diamond?.writeClipboard?.(formatSocialAccountCreationPlan(plan));
+  account.creationStatus = account.creationStatus || "plan_copied";
+  account.creationNote = "Copied social account creation plan.";
+}
+
+function buildCreationPlanForAccount(account) {
+  const company = (state.companies || []).find((item) => item.id === account.companyId);
+  const brand = (state.brands || []).find((item) => item.id === account.brandId);
+  const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId);
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign?.id);
+  return buildSocialAccountCreationPlan({ company, brand, campaign, account, strategy });
 }
 
 function saveAccountForm(account) {

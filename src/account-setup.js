@@ -1,5 +1,12 @@
 import { normalizeId } from "./ids.js";
-import { platformLabel } from "./social-account.js";
+import {
+  defaultComposeUrlForPlatform,
+  defaultExpectedHostForPlatform,
+  defaultLoginUrlForPlatform,
+  normalizeAccountUrl,
+  normalizeBrowserProfileId,
+  platformLabel,
+} from "./social-account.js";
 
 export const ACCOUNT_SETUP_STATUSES = Object.freeze({
   not_started: "Not started",
@@ -79,6 +86,110 @@ export function buildSocialAccountSetupKit({
   };
 }
 
+export function buildSocialAccountCreationPlan({
+  company,
+  brand,
+  campaign,
+  account,
+  strategy,
+  platform = account?.platform || "x",
+  desiredHandle = account?.handle || brand?.name || company?.name || "",
+  now = new Date().toISOString(),
+} = {}) {
+  const normalizedPlatform = normalizeId(platform, "platform");
+  const platformName = platformLabel(normalizedPlatform);
+  const handle = normalizeDesiredHandle(desiredHandle, normalizedPlatform);
+  const displayName = compactText(brand?.name || company?.name || handle.replace(/^@/, "") || "New brand account");
+  const accountUrl = account?.accountUrl || normalizeAccountUrl(handle, normalizedPlatform);
+  const signupUrl = account?.signupUrl || signupUrlForPlatform(normalizedPlatform);
+  const loginUrl = account?.loginUrl || defaultLoginUrlForPlatform(normalizedPlatform);
+  const composeUrl = account?.composeUrl || defaultComposeUrlForPlatform(normalizedPlatform);
+  const expectedHost = account?.expectedHost || defaultExpectedHostForPlatform(normalizedPlatform);
+  const browserProfileId = account?.browserProfileId || normalizeBrowserProfileId([
+    company?.id || company?.name || "company",
+    brand?.id || brand?.name || "brand",
+    normalizedPlatform,
+    account?.id || handle || "account",
+  ].filter(Boolean).join("-"));
+  const kit = buildSocialAccountSetupKit({
+    company,
+    brand,
+    campaign,
+    account: { ...account, platform: normalizedPlatform, handle, accountUrl, signupUrl },
+    strategy,
+    now,
+  });
+
+  return {
+    ok: Boolean(signupUrl),
+    id: `creation-${account?.id || normalizedPlatform}-${now.replace(/[^0-9a-z]/gi, "-")}`,
+    companyId: company?.id || account?.companyId || "",
+    companyName: company?.name || "",
+    brandId: brand?.id || account?.brandId || "",
+    brandName: brand?.name || "",
+    campaignId: campaign?.id || "",
+    campaignName: campaign?.name || "",
+    socialAccountId: account?.id || "",
+    platform: normalizedPlatform,
+    platformName,
+    desiredHandle: handle,
+    displayName,
+    bio: kit.bio,
+    website: kit.website,
+    accountUrl,
+    signupUrl,
+    loginUrl,
+    composeUrl,
+    expectedHost,
+    browserProfileId,
+    checklist: [
+      {
+        id: "identity",
+        label: "Brand identity",
+        detail: `Use display name "${displayName}" and desired handle "${handle || "brand handle"}" when the platform allows it.`,
+        humanRequired: false,
+      },
+      {
+        id: "email",
+        label: "Email or phone",
+        detail: "Use a company-owned email or phone number you can recover later.",
+        humanRequired: true,
+      },
+      {
+        id: "password",
+        label: "Password",
+        detail: "Create a unique password in your password manager. Diamond does not store passwords.",
+        humanRequired: true,
+      },
+      {
+        id: "verification",
+        label: "Human verification",
+        detail: "Complete CAPTCHA, email verification, SMS checks, and 2FA yourself on the official platform page.",
+        humanRequired: true,
+      },
+      {
+        id: "profile",
+        label: "Profile basics",
+        detail: `Add the bio, website, avatar, and header image for ${displayName}.`,
+        humanRequired: false,
+      },
+      {
+        id: "diamond-proof",
+        label: "Return to Diamond",
+        detail: "Save the public account URL, run Check session, and mark the session ready after you can reach the account.",
+        humanRequired: false,
+      },
+    ],
+    safetyNotes: [
+      "Diamond can open the correct signup page and prepare the account details, but it cannot bypass CAPTCHA, phone, email, or identity checks.",
+      "Diamond does not store social media passwords.",
+      "Create one account at a time so each browser profile, brand, and platform stays cleanly separated.",
+    ],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export function formatSocialAccountSetupKit(kit = {}) {
   return [
     `${kit.platformName || platformLabel(kit.platform)} account setup`,
@@ -94,6 +205,31 @@ export function formatSocialAccountSetupKit(kit = {}) {
     "",
     "Human-controlled steps:",
     ...(kit.checklist || []).map((item, index) => `${index + 1}. ${item}`),
+  ].join("\n");
+}
+
+export function formatSocialAccountCreationPlan(plan = {}) {
+  return [
+    `${plan.platformName || platformLabel(plan.platform)} account creation plan`,
+    `Company: ${plan.companyName || plan.companyId || "Unassigned"}`,
+    `Brand: ${plan.brandName || plan.brandId || "Unassigned"}`,
+    `Campaign: ${plan.campaignName || plan.campaignId || "Unassigned"}`,
+    `Desired handle: ${plan.desiredHandle || ""}`,
+    `Display name: ${plan.displayName || ""}`,
+    `Bio: ${plan.bio || ""}`,
+    `Website: ${plan.website || ""}`,
+    `Official signup: ${plan.signupUrl || ""}`,
+    `Public account URL: ${plan.accountUrl || ""}`,
+    `Browser profile: ${plan.browserProfileId || ""}`,
+    "",
+    "Creation checklist:",
+    ...(plan.checklist || []).map((item, index) => {
+      const human = item.humanRequired ? "human required" : "Diamond-assisted";
+      return `${index + 1}. ${item.label} (${human}): ${item.detail}`;
+    }),
+    "",
+    "Safety notes:",
+    ...(plan.safetyNotes || []).map((item) => `- ${item}`),
   ].join("\n");
 }
 

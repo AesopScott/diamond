@@ -28,7 +28,11 @@ This is the current order for finishing the remaining checklist items.
   - [x] Visible active target banner
   - [x] Company/account guard before staging
   - [x] Social account creation setup kit
+    - [x] In-app account creation panel per company, brand, and platform
+    - [x] Copyable account creation plan with handle, bio, signup URL, and safety steps
   - [x] Official signup handoff with human verification boundary
+    - [x] Official signup launch button for X, Instagram, TikTok, LinkedIn, YouTube Shorts, Facebook, and Reddit
+    - [x] Explicit password/CAPTCHA/email/phone/2FA boundary so Diamond never stores or bypasses credentials
 - [x] X account/session workflow
   - [x] Account URL, login URL, compose URL, host, and browser profile fields
   - [x] Isolated browser profile path per company/platform/account
