@@ -1759,14 +1759,7 @@ async function stageOperatorDraft(account, draft) {
 async function captureOperatorProof(account, draft) {
   if (!account) return setOperatorMessage("Proof capture blocked: no active account.");
   if (!draft) return setOperatorMessage("Proof capture blocked: no active draft.");
-  account.proofCount = Number(account.proofCount || 0) + 1;
-  account.lastProofAt = new Date().toISOString();
-  createOperatorRun(draft, {
-    status: "proof_captured",
-    note: "Operator proof captured from the current draft record.",
-    screenshotPath: draft.screenshotPath || "",
-    platformUrl: draft.stageUrl || resolveComposeUrl(account) || resolveLoginUrl(account) || "",
-  });
+  capturePlatformDraftProof(draft, "staged_composer");
   await saveProductionState();
   await refreshProductionViews();
   return setOperatorMessage(`${platformLabel(account.platform)} proof recorded. Total proofs: ${account.proofCount}.`);
@@ -1788,21 +1781,14 @@ async function validateOperatorPackage(account) {
 
 function createOperatorRun(draft, input = {}) {
   state.postRuns ||= [];
-  const now = new Date().toISOString();
-  const run = {
+  const run = buildDraftRunRecord(draft, {
     id: `operator-run-${Date.now()}-${draft.platform || "platform"}`,
-    draftId: draft.id,
-    postPackageId: draft.postPackageId,
-    context: draft.context,
     status: input.status || "operator_recorded",
     note: input.note || "",
-    text: draft.text,
-    media: draft.media || [],
     platformUrl: input.platformUrl || "",
     screenshotPath: input.screenshotPath || "",
     metrics: createPostMetrics(),
-    createdAt: now,
-  };
+  });
   state.postRuns.unshift(run);
   draft.lastRunId = run.id;
   return run;
@@ -2150,10 +2136,14 @@ function renderPlatformPreview(draft) {
         <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">Schedule</button>
         <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">Stage</button>
         <button type="button" data-platform-action="proof" data-platform-draft-id="${escapeHtml(draft.id)}">Capture proof</button>
+        <button type="button" data-platform-action="copy-proof" data-platform-draft-id="${escapeHtml(draft.id)}">Copy proof</button>
+        <button type="button" data-platform-action="copy-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy URL</button>
+        <button type="button" data-platform-action="copy-screenshot" data-platform-draft-id="${escapeHtml(draft.id)}">Copy screenshot</button>
         <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">Mark posted</button>
         <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">Abandon</button>
       </div>
       ${renderDraftEvaluation(draft)}
+      ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
       <div class="social-preview">
         <div class="avatar"></div>
@@ -2164,6 +2154,33 @@ function renderPlatformPreview(draft) {
         <p>${escapeHtml(draft.text)}</p>
       </div>
     </article>
+  `;
+}
+
+function renderDraftProofPanel(draft) {
+  const account = accountForDraft(draft);
+  const run = latestRunForDraft(draft);
+  const rows = [
+    ["Proof status", proofStatus(draft, account)],
+    ["Last proof", draft.proofCapturedAt ? formatDateTime(draft.proofCapturedAt) : "None"],
+    ["Proof kind", titleCase(draft.proofKind || "not captured")],
+    ["Staged URL", draft.stageUrl || run?.platformUrl || "Missing"],
+    ["Screenshot", draft.screenshotPath || run?.screenshotPath || "Missing"],
+    ["Run ID", draft.lastRunId || draft.runId || run?.id || "None"],
+    ["Account proofs", String(account?.proofCount || 0)],
+    ["Next", proofNextAction(draft)],
+  ];
+  return `
+    <section class="draft-proof-panel" aria-label="${escapeHtml(platformLabel(draft.platform))} proof">
+      <header>
+        <strong>Proof</strong>
+        <span>${escapeHtml(draft.proofNote || "Capture proof after staging or manual posting.")}</span>
+      </header>
+      <dl>
+        ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+      </dl>
+      <p>${escapeHtml(buildDraftProofSummary(draft))}</p>
+    </section>
   `;
 }
 
@@ -2275,6 +2292,9 @@ async function handlePlatformDraftAction(event) {
     stagePlatformDraft(draft);
   }
   if (action === "proof") capturePlatformDraftProof(draft);
+  if (action === "copy-proof") await copyDraftProofSummary(draft);
+  if (action === "copy-url") await copyDraftStageUrl(draft);
+  if (action === "copy-screenshot") await copyDraftScreenshotPath(draft);
   if (action === "posted") markPlatformDraftPosted(draft);
   if (action === "abandoned") markPlatformDraftAbandoned(draft);
   updatePostPackageFromDrafts(draft.postPackageId);
@@ -2490,16 +2510,15 @@ function markPlatformDraftPosted(draft) {
   draft.publishedAt = postedAt;
   draft.updatedAt = postedAt;
   state.postRuns ||= [];
-  const run = {
+  const run = buildDraftRunRecord(draft, {
     id: draft.runId || `run-${Date.now()}-${draft.platform}`,
-    draftId: draft.id,
-    postPackageId: draft.postPackageId,
-    context: draft.context,
     status: "posted",
-    text: draft.text,
-    media: draft.media || [],
+    note: draft.proofNote || "Marked posted after manual publish.",
     createdAt: postedAt,
-  };
+    platformUrl: draft.stageUrl || "",
+    screenshotPath: draft.screenshotPath || "",
+    proofKind: draft.proofKind || "",
+  });
   draft.runId = run.id;
   const runIndex = state.postRuns.findIndex((item) => item.id === run.id);
   if (runIndex >= 0) state.postRuns[runIndex] = { ...state.postRuns[runIndex], ...run };
@@ -2512,30 +2531,138 @@ function markPlatformDraftPosted(draft) {
   }
 }
 
-function capturePlatformDraftProof(draft) {
+function capturePlatformDraftProof(draft, proofKind = "") {
   const account = accountForDraft(draft);
   const capturedAt = new Date().toISOString();
+  const kind = normalizeProofKind(proofKind || promptForText("Proof kind", defaultProofKind(draft)));
   if (account) {
     account.proofCount = Number(account.proofCount || 0) + 1;
     account.lastProofAt = capturedAt;
   }
   draft.proofCapturedAt = capturedAt;
-  draft.proofNote = `Proof captured for ${platformLabel(draft.platform)}${account?.handle ? ` / ${account.handle}` : ""}.`;
+  draft.proofKind = kind;
+  draft.proofNote = `${titleCase(kind)} proof captured for ${platformLabel(draft.platform)}${account?.handle ? ` / ${account.handle}` : ""}.`;
   draft.updatedAt = capturedAt;
   state.postRuns ||= [];
-  const run = {
+  const run = buildDraftRunRecord(draft, {
     id: `proof-${Date.now()}-${draft.platform}`,
-    draftId: draft.id,
-    postPackageId: draft.postPackageId,
-    context: draft.context,
     status: "proof_captured",
-    text: draft.text,
-    media: draft.media || [],
     createdAt: capturedAt,
     platformUrl: draft.stageUrl || resolveComposeUrl(account) || resolveLoginUrl(account) || "",
+    screenshotPath: draft.screenshotPath || "",
     note: draft.proofNote,
-  };
+    proofKind: kind,
+    proofCapturedAt: capturedAt,
+  });
+  draft.lastProofRunId = run.id;
+  draft.lastRunId = run.id;
   state.postRuns.unshift(run);
+}
+
+async function copyDraftProofSummary(draft) {
+  await window.diamond?.writeClipboard?.(buildDraftProofSummary(draft));
+  draft.stageNote = "Copied proof summary.";
+  draft.updatedAt = new Date().toISOString();
+}
+
+async function copyDraftStageUrl(draft) {
+  const run = latestRunForDraft(draft);
+  const value = draft.stageUrl || run?.platformUrl || "";
+  await window.diamond?.writeClipboard?.(value);
+  draft.stageNote = value ? "Copied staged URL." : "No staged URL to copy.";
+  draft.updatedAt = new Date().toISOString();
+}
+
+async function copyDraftScreenshotPath(draft) {
+  const run = latestRunForDraft(draft);
+  const value = draft.screenshotPath || run?.screenshotPath || "";
+  await window.diamond?.writeClipboard?.(value);
+  draft.stageNote = value ? "Copied screenshot path." : "No screenshot path to copy.";
+  draft.updatedAt = new Date().toISOString();
+}
+
+function buildDraftRunRecord(draft, input = {}) {
+  const context = draft.context || {};
+  const account = accountForDraft(draft);
+  return {
+    id: input.id || `run-${Date.now()}-${draft.platform || "platform"}`,
+    companyId: draft.companyId || context.companyId || "",
+    brandId: draft.brandId || context.brandId || "",
+    campaignId: draft.campaignId || context.campaignId || "",
+    platform: draft.platform || context.platform || "",
+    socialAccountId: draft.socialAccountId || context.socialAccountId || account?.id || "",
+    browserProfileId: context.browserProfileId || account?.browserProfileId || "",
+    accountHandle: account?.handle || "",
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    context: {
+      ...context,
+      companyId: draft.companyId || context.companyId || "",
+      brandId: draft.brandId || context.brandId || "",
+      campaignId: draft.campaignId || context.campaignId || "",
+      platform: draft.platform || context.platform || "",
+      socialAccountId: draft.socialAccountId || context.socialAccountId || account?.id || "",
+      browserProfileId: context.browserProfileId || account?.browserProfileId || "",
+    },
+    status: input.status || "operator_recorded",
+    proofKind: input.proofKind || "",
+    proofCapturedAt: input.proofCapturedAt || draft.proofCapturedAt || "",
+    note: input.note || "",
+    text: draft.text,
+    media: draft.media || [],
+    platformUrl: input.platformUrl || draft.stageUrl || "",
+    stageUrl: input.platformUrl || draft.stageUrl || "",
+    screenshotPath: input.screenshotPath || draft.screenshotPath || "",
+    metrics: input.metrics,
+    createdAt: input.createdAt || new Date().toISOString(),
+  };
+}
+
+function latestRunForDraft(draft) {
+  return (state.postRuns || []).find((run) => (
+    run.id === draft.lastProofRunId
+    || run.id === draft.lastRunId
+    || run.id === draft.runId
+    || run.draftId === draft.id
+  )) || null;
+}
+
+function buildDraftProofSummary(draft) {
+  const account = accountForDraft(draft);
+  const run = latestRunForDraft(draft);
+  const lines = [
+    `${platformLabel(draft.platform)} ${titleCase(draft.status || "draft")} proof`,
+    `Account: ${account?.handle || account?.id || "missing"}`,
+    `Brand: ${brandName(draft.brandId || draft.context?.brandId)}`,
+    `Campaign: ${campaignName(draft.campaignId || draft.context?.campaignId)}`,
+    `Proof: ${draft.proofCapturedAt ? `${titleCase(draft.proofKind || "captured")} at ${formatDateTime(draft.proofCapturedAt)}` : "not captured"}`,
+    `URL: ${draft.stageUrl || run?.platformUrl || "missing"}`,
+    `Screenshot: ${draft.screenshotPath || run?.screenshotPath || "missing"}`,
+    `Run: ${draft.lastProofRunId || draft.lastRunId || draft.runId || run?.id || "missing"}`,
+  ];
+  return lines.join(" | ");
+}
+
+function defaultProofKind(draft) {
+  if (draft.status === "published") return "published";
+  if (draft.screenshotPath) return "screenshot";
+  if (draft.status === "staged") return "staged";
+  return "account";
+}
+
+function normalizeProofKind(value) {
+  const id = normalizeId(value || "account");
+  if (["published", "published-post", "live-post", "live"].includes(id)) return "published_post";
+  if (["screenshot", "screen", "capture"].includes(id)) return "screenshot";
+  if (["media", "upload", "manual-upload"].includes(id)) return "manual_upload";
+  if (["account", "session", "login"].includes(id)) return "account_session";
+  return "staged_composer";
+}
+
+function proofNextAction(draft) {
+  if (!draft.proofCapturedAt) return "Capture proof after staging or publishing.";
+  if (draft.status !== "published") return "Mark posted after the post is live.";
+  return "Run record is ready for analytics.";
 }
 
 function markPlatformDraftAbandoned(draft) {

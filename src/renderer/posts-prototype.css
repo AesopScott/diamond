@@ -897,6 +897,66 @@ textarea {
   text-transform: uppercase;
 }
 
+.draft-proof-panel {
+  background: color-mix(in srgb, var(--surface-2) 76%, var(--accent) 8%);
+  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.draft-proof-panel header {
+  align-items: start;
+  border: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+
+.draft-proof-panel header span,
+.draft-proof-panel p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.draft-proof-panel dl {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  margin: 0;
+}
+
+.draft-proof-panel dl div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px;
+}
+
+.draft-proof-panel dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 1000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.draft-proof-panel dd {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .platform-note {
   background: var(--card);
   border: 1px solid var(--line);
@@ -2297,6 +2357,7 @@ textarea {
   }
 
   .staging-plan dl,
+  .draft-proof-panel dl,
   .stage-result {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
