@@ -37,6 +37,9 @@ This is the current order for finishing the remaining checklist items.
   - [x] Manual mark-ready
   - [x] Preserve login through Electron browser profile
   - [ ] Formal repeated X staging proof across three separate app sessions
+    - [x] Repeated staging proof session tracker
+    - [x] Staging proof records include session, timestamp, account, draft, screenshot, URL, and result
+    - [ ] Three real X staging proof sessions recorded from separate app launches
 - [x] Post package workflow
   - [x] Draft text area
   - [x] Numbered action buttons
@@ -461,7 +464,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P0 | Add scheduled-post calendar view | Built | Calendar shows upcoming scheduled posts by company, brand, campaign, platform, account, status, timezone, readiness, and queue actions. |
 | P0 | Add brand and claim libraries | Built | Voice rules, approved language, banned claims, identity rules, and evaluation rule hits. |
 | P0 | Validate plan against Diamond reality | Built | Standalone Electron app, local state, embedded browser strategy, and routine hooks have been validated in code. |
-| P0 | Run confidence proof phase | Partial | App shell, browser sizing, staging, screenshots, and tests are proven; repeated X staging across three separate app sessions remains open. |
+| P0 | Run confidence proof phase | Partial | App shell, browser sizing, staging, screenshots, tests, and repeated-proof tracking are proven; three real X staging records across separate app sessions remain open. |
 | P0 | Build `social-x` skill | Built | X-specific compose URL, session flow, composer insertion, media helper, and run capture are in place. |
 | P0 | Build `x-daily-post` routine | Built | Generate one post package from the next planned editorial slot. |
 | P0 | Add routine scheduler handoff | Built | Run due planned slots, record generated/skipped runs, show ready/skipped calendar states, and use a campaign-configurable due window. |

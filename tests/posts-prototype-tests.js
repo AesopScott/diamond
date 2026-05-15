@@ -111,6 +111,7 @@ assert.match(css, /\.operator-panel/);
 assert.match(css, /\.operator-check/);
 assert.match(css, /\.operator-action/);
 assert.match(css, /\.operator-status/);
+assert.match(css, /\.proof-session-list/);
 assert.match(css, /button:disabled/);
 assert.match(css, /grid-template-columns: repeat\(5/);
 
@@ -263,6 +264,10 @@ assert.match(js, /stageOperatorDraft/);
 assert.match(js, /captureOperatorProof/);
 assert.match(js, /validateOperatorPackage/);
 assert.match(js, /createOperatorRun/);
+assert.match(js, /getPlatformProofForAccount/);
+assert.match(js, /recordStagingProofForDraft/);
+assert.match(js, /stagingProofSessionProgress/);
+assert.match(js, /APP_SESSION_ID/);
 assert.match(js, /activeOperatorDraft/);
 assert.match(js, /setOperatorMessage/);
 assert.match(js, /"stage-browser"/);

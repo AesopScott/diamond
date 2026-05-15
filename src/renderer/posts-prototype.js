@@ -33,7 +33,13 @@ import {
   createElevenLabsSpeechRequest,
   getDiamondGuideSections,
   getDiamondTourSteps,
+  createPlatformProofRecord,
+  ensurePlatformProofRecords,
+  evaluatePlatformProof,
+  markPlatformProofFromStage,
+  platformProofId,
   platformStagingPlan,
+  stagingProofSessionProgress,
 } from "../index.js";
 
 const PROFESSIONAL_THEMES = [
@@ -203,6 +209,7 @@ const OPERATOR_LABELS_ES = {
   "Export Bundle": "Exportar paquete",
   "Run Log": "Registro",
   "Preflight Checks": "Revisiones previas",
+  "Repeated Staging Proof": "Prueba de preparacion repetida",
   "License Permits Target": "Licencia permite objetivo",
   "License permits target": "Licencia permite objetivo",
   "Firebase Admin Config": "Configuracion admin de Firebase",
@@ -222,6 +229,7 @@ const OPERATOR_LABELS_ES = {
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
 state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
+const APP_SESSION_ID = `diamond-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
 let prototypeModel = buildProductionPostModel(state);
@@ -274,11 +282,12 @@ function hydrateSavedWorkspace(saved) {
     drafts: saved.drafts || [],
     scheduledPosts: saved.scheduledPosts || [],
     postRuns: saved.postRuns || [],
+    platformProofs: saved.platformProofs || defaults.platformProofs || [],
     postPackages: saved.postPackages || [],
     platformDrafts: saved.platformDrafts || [],
     context: saved.context || defaults.context,
   });
-  return workspace;
+  return ensurePlatformProofRecords(workspace);
 }
 
 function buildProductionPostModel(workspace) {
@@ -422,7 +431,7 @@ function buildSampleWorkspace() {
     colorContrast: "needs full audit",
     reducedMotion: "planned",
   };
-  return workspace;
+  return ensurePlatformProofRecords(workspace);
 }
 
 function renderBoard(columns) {
@@ -1803,6 +1812,9 @@ function renderOperatorDrawer() {
   const checks = operatorChecks(account);
   const syncSummary = summarizeFirestoreSyncBundle(buildFirestoreSyncBundle(state));
   const recentLogs = operatorRunLogs();
+  const proof = account ? getPlatformProofForAccount(account) : null;
+  const proofProgress = proof ? stagingProofSessionProgress(proof) : null;
+  const proofEvaluation = proof ? evaluatePlatformProof(proof) : null;
   target.innerHTML = `
     ${latestOperatorMessage ? `<section class="operator-status" aria-live="polite">${escapeHtml(latestOperatorMessage)}</section>` : ""}
     <section class="operator-panel">
@@ -1829,6 +1841,27 @@ function renderOperatorDrawer() {
         ${checks.map(renderOperatorCheck).join("")}
       </div>
     </section>
+
+    ${proof ? `
+      <section class="operator-panel proof-session-panel">
+        <header>
+          <h3>${escapeHtml(t("Repeated Staging Proof"))}</h3>
+          <span class="count">${escapeHtml(proofProgress.label)}</span>
+        </header>
+        <div class="proof-session-summary">
+          <span class="session-pill ${proofProgress.complete ? "ready" : "needs_login"}">${escapeHtml(proofProgress.complete ? t("Ready") : t("Needs Attention"))}</span>
+          <p>${escapeHtml(proofEvaluation?.summary || "")} ${escapeHtml(proofEvaluation?.loginSummary || "")}</p>
+        </div>
+        <ol class="proof-session-list">
+          ${proofProgress.sessions.map((session) => `
+            <li>
+              <strong>${escapeHtml(formatDateTime(session.createdAt))}</strong>
+              <span>${escapeHtml(session.draftId || "No draft")} / ${escapeHtml(session.screenshotPath || session.stageUrl || "No screenshot")}</span>
+            </li>
+          `).join("") || `<li><strong>${escapeHtml(t("No Posts"))}</strong><span>Stage X from Operator three separate app sessions.</span></li>`}
+        </ol>
+      </section>
+    ` : ""}
 
     <section class="operator-panel">
       <header>
@@ -1967,6 +2000,7 @@ async function stageOperatorDraft(account, draft) {
     screenshotPath: draft.screenshotPath,
     platformUrl: draft.stageUrl,
   });
+  recordStagingProofForDraft(account, draft, result || {});
   updatePostPackageFromDrafts(draft.postPackageId);
   await saveProductionState();
   await refreshProductionViews();
@@ -2010,6 +2044,48 @@ function createOperatorRun(draft, input = {}) {
   state.postRuns.unshift(run);
   draft.lastRunId = run.id;
   return run;
+}
+
+function getPlatformProofForAccount(account) {
+  if (!account) return null;
+  state.platformProofs ||= [];
+  const id = platformProofId({
+    companyId: account.companyId,
+    brandId: account.brandId,
+    platform: account.platform,
+    socialAccountId: account.id,
+  });
+  let proof = state.platformProofs.find((item) => item.id === id);
+  if (!proof) {
+    proof = createPlatformProofRecord({
+      companyId: account.companyId,
+      brandId: account.brandId,
+      platform: account.platform,
+      socialAccountId: account.id,
+    });
+    state.platformProofs.push(proof);
+  }
+  return proof;
+}
+
+function recordStagingProofForDraft(account, draft, result = {}) {
+  if (!account || !draft) return null;
+  const proof = getPlatformProofForAccount(account);
+  const next = markPlatformProofFromStage(proof, {
+    appSessionId: APP_SESSION_ID,
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    stageUrl: draft.stageUrl || result.currentUrl || "",
+    screenshotPath: draft.screenshotPath || result.screenshotPath || "",
+    status: draft.status,
+    ok: Boolean(result.ok),
+    fillResult: result.fillResult || { ok: Boolean(result.ok), manual: draft.status === "needs_manual_finish" },
+    mediaResult: result.mediaResult || {},
+    hasMedia: Boolean((draft.media || []).length),
+    notes: draft.stageNote || result.reason || "",
+  });
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.proof.id ? next.proof : item);
+  return next.proof;
 }
 
 function setOperatorMessage(message) {

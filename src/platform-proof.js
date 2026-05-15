@@ -14,6 +14,7 @@ export function createPlatformProofRecord(input = {}) {
     mediaProofCount: whole(input.mediaProofCount),
     manualProofCount: whole(input.manualProofCount),
     loginProofCount: whole(input.loginProofCount),
+    stagingProofSessions: normalizeStagingProofSessions(input.stagingProofSessions),
     lastLoginProofAt: input.lastLoginProofAt || null,
     lastProofAt: input.lastProofAt || null,
     notes: input.notes || adapter.note || "",
@@ -85,10 +86,66 @@ export function markPlatformProofFromStage(proof, input = {}) {
     next.notes = notes.join(" ");
     next.updatedAt = next.lastProofAt || new Date().toISOString();
   }
+  if (input.appSessionId || input.stageUrl || input.screenshotPath || input.draftId) {
+    next = recordPlatformStagingProofSession(next, {
+      ...input,
+      ok: Boolean(input.ok ?? fillResult.ok ?? input.stageUrl ?? input.screenshotPath),
+      notes: notes.join(" ") || input.notes || "",
+    });
+  }
   return {
     proof: next,
-    changed: notes.length > 0,
+    changed: notes.length > 0 || Boolean(input.appSessionId || input.stageUrl || input.screenshotPath || input.draftId),
     notes,
+  };
+}
+
+export function recordPlatformStagingProofSession(proof, input = {}) {
+  const next = createPlatformProofRecord(proof);
+  const createdAt = input.createdAt || new Date().toISOString();
+  const appSessionId = input.appSessionId || `session-${createdAt}`;
+  const record = {
+    id: input.id || `staging-proof-${createdAt.replace(/[^0-9a-z]+/gi, "-")}-${next.platform || "platform"}`,
+    appSessionId,
+    platform: next.platform,
+    companyId: next.companyId,
+    brandId: next.brandId,
+    socialAccountId: next.socialAccountId,
+    draftId: input.draftId || "",
+    postPackageId: input.postPackageId || "",
+    stageUrl: input.stageUrl || input.platformUrl || "",
+    screenshotPath: input.screenshotPath || "",
+    status: input.status || (input.ok ? "staged" : "needs_review"),
+    ok: Boolean(input.ok),
+    notes: input.notes || "",
+    createdAt,
+  };
+  const existingIndex = next.stagingProofSessions.findIndex((session) => session.appSessionId === appSessionId && session.draftId === record.draftId);
+  if (existingIndex >= 0) next.stagingProofSessions[existingIndex] = { ...next.stagingProofSessions[existingIndex], ...record };
+  else next.stagingProofSessions.unshift(record);
+  next.stagingProofSessions = next.stagingProofSessions.slice(0, 12);
+  next.lastProofAt = createdAt;
+  next.updatedAt = createdAt;
+  if (record.notes) next.notes = record.notes;
+  return next;
+}
+
+export function stagingProofSessionProgress(proof = {}, required = 3) {
+  const sessions = normalizeStagingProofSessions(proof.stagingProofSessions)
+    .filter((session) => session.ok && session.appSessionId);
+  const unique = [];
+  const seen = new Set();
+  sessions.forEach((session) => {
+    if (seen.has(session.appSessionId)) return;
+    seen.add(session.appSessionId);
+    unique.push(session);
+  });
+  return {
+    count: unique.length,
+    required,
+    complete: unique.length >= required,
+    sessions: unique,
+    label: `${platformDisplay(proof.platform)} staging proof ${Math.min(unique.length, required)}/${required}`,
   };
 }
 
@@ -114,11 +171,12 @@ export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAd
     };
   }
   const ok = record.textProofCount >= 3 && record.mediaProofCount >= 1;
+  const stagingProgress = stagingProofSessionProgress(record);
   return {
-    status: ok ? "assisted_proven" : "needs_proof",
+    status: ok && stagingProgress.complete ? "assisted_proven" : "needs_proof",
     label: ok ? "Assisted proven" : "Proof needed",
-    ok,
-    summary: `Text proof ${record.textProofCount}/3. Media proof ${record.mediaProofCount}/1.`,
+    ok: ok && stagingProgress.complete,
+    summary: `Text proof ${record.textProofCount}/3. Media proof ${record.mediaProofCount}/1. ${stagingProgress.label}.`,
     loginSummary: `Login proof ${record.loginProofCount}/1.`,
   };
 }
@@ -136,4 +194,29 @@ export function platformProofId(input = {}) {
 function whole(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+}
+
+function normalizeStagingProofSessions(value) {
+  return Array.isArray(value) ? value.filter(Boolean).map((session) => ({
+    id: session.id || "",
+    appSessionId: session.appSessionId || "",
+    platform: session.platform || "",
+    companyId: session.companyId || "",
+    brandId: session.brandId || "",
+    socialAccountId: session.socialAccountId || "",
+    draftId: session.draftId || "",
+    postPackageId: session.postPackageId || "",
+    stageUrl: session.stageUrl || session.platformUrl || "",
+    screenshotPath: session.screenshotPath || "",
+    status: session.status || "",
+    ok: Boolean(session.ok),
+    notes: session.notes || "",
+    createdAt: session.createdAt || "",
+  })) : [];
+}
+
+function platformDisplay(platform) {
+  if (platform === "x") return "X";
+  if (!platform) return "Platform";
+  return String(platform).replace(/(^|-)(\w)/g, (_match, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`);
 }

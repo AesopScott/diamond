@@ -9,6 +9,8 @@ import {
   markPlatformProof,
   markPlatformProofFromStage,
   platformProofId,
+  recordPlatformStagingProofSession,
+  stagingProofSessionProgress,
 } from "../src/index.js";
 
 const workspace = createSeedWorkspace();
@@ -29,9 +31,13 @@ let proven = markPlatformProof(xProof, "text");
 proven = markPlatformProof(proven, "text");
 proven = markPlatformProof(proven, "text");
 proven = markPlatformProof(proven, "media");
+proven = recordPlatformStagingProofSession(proven, { appSessionId: "session-proof-1", draftId: "proof-1", ok: true });
+proven = recordPlatformStagingProofSession(proven, { appSessionId: "session-proof-2", draftId: "proof-2", ok: true });
+proven = recordPlatformStagingProofSession(proven, { appSessionId: "session-proof-3", draftId: "proof-3", ok: true });
 const xEvaluation = evaluatePlatformProof(proven, getPlatformBrowserAdapter("x"));
 assert.equal(xEvaluation.status, "assisted_proven");
 assert.equal(xEvaluation.ok, true);
+assert.match(xEvaluation.summary, /X staging proof 3\/3/);
 
 const instagramProof = createPlatformProofRecord({
   companyId: "thecard-bet",
@@ -62,10 +68,16 @@ const stageProof = markPlatformProofFromStage(xProof, {
   fillResult: { ok: true },
   mediaResult: { ok: true },
   hasMedia: true,
+  appSessionId: "session-1",
+  draftId: "draft-1",
+  stageUrl: "https://x.com/compose/post",
+  screenshotPath: "C:/Diamond/proof/session-1.png",
 });
 assert.equal(stageProof.changed, true);
 assert.equal(stageProof.proof.textProofCount, 1);
 assert.equal(stageProof.proof.mediaProofCount, 1);
+assert.equal(stageProof.proof.stagingProofSessions.length, 1);
+assert.equal(stagingProofSessionProgress(stageProof.proof).count, 1);
 
 const manualStageProof = markPlatformProofFromStage(instagramProof, {
   fillResult: { ok: false, manual: true },
@@ -75,5 +87,31 @@ const manualStageProof = markPlatformProofFromStage(instagramProof, {
 assert.equal(manualStageProof.changed, true);
 assert.equal(manualStageProof.proof.manualProofCount, 1);
 assert.equal(manualStageProof.proof.mediaProofCount, 0);
+
+let repeated = recordPlatformStagingProofSession(xProof, {
+  appSessionId: "session-a",
+  draftId: "draft-a",
+  stageUrl: "https://x.com/compose/post",
+  screenshotPath: "C:/Diamond/proof/a.png",
+  ok: true,
+});
+repeated = recordPlatformStagingProofSession(repeated, {
+  appSessionId: "session-b",
+  draftId: "draft-b",
+  stageUrl: "https://x.com/compose/post",
+  screenshotPath: "C:/Diamond/proof/b.png",
+  ok: true,
+});
+repeated = recordPlatformStagingProofSession(repeated, {
+  appSessionId: "session-c",
+  draftId: "draft-c",
+  stageUrl: "https://x.com/compose/post",
+  screenshotPath: "C:/Diamond/proof/c.png",
+  ok: true,
+});
+const repeatedProgress = stagingProofSessionProgress(repeated);
+assert.equal(repeatedProgress.count, 3);
+assert.equal(repeatedProgress.complete, true);
+assert.equal(repeatedProgress.label, "X staging proof 3/3");
 
 console.log("All Diamond platform proof tests passed.");
