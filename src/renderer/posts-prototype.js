@@ -1286,7 +1286,6 @@ function renderCompanies() {
         </dl>
         <section class="account-actions" aria-label="Company actions">
           <button type="button" data-company-action="save">Save company</button>
-          <button type="button" data-company-action="set-active">Set active company</button>
         </section>
       </article>
     </aside>
@@ -1373,10 +1372,11 @@ function renderBrandPanel(title, items = []) {
 async function handleCompanyWorkspaceClick(event) {
   const button = event.target.closest("[data-company-action]");
   if (!button) return;
+  if (button.dataset.companyAction !== "save") return;
   const workspace = document.querySelector("#company-workspace");
   const companyId = normalizeId(workspace?.querySelector('[data-company-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
   const company = (state.companies || []).find((item) => item.id === companyId);
-  if (company && button.dataset.companyAction === "save") {
+  if (company) {
     company.name = workspace?.querySelector('[data-company-field="companyName"]')?.value || company.name;
   }
   state.context = {
