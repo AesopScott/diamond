@@ -34,6 +34,13 @@ const validInput = {
 assert.equal(validatePlaywrightStageInput(validInput).ok, true);
 assert.equal(validatePlaywrightStageInput({ ...validInput, media: [path.join(root, "missing.png")] }).ok, false);
 assert.equal(validatePlaywrightStageInput({ ...validInput, account: { ...account, platform: "instagram" } }).ok, false);
+assert.equal(validatePlaywrightStageInput({
+  ...validInput,
+  context: { ...context, platform: "instagram" },
+  account: { ...workspace.socialAccounts.find((item) => item.platform === "instagram"), browserProfileId: "ig-profile" },
+  composeUrl: "https://www.instagram.com/",
+  allowCandidateAdapters: true,
+}).ok, true);
 
 const actions = [];
 const fakePage = {
@@ -81,5 +88,16 @@ assert.deepEqual(actions.map((item) => item[0]), [
   "screenshot",
   "close",
 ]);
+
+const instagramAccount = workspace.socialAccounts.find((item) => item.platform === "instagram");
+const candidateResult = await stagePostWithPlaywright({
+  ...validInput,
+  context: { ...context, platform: "instagram", socialAccountId: instagramAccount.id, browserProfileId: instagramAccount.browserProfileId },
+  account: instagramAccount,
+  composeUrl: "https://www.instagram.com/",
+  allowCandidateAdapters: true,
+}, fakeDriver);
+assert.equal(candidateResult.ok, true);
+assert.equal(candidateResult.candidateAdapter, true);
 
 console.log("All Diamond Playwright worker tests passed.");

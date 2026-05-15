@@ -25,9 +25,11 @@ export function validatePlaywrightStageInput(input = {}) {
   ].filter(([, value]) => !value);
 
   if (missing.length) return { ok: false, reason: `Missing ${missing.map(([label]) => label).join(", ")}.` };
-  if (adapter.stageMode !== "assisted") return { ok: false, reason: `${adapter.label} does not have a proven Playwright staging adapter yet.` };
-  if (!adapter.composerSelector) return { ok: false, reason: `${adapter.label} is missing a composer selector.` };
-  if (media.length && !adapter.mediaInputSelector) return { ok: false, reason: `${adapter.label} is missing a media input selector.` };
+  const composerSelector = adapter.composerSelector || (input.allowCandidateAdapters ? adapter.candidateComposerSelector : "");
+  const mediaInputSelector = adapter.mediaInputSelector || (input.allowCandidateAdapters ? adapter.candidateMediaInputSelector : "");
+  if (adapter.stageMode !== "assisted" && !input.allowCandidateAdapters) return { ok: false, reason: `${adapter.label} does not have a proven Playwright staging adapter yet.` };
+  if (!composerSelector) return { ok: false, reason: `${adapter.label} is missing a composer selector.` };
+  if (media.length && !mediaInputSelector) return { ok: false, reason: `${adapter.label} is missing a media input selector.` };
   const missingMedia = media.filter((file) => !fs.existsSync(file));
   if (missingMedia.length) return { ok: false, reason: `Media file not found: ${missingMedia[0]}` };
   return { ok: true, reason: "Playwright stage input is valid." };
@@ -60,9 +62,11 @@ export async function stagePostWithPlaywright(input = {}, driver) {
     const composeUrl = input.composeUrl || input.account.composeUrl;
     await page.goto(composeUrl, { waitUntil: "domcontentloaded", timeout: input.timeoutMs || 45000 });
 
-    const fillResult = await fillComposer(page, adapter.composerSelector, input.text, input.timeoutMs);
+    const composerSelector = adapter.composerSelector || (input.allowCandidateAdapters ? adapter.candidateComposerSelector : "");
+    const mediaInputSelector = adapter.mediaInputSelector || (input.allowCandidateAdapters ? adapter.candidateMediaInputSelector : "");
+    const fillResult = await fillComposer(page, composerSelector, input.text, input.timeoutMs);
     const mediaResult = input.media?.length
-      ? await attachMedia(page, adapter.mediaInputSelector, input.media, input.timeoutMs)
+      ? await attachMedia(page, mediaInputSelector, input.media, input.timeoutMs)
       : { ok: true, reason: "No media selected." };
     const screenshotPath = await captureWorkerScreenshot(page, screenshotsDir, input.screenshotName);
 
@@ -75,6 +79,7 @@ export async function stagePostWithPlaywright(input = {}, driver) {
       screenshotPath,
       currentUrl: typeof page.url === "function" ? page.url() : composeUrl,
       profilePath,
+      candidateAdapter: adapter.stageMode !== "assisted",
     });
   } catch (error) {
     return workerResult({ ok: false, status: "needs_manual_finish", reason: error.message || "Playwright staging failed.", profilePath });
@@ -135,5 +140,6 @@ function workerResult(input) {
     currentUrl: input.currentUrl || "",
     profilePath: input.profilePath || "",
     profileUrl: input.profilePath ? pathToFileURL(input.profilePath).href : "",
+    candidateAdapter: Boolean(input.candidateAdapter),
   };
 }

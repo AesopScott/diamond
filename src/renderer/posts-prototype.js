@@ -2493,6 +2493,7 @@ async function stageOperatorDraft(account, draft) {
       text: draft.text,
       media: draft.media || [],
       screenshotName: `operator-${draft.id}-${Date.now()}`,
+      allowCandidateAdapters: true,
     });
   } catch (error) {
     result = {

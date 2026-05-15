@@ -218,7 +218,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Manual Operator controls for login, media, and manual proof
   - [x] Platform-specific proof kind capture updates proof counters
   - [x] Candidate composer/media selector registry beyond X
-  - [ ] Assisted composer adapters beyond X
+  - [x] Assisted composer adapters beyond X
   - [x] Platform-specific media upload proof
   - [ ] Repeated staging proof for each writable platform
 - [x] Polaris integration bridge
