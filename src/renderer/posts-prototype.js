@@ -42,9 +42,12 @@ import {
   buildPlatformProofQueue,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
+  markPlatformLoginProof,
+  markPlatformProof,
   markPlatformProofFromStage,
   platformProofId,
   platformProofQueueMarkdown,
+  platformProofTypeFromKind,
   platformStagingPlan,
   stagingProofSessionProgress,
 } from "../index.js";
@@ -3004,6 +3007,7 @@ function capturePlatformDraftProof(draft, proofKind = "") {
   draft.proofKind = kind;
   draft.proofNote = `${titleCase(kind)} proof captured for ${platformLabel(draft.platform)}${account?.handle ? ` / ${account.handle}` : ""}.`;
   draft.updatedAt = capturedAt;
+  recordPlatformProofKind(account, draft, kind);
   state.postRuns ||= [];
   const run = buildDraftRunRecord(draft, {
     id: `proof-${Date.now()}-${draft.platform}`,
@@ -3018,6 +3022,19 @@ function capturePlatformDraftProof(draft, proofKind = "") {
   draft.lastProofRunId = run.id;
   draft.lastRunId = run.id;
   state.postRuns.unshift(run);
+}
+
+function recordPlatformProofKind(account, draft, kind) {
+  if (!account) return null;
+  const proof = getPlatformProofForAccount(account);
+  const proofType = platformProofTypeFromKind(kind, draft.platform || account.platform);
+  const notes = `${titleCase(kind)} proof captured for ${platformLabel(draft.platform || account.platform)}.`;
+  let next = proof;
+  if (proofType === "login") next = markPlatformLoginProof(proof, notes);
+  if (["text", "media", "manual"].includes(proofType)) next = markPlatformProof(proof, proofType, notes);
+  if (proofType === "monitoring") return proof;
+  state.platformProofs = (state.platformProofs || []).map((item) => item.id === next.id ? next : item);
+  return next;
 }
 
 async function copyDraftProofSummary(draft) {

@@ -55,6 +55,20 @@ export function markPlatformLoginProof(proof, notes = "") {
   return next;
 }
 
+export function platformProofTypeFromKind(kind = "", platform = "") {
+  const id = normalizeProofKindId(kind);
+  const adapter = getPlatformBrowserAdapter(platform);
+  if (adapter.stageMode === "monitoring_only") return "monitoring";
+  if (["account", "account_session", "session", "login", "login_proof"].includes(id)) return "login";
+  if (["media", "manual_upload", "media_upload", "upload", "file_upload"].includes(id)) return "media";
+  if (["text", "text_insert", "text_insertion", "composer_text"].includes(id)) return "text";
+  if (["staged", "staged_composer", "composer", "compose"].includes(id)) {
+    return adapter.stageMode === "assisted" ? "text" : "manual";
+  }
+  if (["published", "published_post", "live_post", "live", "screenshot", "screen", "capture"].includes(id)) return "manual";
+  return adapter.stageMode === "assisted" ? "text" : "manual";
+}
+
 export function markPlatformProof(proof, type = "manual", notes = "") {
   const next = createPlatformProofRecord(proof);
   if (type === "text") next.textProofCount += 1;
@@ -324,6 +338,14 @@ function normalizeStagingProofSessions(value) {
     notes: session.notes || "",
     createdAt: session.createdAt || "",
   })) : [];
+}
+
+function normalizeProofKindId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 }
 
 function platformDisplay(platform) {

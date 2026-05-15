@@ -11,6 +11,7 @@ import {
   markPlatformProofFromStage,
   platformProofId,
   platformProofQueueMarkdown,
+  platformProofTypeFromKind,
   recordPlatformStagingProofSession,
   stagingProofSessionProgress,
 } from "../src/index.js";
@@ -33,6 +34,11 @@ const xProof = createPlatformProofRecord({
 });
 assert.equal(xProof.id, platformProofId(xProof));
 assert.equal(evaluatePlatformProof(xProof, getPlatformBrowserAdapter("x")).ok, false);
+assert.equal(platformProofTypeFromKind("staged_composer", "x"), "text");
+assert.equal(platformProofTypeFromKind("staged_composer", "instagram"), "manual");
+assert.equal(platformProofTypeFromKind("manual_upload", "instagram"), "media");
+assert.equal(platformProofTypeFromKind("account_session", "facebook"), "login");
+assert.equal(platformProofTypeFromKind("staged_composer", "reddit"), "monitoring");
 
 let proven = markPlatformProof(xProof, "text");
 proven = markPlatformProof(proven, "text");
