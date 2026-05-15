@@ -1,4 +1,5 @@
 import { getPlatformBrowserAdapter } from "./platform-browser-adapter.js";
+import { platformLabel } from "./social-account.js";
 
 export function createPlatformProofRecord(input = {}) {
   const adapter = input.adapter || getPlatformBrowserAdapter(input.platform);
@@ -181,6 +182,64 @@ export function evaluatePlatformProof(proof = {}, adapter = getPlatformBrowserAd
   };
 }
 
+export function buildPlatformProofQueue(workspace = {}, options = {}) {
+  const required = whole(options.requiredStagingProofSessions, 3);
+  const withProofs = ensurePlatformProofRecords(workspace);
+  return (withProofs.socialAccounts || []).map((account) => {
+    const proof = (withProofs.platformProofs || []).find((item) => item.id === platformProofId({
+      companyId: account.companyId,
+      brandId: account.brandId,
+      platform: account.platform,
+      socialAccountId: account.id,
+    }));
+    return buildPlatformProofQueueItem(account, proof, { requiredStagingProofSessions: required });
+  });
+}
+
+export function buildPlatformProofQueueItem(account = {}, proof = {}, options = {}) {
+  const adapter = getPlatformBrowserAdapter(account.platform || proof.platform);
+  const record = createPlatformProofRecord({
+    ...proof,
+    companyId: account.companyId || proof.companyId,
+    brandId: account.brandId || proof.brandId,
+    platform: account.platform || proof.platform,
+    socialAccountId: account.id || proof.socialAccountId,
+    adapter,
+  });
+  const required = whole(options.requiredStagingProofSessions, 3);
+  const stagingProgress = stagingProofSessionProgress(record, required);
+  const evaluation = evaluatePlatformProof(record, adapter);
+  const requirements = proofRequirements(record, adapter, stagingProgress);
+  const openRequirements = requirements.filter((item) => !item.complete);
+  const status = adapter.stageMode === "monitoring_only"
+    ? "monitoring_only"
+    : openRequirements.length ? "needs_proof" : "ready";
+  return {
+    id: record.id,
+    platform: record.platform,
+    label: platformLabel(record.platform),
+    accountId: account.id || record.socialAccountId,
+    accountHandle: account.handle || account.accountUrl || account.id || record.socialAccountId || "",
+    stageMode: adapter.stageMode,
+    status,
+    evaluation,
+    stagingProgress,
+    requirements,
+    nextActions: openRequirements.map((item) => item.action),
+  };
+}
+
+export function platformProofQueueMarkdown(queue = []) {
+  const lines = ["# Diamond Platform Proof Queue", ""];
+  for (const item of queue) {
+    lines.push(`- ${item.label}: ${titleCase(item.status)}${item.accountHandle ? ` (${item.accountHandle})` : ""}`);
+    for (const action of item.nextActions || []) {
+      lines.push(`  - ${action}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 export function platformProofId(input = {}) {
   return [
     "proof",
@@ -191,9 +250,61 @@ export function platformProofId(input = {}) {
   ].filter(Boolean).join("-").replace(/[^a-z0-9_.-]+/gi, "-").toLowerCase();
 }
 
-function whole(value) {
+function proofRequirements(record, adapter, stagingProgress) {
+  if (adapter.stageMode === "monitoring_only") {
+    return [{
+      id: "monitoring_only",
+      label: "Monitoring only",
+      complete: true,
+      current: 1,
+      required: 1,
+      action: "No publishing proof required.",
+    }];
+  }
+  const requirements = [
+    requirement("login", "Login proof", record.loginProofCount, 1, `Record login proof for ${adapter.label}.`),
+  ];
+  if (adapter.stageMode === "assisted") {
+    requirements.push(
+      requirement("text", "Text insertion proof", record.textProofCount, 3, `Record ${adapter.label} text insertion proof.`),
+      requirement("media", "Media upload proof", record.mediaProofCount, 1, `Record ${adapter.label} media upload proof.`),
+      requirement("staging_sessions", "Separate staging sessions", stagingProgress.count, stagingProgress.required, `Record ${stagingProgress.required} separate ${adapter.label} staging sessions.`),
+    );
+  } else if (adapter.stageMode === "manual") {
+    requirements.push(
+      requirement("manual", "Manual staging proof", record.manualProofCount, 3, `Record 3 manual ${adapter.label} staging proofs.`),
+    );
+    if (adapter.mediaRequired) {
+      requirements.push(requirement("media", "Media upload proof", record.mediaProofCount, 1, `Record ${adapter.label} media upload proof.`));
+    }
+  } else {
+    requirements.push({
+      id: "adapter",
+      label: "Adapter",
+      complete: false,
+      current: 0,
+      required: 1,
+      action: `Build a ${adapter.label} staging adapter or mark it monitoring-only.`,
+    });
+  }
+  return requirements;
+}
+
+function requirement(id, label, current, required, action) {
+  const value = whole(current, 0);
+  return {
+    id,
+    label,
+    complete: value >= required,
+    current: value,
+    required,
+    action,
+  };
+}
+
+function whole(value, fallback = 0) {
   const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
+  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : fallback;
 }
 
 function normalizeStagingProofSessions(value) {
@@ -219,4 +330,12 @@ function platformDisplay(platform) {
   if (platform === "x") return "X";
   if (!platform) return "Platform";
   return String(platform).replace(/(^|-)(\w)/g, (_match, separator, letter) => `${separator ? " " : ""}${letter.toUpperCase()}`);
+}
+
+function titleCase(value) {
+  return String(value || "")
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

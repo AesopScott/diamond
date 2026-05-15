@@ -210,6 +210,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Login proof tracking
   - [x] Facebook login proof
   - [x] TikTok login proof
+  - [x] Platform proof queue with missing proof actions
   - [ ] Assisted composer adapters beyond X
   - [ ] Platform-specific media upload proof
   - [ ] Repeated staging proof for each writable platform

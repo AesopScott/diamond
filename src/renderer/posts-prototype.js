@@ -39,10 +39,12 @@ import {
   getDiamondTourSteps,
   captureRedditMonitoringItem,
   createPlatformProofRecord,
+  buildPlatformProofQueue,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
   markPlatformProofFromStage,
   platformProofId,
+  platformProofQueueMarkdown,
   platformStagingPlan,
   stagingProofSessionProgress,
 } from "../index.js";
@@ -166,6 +168,7 @@ const OPERATOR_LABELS_ES = {
   "Generate Voiceovers": "Generar voces",
   "Start Walkthrough": "Iniciar guia",
   "Proof": "Prueba",
+  "Proof Queue": "Cola de pruebas",
   "Proof Status": "Estado de prueba",
   "Proof Kind": "Tipo de prueba",
   "Stage Mode": "Modo de preparacion",
@@ -177,6 +180,7 @@ const OPERATOR_LABELS_ES = {
   "Expert Checklist": "Lista experta",
   "Auto-Publish Gate": "Control auto-publicar",
   "Account Proofs": "Pruebas de cuenta",
+  "Copy Proof Queue": "Copiar cola de pruebas",
   "Next": "Siguiente",
   "Social Templates": "Plantillas sociales",
   "Creative Assets": "Activos creativos",
@@ -1864,6 +1868,7 @@ function renderOperatorDrawer() {
   const proof = account ? getPlatformProofForAccount(account) : null;
   const proofProgress = proof ? stagingProofSessionProgress(proof) : null;
   const proofEvaluation = proof ? evaluatePlatformProof(proof) : null;
+  const proofQueue = buildPlatformProofQueue(state);
   target.innerHTML = `
     ${latestOperatorMessage ? `<section class="operator-status" aria-live="polite">${escapeHtml(latestOperatorMessage)}</section>` : ""}
     <section class="operator-panel">
@@ -1912,6 +1917,8 @@ function renderOperatorDrawer() {
       </section>
     ` : ""}
 
+    ${renderPlatformProofQueuePanel(proofQueue)}
+
     <section class="operator-panel">
       <header>
         <h3>${escapeHtml(t("Browser Staging"))}</h3>
@@ -1936,6 +1943,7 @@ function renderOperatorDrawer() {
         ${renderOperatorAction("Sync License", "Reads the Firebase license cache and offline grace window.", "sync-license")}
         ${renderOperatorAction("Check Firebase", "Validates admin config and expected collection paths.", "check-firebase")}
         ${renderOperatorAction("Export Bundle", `${formatNumber(syncSummary.totalDocuments || 0)} Firestore documents staged.`, "export-bundle")}
+        ${renderOperatorAction("Copy Proof Queue", "Copies platform proof gaps and next actions.", "copy-proof-queue")}
       </div>
     </section>
 
@@ -1947,6 +1955,31 @@ function renderOperatorDrawer() {
       <ol class="operator-log">
         ${recentLogs.map((log) => `<li><time>${escapeHtml(formatDateTime(log.createdAt))}</time><span>${escapeHtml(log.message)}</span></li>`).join("")}
       </ol>
+    </section>
+  `;
+}
+
+function renderPlatformProofQueuePanel(queue = []) {
+  return `
+    <section class="operator-panel platform-proof-queue-panel">
+      <header>
+        <h3>${escapeHtml(t("Proof Queue"))}</h3>
+        <span class="count">${queue.filter((item) => item.status === "ready" || item.status === "monitoring_only").length}/${queue.length}</span>
+      </header>
+      <div class="platform-proof-queue">
+        ${queue.map((item) => `
+          <article class="platform-proof-queue-item ${escapeHtml(item.status)}">
+            <header>
+              <strong>${escapeHtml(item.label)}</strong>
+              <span>${escapeHtml(statusLabel(item.status))}</span>
+            </header>
+            <p>${escapeHtml(item.accountHandle || item.accountId || "No account")}</p>
+            <ul>
+              ${(item.nextActions || []).slice(0, 4).map((action) => `<li>${escapeHtml(action)}</li>`).join("") || `<li>${escapeHtml(item.status === "monitoring_only" ? "Monitoring only. No publishing proof required." : "Proof requirements are complete.")}</li>`}
+            </ul>
+          </article>
+        `).join("")}
+      </div>
     </section>
   `;
 }
@@ -1997,6 +2030,10 @@ async function runOperatorAction(action) {
   if (action === "export-bundle") {
     await runSettingsAction("export-sync");
     return setOperatorMessage(latestSyncExportPath ? `Exported Firestore bundle to ${latestSyncExportPath}.` : "Export finished.");
+  }
+  if (action === "copy-proof-queue") {
+    await window.diamond?.writeClipboard?.(platformProofQueueMarkdown(buildPlatformProofQueue(state)));
+    return setOperatorMessage("Copied the platform proof queue.");
   }
 }
 

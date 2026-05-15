@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   createPlatformProofRecord,
   createSeedWorkspace,
+  buildPlatformProofQueue,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
   getPlatformBrowserAdapter,
@@ -9,6 +10,7 @@ import {
   markPlatformProof,
   markPlatformProofFromStage,
   platformProofId,
+  platformProofQueueMarkdown,
   recordPlatformStagingProofSession,
   stagingProofSessionProgress,
 } from "../src/index.js";
@@ -16,6 +18,11 @@ import {
 const workspace = createSeedWorkspace();
 const withProofs = ensurePlatformProofRecords(workspace);
 assert.equal(withProofs.platformProofs.length, workspace.socialAccounts.length);
+const initialQueue = buildPlatformProofQueue(workspace);
+assert.equal(initialQueue.length, workspace.socialAccounts.length);
+assert.ok(initialQueue.find((item) => item.platform === "x").nextActions.some((action) => action.includes("text insertion")));
+assert.ok(initialQueue.find((item) => item.platform === "instagram").nextActions.some((action) => action.includes("media upload")));
+assert.equal(initialQueue.find((item) => item.platform === "reddit").status, "monitoring_only");
 
 const xAccount = workspace.socialAccounts.find((account) => account.platform === "x");
 const xProof = createPlatformProofRecord({
@@ -113,5 +120,23 @@ const repeatedProgress = stagingProofSessionProgress(repeated);
 assert.equal(repeatedProgress.count, 3);
 assert.equal(repeatedProgress.complete, true);
 assert.equal(repeatedProgress.label, "X staging proof 3/3");
+
+const readyQueue = buildPlatformProofQueue({
+  ...workspace,
+  platformProofs: [
+    markPlatformLoginProof(proven),
+    {
+      ...instagramProof,
+      loginProofCount: 1,
+      manualProofCount: 3,
+      mediaProofCount: 1,
+    },
+    redditProof,
+  ],
+});
+assert.equal(readyQueue.find((item) => item.platform === "x").status, "ready");
+assert.equal(readyQueue.find((item) => item.platform === "instagram").status, "ready");
+assert.match(platformProofQueueMarkdown(initialQueue), /Diamond Platform Proof Queue/);
+assert.match(platformProofQueueMarkdown(initialQueue), /Instagram: Needs Proof/);
 
 console.log("All Diamond platform proof tests passed.");
