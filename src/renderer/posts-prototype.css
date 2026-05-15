@@ -1974,12 +1974,15 @@ textarea {
 .brand-workspace {
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(260px, 340px) 1fr;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.7fr);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .brand-overview {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .brand-identity-card,
@@ -1988,6 +1991,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
+  min-width: 0;
   padding: 12px;
 }
 
@@ -1995,6 +1999,7 @@ textarea {
   font-size: 24px;
   line-height: 1.1;
   margin: 4px 0 12px;
+  overflow-wrap: anywhere;
 }
 
 .brand-facts {
@@ -2007,6 +2012,7 @@ textarea {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 6px;
+  min-width: 0;
   padding: 8px;
 }
 
@@ -2020,6 +2026,7 @@ textarea {
 .brand-facts dd {
   font-weight: 900;
   margin: 0;
+  min-width: 0;
 }
 
 .brand-facts input,
@@ -2027,7 +2034,9 @@ textarea {
   font-size: 15px;
   font-weight: 850;
   min-height: 40px;
+  min-width: 0;
   padding: 8px 10px;
+  width: 100%;
 }
 
 .strategy-card h3 {
@@ -2057,8 +2066,9 @@ textarea {
 .brand-panels {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
   align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .brand-panel {
@@ -2105,6 +2115,7 @@ textarea {
   font-weight: 800;
   line-height: 1.4;
   min-height: 96px;
+  min-width: 0;
   padding: 10px;
   resize: vertical;
   width: 100%;

@@ -107,6 +107,8 @@ assert.match(css, /\.brand-panel/);
 assert.match(css, /\.editable-brand-panel/);
 assert.match(css, /\.brand-facts input/);
 assert.match(css, /min-height: 96px/);
+assert.match(css, /\.brand-workspace[\s\S]*grid-template-columns: minmax\(280px, 0\.82fr\) minmax\(0, 1\.7fr\)/);
+assert.match(css, /\.brand-panels[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 assert.match(css, /\.templates-workspace/);
 assert.match(css, /\.template-summary/);
 assert.match(css, /\.template-card/);
