@@ -2353,6 +2353,7 @@ function renderPlatformProofQueuePanel(queue = []) {
             <p>${escapeHtml(item.accountHandle || item.accountId || "No account")}</p>
             <ul>
               ${(item.nextActions || []).slice(0, 4).map((action) => `<li>${escapeHtml(action)}</li>`).join("") || `<li>${escapeHtml(item.status === "monitoring_only" ? "Monitoring only. No publishing proof required." : "Proof requirements are complete.")}</li>`}
+              ${item.mediaProofGuide && item.status !== "monitoring_only" ? `<li>${escapeHtml(item.mediaProofGuide)}</li>` : ""}
             </ul>
             <button type="button" data-operator-action="focus-proof-account" data-proof-account-id="${escapeHtml(item.accountId || "")}">${escapeHtml(item.status === "ready" || item.status === "monitoring_only" ? "Review account" : "Work proof")}</button>
           </article>

@@ -276,8 +276,26 @@ export function buildPlatformProofQueueItem(account = {}, proof = {}, options = 
     evaluation,
     stagingProgress,
     requirements,
+    mediaProofGuide: mediaProofGuideForAdapter(adapter),
     nextActions: openRequirements.map((item) => item.action),
   };
+}
+
+export function mediaProofGuideForAdapter(adapter = {}) {
+  if (adapter.stageMode === "monitoring_only") return "No media upload proof required for monitoring-only platforms.";
+  if (!adapter.mediaRequired && !adapter.supportsMediaPicker && !adapter.candidateMediaInputSelector) {
+    return `${adapter.label || "This platform"} does not require media proof unless a post uses media.`;
+  }
+  if (adapter.platform === "tiktok" || adapter.platform === "youtube-shorts") {
+    return `Record video upload proof for ${adapter.label}: upload screen visible, file accepted, caption/details visible, and screenshot or URL saved.`;
+  }
+  if (adapter.platform === "instagram") {
+    return "Record Instagram media upload proof: image/video selected, crop or preview visible, caption screen visible, and screenshot or URL saved.";
+  }
+  if (adapter.platform === "x") {
+    return "Record X media proof when media is attached through the file picker and the composer preview shows the asset.";
+  }
+  return `Record ${adapter.label || "platform"} media proof when the platform shows the uploaded media preview before posting.`;
 }
 
 export function platformProofQueueMarkdown(queue = []) {
@@ -318,7 +336,7 @@ function proofRequirements(record, adapter, stagingProgress) {
   if (adapter.stageMode === "assisted") {
     requirements.push(
       requirement("text", "Text insertion proof", record.textProofCount, 3, `Record ${adapter.label} text insertion proof.`),
-      requirement("media", "Media upload proof", record.mediaProofCount, 1, `Record ${adapter.label} media upload proof.`),
+      requirement("media", "Media upload proof", record.mediaProofCount, 1, mediaProofGuideForAdapter(adapter)),
       requirement("staging_sessions", "Separate staging sessions", stagingProgress.count, stagingProgress.required, `Record ${stagingProgress.required} separate ${adapter.label} staging sessions.`),
     );
   } else if (adapter.stageMode === "manual") {
@@ -326,7 +344,7 @@ function proofRequirements(record, adapter, stagingProgress) {
       requirement("manual", "Manual staging proof", record.manualProofCount, 3, `Record 3 manual ${adapter.label} staging proofs.`),
     );
     if (adapter.mediaRequired) {
-      requirements.push(requirement("media", "Media upload proof", record.mediaProofCount, 1, `Record ${adapter.label} media upload proof.`));
+      requirements.push(requirement("media", "Media upload proof", record.mediaProofCount, 1, mediaProofGuideForAdapter(adapter)));
     }
   } else {
     requirements.push({

@@ -10,6 +10,7 @@ import {
   markPlatformLoginProof,
   markPlatformProof,
   markPlatformProofFromStage,
+  mediaProofGuideForAdapter,
   platformProofId,
   platformProofQueueMarkdown,
   platformProofTypeFromKind,
@@ -46,6 +47,9 @@ assert.equal(platformProofTypeFromKind("staged_composer", "instagram"), "manual"
 assert.equal(platformProofTypeFromKind("manual_upload", "instagram"), "media");
 assert.equal(platformProofTypeFromKind("account_session", "facebook"), "login");
 assert.equal(platformProofTypeFromKind("staged_composer", "reddit"), "monitoring");
+assert.match(mediaProofGuideForAdapter(getPlatformBrowserAdapter("instagram")), /Instagram media upload proof/);
+assert.match(mediaProofGuideForAdapter(getPlatformBrowserAdapter("tiktok")), /video upload proof/);
+assert.match(initialQueue.find((item) => item.platform === "instagram").mediaProofGuide, /Instagram media upload proof/);
 
 let proven = markPlatformProof(xProof, "text");
 proven = markPlatformProof(proven, "text");
