@@ -50,6 +50,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Capture run
   - [x] Mark posted
   - [x] Mark abandoned
+  - [x] Active draft workflow checklist
 - [x] Browser staging path
   - [x] Open composer
   - [x] Copy draft to clipboard
@@ -257,6 +258,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Detailed operator manual with examples for every major workflow
   - [x] Searchable in-app operator manual browser
   - [x] Contextual next-step help cards in platform drafts
+  - [x] Active draft workflow checklist with next-step state
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

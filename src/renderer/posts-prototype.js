@@ -2684,6 +2684,7 @@ function renderPlatformPreview(draft) {
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
       ${renderContextHelpCard(draft, preflight, plan)}
+      ${renderWorkflowChecklist(draft, preflight, plan)}
       ${renderDraftReliability(draft, preflight)}
       ${renderStagingPlan(draft, plan)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
@@ -2816,6 +2817,110 @@ function workflowHelpForDraft(draft, preflight, plan) {
     body: "Read, evaluate, approve, stage, publish manually, capture proof, then mark posted.",
     steps: ["Evaluate.", "Approve.", "Stage.", "Capture proof.", "Mark posted."],
   };
+}
+
+function renderWorkflowChecklist(draft, preflight, plan) {
+  const checklist = workflowChecklistForDraft(draft, preflight, plan);
+  const completeCount = checklist.filter((item) => item.complete).length;
+  const nextStep = nextWorkflowStep(checklist);
+  return `
+    <section class="workflow-checklist-card" aria-label="${escapeHtml(platformLabel(draft.platform))} workflow checklist">
+      <header>
+        <strong>Workflow checklist</strong>
+        <span>${completeCount}/${checklist.length} done</span>
+      </header>
+      ${nextStep ? `<p class="workflow-next-step"><strong>Next:</strong> ${escapeHtml(nextStep.label)}. ${escapeHtml(nextStep.detail)}</p>` : `<p class="workflow-next-step complete"><strong>Complete:</strong> This draft has reached the posted state.</p>`}
+      <ol>
+        ${checklist.map((item, index) => `
+          <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${item === nextStep ? "current" : ""}">
+            <span class="workflow-step-number">${index + 1}</span>
+            <div>
+              <strong>${escapeHtml(item.label)}</strong>
+              <small>${escapeHtml(item.complete ? item.doneDetail : item.detail)}</small>
+            </div>
+            <em>${item.complete ? "Done" : item === nextStep ? "Next" : "Open"}</em>
+          </li>
+        `).join("")}
+      </ol>
+    </section>
+  `;
+}
+
+function workflowChecklistForDraft(draft, preflight, plan) {
+  const status = draft.status || "draft";
+  const account = preflight.account || accountForDraft(draft);
+  const targetComplete = Boolean(
+    (draft.companyId || draft.context?.companyId)
+    && (draft.brandId || draft.context?.brandId)
+    && draft.platform
+    && account
+  );
+  const evaluated = Boolean(
+    draft.evaluatedAt
+    || Number.isFinite(Number(draft.qualityScore))
+    || (draft.riskDetails || []).length
+    || ["approved", "scheduled", "staged", "published", "posted", "blocked", "needs_review"].includes(status)
+  );
+  const approved = ["approved", "scheduled", "staged", "published", "posted"].includes(status) || Boolean(draft.approvedAt);
+  const mediaReady = !plan.mediaRequired || Boolean((draft.media || []).length);
+  const staged = ["staged", "published", "posted", "needs_manual_finish"].includes(status)
+    || Boolean(draft.stagedAt || draft.stageUrl || draft.stageResult?.openedUrl);
+  const published = ["published", "posted"].includes(status) || Boolean(draft.publishedAt);
+  const proofed = Boolean(draft.proofCapturedAt || draft.proofKind || draft.lastProofRunId);
+  return [
+    {
+      label: "Confirm target",
+      complete: targetComplete,
+      detail: "Pick the company, brand, platform, and social account before doing anything else.",
+      doneDetail: "Company, brand, platform, and social account are attached.",
+    },
+    {
+      label: "Evaluate",
+      complete: evaluated,
+      detail: "Click Evaluate so Diamond checks the text, brand fit, claims, and risk.",
+      doneDetail: "This draft has an evaluation record.",
+    },
+    {
+      label: "Approve",
+      complete: approved,
+      detail: "Click Approve only after the evaluation is clean enough to continue.",
+      doneDetail: "This draft is approved for staging or has moved beyond approval.",
+    },
+    {
+      label: "Add media if needed",
+      complete: mediaReady,
+      detail: plan.mediaRequired ? `${plan.label} needs media before staging.` : "Media is optional for this platform.",
+      doneDetail: plan.mediaRequired ? "Required media is attached." : "No required media is missing.",
+    },
+    {
+      label: "Stage in browser",
+      complete: staged,
+      detail: "Click Stage so Diamond opens the platform composer and prepares the post.",
+      doneDetail: "The platform composer has been staged or opened for manual finish.",
+    },
+    {
+      label: "Publish manually",
+      complete: published,
+      detail: "Review the platform composer yourself, then publish inside the social site.",
+      doneDetail: "This draft is marked as published.",
+    },
+    {
+      label: "Capture proof",
+      complete: proofed,
+      detail: "Capture a screenshot or URL proof so the run has a record.",
+      doneDetail: "Proof has been captured for this draft.",
+    },
+    {
+      label: "Mark posted",
+      complete: published,
+      detail: "After the post is live, click Mark Posted so queues and metrics stay correct.",
+      doneDetail: "Diamond has moved this draft into the posted state.",
+    },
+  ];
+}
+
+function nextWorkflowStep(checklist) {
+  return checklist.find((item) => !item.complete) || null;
 }
 
 function renderDraftProofPanel(draft) {
