@@ -2,6 +2,12 @@ import { isMonitoringOnlyPlatform, platformLabel } from "./social-account.js";
 
 export const X_COMPOSER_SELECTOR = '[data-testid="tweetTextarea_0"], div[role="textbox"][contenteditable="true"]';
 export const X_MEDIA_INPUT_SELECTOR = 'input[data-testid="fileInput"][type="file"], input[type="file"]';
+export const LINKEDIN_COMPOSER_SELECTOR = '.ql-editor[contenteditable="true"], div[role="textbox"][contenteditable="true"]';
+export const FACEBOOK_COMPOSER_SELECTOR = 'div[role="textbox"][contenteditable="true"], [contenteditable="true"][aria-label]';
+export const INSTAGRAM_CAPTION_SELECTOR = 'textarea[aria-label*="caption" i], textarea[placeholder*="caption" i], div[contenteditable="true"][role="textbox"]';
+export const TIKTOK_CAPTION_SELECTOR = 'div[contenteditable="true"][role="textbox"], textarea[placeholder*="caption" i], textarea';
+export const YOUTUBE_SHORTS_DETAILS_SELECTOR = '#textbox[contenteditable="true"], div[contenteditable="true"][aria-label*="title" i], textarea';
+export const GENERIC_MEDIA_INPUT_SELECTOR = 'input[type="file"]';
 
 export const PLATFORM_BROWSER_ADAPTERS = Object.freeze({
   x: {
@@ -20,30 +26,40 @@ export const PLATFORM_BROWSER_ADAPTERS = Object.freeze({
   },
   instagram: manualAdapter("instagram", "Instagram", {
     composeUrl: "https://www.instagram.com/",
+    candidateComposerSelector: INSTAGRAM_CAPTION_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
     mediaRequired: true,
     proofTarget: "Composer screenshot or published post URL",
     manualFinish: "Open Create, attach the image or video, review crop/caption, then publish manually.",
   }),
   tiktok: manualAdapter("tiktok", "TikTok", {
     composeUrl: "https://www.tiktok.com/upload",
+    candidateComposerSelector: TIKTOK_CAPTION_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
     mediaRequired: true,
     proofTarget: "Upload screen or published video URL",
     manualFinish: "Upload video media, verify caption and cover, then publish manually.",
   }),
   linkedin: manualAdapter("linkedin", "LinkedIn", {
     composeUrl: "https://www.linkedin.com/feed/",
+    candidateComposerSelector: LINKEDIN_COMPOSER_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
     mediaRequired: false,
     proofTarget: "Composer screenshot or published post URL",
     manualFinish: "Start a post, paste the copied draft, review formatting/link preview, then publish manually.",
   }),
   "youtube-shorts": manualAdapter("youtube-shorts", "YouTube Shorts", {
     composeUrl: "https://studio.youtube.com/",
+    candidateComposerSelector: YOUTUBE_SHORTS_DETAILS_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
     mediaRequired: true,
     proofTarget: "Upload details screen or published Short URL",
     manualFinish: "Upload short-form video, complete title/details, confirm checks, then publish manually.",
   }),
   facebook: manualAdapter("facebook", "Facebook", {
     composeUrl: "https://www.facebook.com/",
+    candidateComposerSelector: FACEBOOK_COMPOSER_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
     mediaRequired: false,
     proofTarget: "Page composer screenshot or published post URL",
     manualFinish: "Confirm the correct page/profile, paste the draft, attach media if needed, then publish manually.",
@@ -88,17 +104,34 @@ export function buildInsertComposerScript(text, platform = "x") {
   return buildInsertContentEditableScript(adapter.composerSelector, text);
 }
 
+export function platformHasCandidateComposerAdapter(platform) {
+  const adapter = getPlatformBrowserAdapter(platform);
+  return Boolean(adapter.candidateComposerSelector);
+}
+
+export function platformHasCandidateMediaAdapter(platform) {
+  const adapter = getPlatformBrowserAdapter(platform);
+  return Boolean(adapter.candidateMediaInputSelector);
+}
+
+export function buildCandidateComposerScript(text, platform = "x") {
+  const adapter = getPlatformBrowserAdapter(platform);
+  const selector = adapter.composerSelector || adapter.candidateComposerSelector;
+  if (!selector) return buildUnsupportedScript(`${adapter.label} does not have a candidate composer selector yet`);
+  return buildInsertContentEditableScript(selector, text);
+}
+
+export function buildCandidateMediaPickerScript(platform = "x") {
+  const adapter = getPlatformBrowserAdapter(platform);
+  const selector = adapter.mediaInputSelector || adapter.candidateMediaInputSelector;
+  if (!selector) return buildUnsupportedScript(`${adapter.label} does not have a candidate media selector yet`);
+  return buildClickFileInputScript(selector);
+}
+
 export function buildOpenMediaPickerScript(platform = "x") {
   const adapter = getPlatformBrowserAdapter(platform);
   if (!adapter.mediaInputSelector) return buildUnsupportedScript(`${adapter.label} does not have an assisted media picker selector yet`);
-  return `
-    (() => {
-      const input = document.querySelector(${JSON.stringify(adapter.mediaInputSelector)});
-      if (!input) return { ok: false, reason: "media input selector missing" };
-      input.click();
-      return { ok: true, reason: "platform file picker opened" };
-    })();
-  `;
+  return buildClickFileInputScript(adapter.mediaInputSelector);
 }
 
 export async function insertPlatformComposerText(webview, text, platform = "x") {
@@ -151,6 +184,8 @@ export function platformStagingPlan(platform, input = {}) {
     composeUrl: adapter.composeUrl || "",
     supportsTextInsert: Boolean(adapter.supportsTextInsert),
     supportsMediaPicker: Boolean(adapter.supportsMediaPicker),
+    candidateTextInsert: Boolean(adapter.candidateComposerSelector),
+    candidateMediaPicker: Boolean(adapter.candidateMediaInputSelector),
     mediaRequired: Boolean(adapter.mediaRequired),
     mediaState: hasMedia ? "attached" : adapter.mediaRequired ? "required" : "optional",
     proofTarget: adapter.proofTarget || "Manual proof",
@@ -168,11 +203,24 @@ function manualAdapter(platform, label, options = {}) {
     composeUrl: options.composeUrl || "",
     supportsTextInsert: false,
     supportsMediaPicker: false,
+    candidateComposerSelector: options.candidateComposerSelector || "",
+    candidateMediaInputSelector: options.candidateMediaInputSelector || "",
     mediaRequired: Boolean(options.mediaRequired),
     proofTarget: options.proofTarget || "Manual proof",
     manualFinish: options.manualFinish || `Paste the copied draft into ${label}, complete any platform checks, then publish manually.`,
     note: `${label} opens in the visible browser and uses clipboard/manual staging until selectors are proven.`,
   };
+}
+
+function buildClickFileInputScript(selector) {
+  return `
+    (() => {
+      const input = document.querySelector(${JSON.stringify(selector)});
+      if (!input) return { ok: false, reason: "media input selector missing" };
+      input.click();
+      return { ok: true, reason: "platform file picker opened" };
+    })();
+  `;
 }
 
 function buildInsertContentEditableScript(selector, text) {

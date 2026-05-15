@@ -142,6 +142,8 @@ assert.match(js, /renderDraftProofPanel/);
 assert.match(js, /platformDraftPreflight/);
 assert.match(js, /platformStagingPlan/);
 assert.match(js, /renderStagingPlan/);
+assert.match(js, /Candidate Text/);
+assert.match(js, /Candidate Media/);
 assert.match(js, /renderStageResult/);
 assert.match(js, /buildDraftStageResult/);
 assert.match(js, /mediaStatus/);

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import {
+  buildCandidateComposerScript,
+  buildCandidateMediaPickerScript,
   buildInsertComposerScript,
   buildOpenMediaPickerScript,
   getPlatformBrowserAdapter,
   insertPlatformComposerText,
   openPlatformMediaPicker,
   platformCanStageInBrowser,
+  platformHasCandidateComposerAdapter,
+  platformHasCandidateMediaAdapter,
   platformStagingPlan,
 } from "../src/index.js";
 
@@ -20,11 +24,28 @@ assert.equal(platformStagingPlan("x", { media: [] }).mediaState, "optional");
 const instagram = getPlatformBrowserAdapter("instagram");
 assert.equal(instagram.stageMode, "manual");
 assert.equal(instagram.supportsTextInsert, false);
+assert.equal(platformHasCandidateComposerAdapter("instagram"), true);
+assert.equal(platformHasCandidateMediaAdapter("instagram"), true);
 assert.equal(instagram.mediaRequired, true);
 assert.equal(platformCanStageInBrowser("instagram"), true);
 assert.match(buildInsertComposerScript("hello", "instagram"), /does not have an assisted composer selector yet/);
+assert.match(buildCandidateComposerScript("hello", "instagram"), /caption/i);
+assert.match(buildCandidateMediaPickerScript("instagram"), /platform file picker opened/);
 assert.match(platformStagingPlan("instagram", { media: [] }).blockers.join(" "), /requires media/);
+assert.equal(platformStagingPlan("instagram", { media: [] }).candidateTextInsert, true);
 assert.equal(platformStagingPlan("instagram", { media: ["image.png"] }).mediaState, "attached");
+
+const linkedin = getPlatformBrowserAdapter("linkedin");
+assert.equal(linkedin.stageMode, "manual");
+assert.equal(platformHasCandidateComposerAdapter("linkedin"), true);
+assert.match(buildCandidateComposerScript("hello", "linkedin"), /ql-editor/);
+
+const facebook = getPlatformBrowserAdapter("facebook");
+assert.equal(facebook.stageMode, "manual");
+assert.equal(platformHasCandidateComposerAdapter("facebook"), true);
+assert.match(buildCandidateComposerScript("hello", "facebook"), /contenteditable/);
+
+assert.equal(platformHasCandidateComposerAdapter("reddit"), false);
 
 const reddit = getPlatformBrowserAdapter("reddit");
 assert.equal(reddit.stageMode, "monitoring_only");

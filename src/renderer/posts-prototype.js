@@ -2671,7 +2671,9 @@ function renderStagingPlan(draft, plan = platformStagingPlan(draft.platform, { m
   const rows = [
     ["Stage Mode", titleCase(plan.stageMode)],
     ["Text Insert", plan.supportsTextInsert ? "Assisted" : "Manual Paste"],
+    ["Candidate Text", plan.candidateTextInsert ? "Available" : "None"],
     ["Media", titleCase(plan.mediaState)],
+    ["Candidate Media", plan.candidateMediaPicker ? "Available" : "None"],
     ["Proof Target", plan.proofTarget],
   ];
   return `
