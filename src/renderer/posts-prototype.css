@@ -2212,6 +2212,100 @@ textarea {
   padding: 12px;
 }
 
+.first-run-panel {
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--accent) 8%);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, var(--accent) 30%);
+  border-radius: 10px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.first-run-panel header {
+  align-items: start;
+  border: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0;
+  padding: 0;
+}
+
+.first-run-panel h3 {
+  font-size: 20px;
+  margin: 3px 0 4px;
+}
+
+.first-run-panel p {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.first-run-panel button {
+  background: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 80%, white);
+  border-radius: 8px;
+  color: var(--accent-text);
+  cursor: pointer;
+  font-weight: 1000;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.first-run-panel ol {
+  counter-reset: first-run;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.first-run-panel li {
+  align-items: start;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  counter-increment: first-run;
+  display: grid;
+  gap: 5px 10px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  padding: 10px;
+}
+
+.first-run-panel li::before {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
+  border-radius: 999px;
+  color: var(--accent-text);
+  content: counter(first-run);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 1000;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.first-run-panel li strong {
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.first-run-panel li span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  grid-column: 2;
+  line-height: 1.35;
+}
+
 .manual-browser {
   background: var(--surface-2);
   border: 1px solid var(--line);

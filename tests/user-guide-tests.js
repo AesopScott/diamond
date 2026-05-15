@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildTourVoiceoverScript,
   createElevenLabsSpeechRequest,
+  getDiamondFirstRunSteps,
   getDiamondGuideSections,
   getDiamondTourSteps,
   validateDiamondTourSteps,
@@ -16,9 +17,19 @@ const tourSteps = getDiamondTourSteps();
 assert.ok(tourSteps.length >= 8);
 assert.deepEqual(tourSteps.map((step) => step.order), Array.from({ length: tourSteps.length }, (_value, index) => index + 1));
 
+const firstRunSteps = getDiamondFirstRunSteps();
+assert.ok(firstRunSteps.length >= 8);
+assert.deepEqual(firstRunSteps.map((step) => step.order), Array.from({ length: firstRunSteps.length }, (_value, index) => index + 1));
+assert.ok(firstRunSteps.every((step) => step.checklistText && step.targetSelector && step.voiceoverText));
+assert.match(firstRunSteps.map((step) => step.checklistText).join("\n"), /Mark Posted only after the post is live/);
+
 const validation = validateDiamondTourSteps(tourSteps);
 assert.equal(validation.ok, true);
 assert.deepEqual(validation.issues, []);
+
+const firstRunValidation = validateDiamondTourSteps(firstRunSteps);
+assert.equal(firstRunValidation.ok, true);
+assert.deepEqual(firstRunValidation.issues, []);
 
 const invalid = validateDiamondTourSteps([{ id: "broken" }]);
 assert.equal(invalid.ok, false);

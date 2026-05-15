@@ -36,6 +36,7 @@ import {
   expertChecklistMarkdown,
   evaluateAutoPublishReadiness,
   getDiamondGuideSections,
+  getDiamondFirstRunSteps,
   getDiamondTourSteps,
   captureRedditMonitoringItem,
   createPlatformProofRecord,
@@ -249,6 +250,7 @@ state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
 state.beginnerMode = normalizeBeginnerMode(state.beginnerMode);
 const APP_SESSION_ID = `diamond-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const guideSections = getDiamondGuideSections();
+const firstRunSteps = getDiamondFirstRunSteps();
 const tourSteps = getDiamondTourSteps();
 const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
@@ -262,6 +264,7 @@ let latestOperatorMessage = "";
 let latestGuideMessage = "";
 let manualSearchTerm = "";
 let activeTourIndex = 0;
+let activeTourSteps = tourSteps;
 let activeTourTarget = null;
 let activeTourAudio = null;
 applyDiamondTheme(state.themeId);
@@ -1553,6 +1556,9 @@ async function runSettingsAction(action) {
   if (action === "start-tour") {
     startGuideTour();
   }
+  if (action === "start-first-run") {
+    startFirstRunTour();
+  }
 }
 
 function saveSettingsForm() {
@@ -1719,6 +1725,7 @@ function renderUserGuidePanel() {
           <p>Use this when you need the full operating path instead of guessing what the next button does.</p>
         </div>
         <div class="guide-actions">
+          <button type="button" data-settings-action="start-first-run">Start first-run flow</button>
           <button type="button" data-settings-action="start-tour">Start walkthrough</button>
           <button type="button" data-settings-action="copy-guide">Copy guide</button>
           <button type="button" data-settings-action="copy-operator-manual">Copy full manual</button>
@@ -1728,6 +1735,7 @@ function renderUserGuidePanel() {
         </div>
       </header>
       ${latestGuideMessage ? `<div class="guide-message">${escapeHtml(latestGuideMessage)}</div>` : ""}
+      ${renderFirstRunPanel()}
       ${renderOperatorManualBrowser()}
       <div class="guide-grid">
         ${guideSections.map((section) => `
@@ -1740,6 +1748,29 @@ function renderUserGuidePanel() {
           </article>
         `).join("")}
       </div>
+    </section>
+  `;
+}
+
+function renderFirstRunPanel() {
+  return `
+    <section class="first-run-panel" aria-labelledby="first-run-heading">
+      <header>
+        <div>
+          <span class="eyebrow">First run</span>
+          <h3 id="first-run-heading">Post safely for the first time</h3>
+          <p>Use this checklist the first few times you operate Diamond. It keeps company setup, account setup, staging, proof, and posted status in the right order.</p>
+        </div>
+        <button type="button" data-settings-action="start-first-run">Start guided flow</button>
+      </header>
+      <ol>
+        ${firstRunSteps.map((step) => `
+          <li>
+            <strong>${escapeHtml(step.title)}</strong>
+            <span>${escapeHtml(step.checklistText)}</span>
+          </li>
+        `).join("")}
+      </ol>
     </section>
   `;
 }
@@ -1813,6 +1844,13 @@ function buildGuideMarkdown() {
   return [
     "# Diamond User Guide",
     "",
+    "## First-Run Flow",
+    "",
+    ...firstRunSteps.flatMap((step) => [
+      `### ${step.title}`,
+      step.checklistText,
+      "",
+    ]),
     ...guideSections.flatMap((section) => [
       `## ${section.title}`,
       "",
@@ -3851,21 +3889,28 @@ function promptForText(label, fallback = "") {
 }
 
 function startGuideTour() {
+  activeTourSteps = tourSteps;
+  activeTourIndex = 0;
+  showTourStep();
+}
+
+function startFirstRunTour() {
+  activeTourSteps = firstRunSteps;
   activeTourIndex = 0;
   showTourStep();
 }
 
 function moveTour(delta) {
-  if (activeTourIndex === tourSteps.length - 1 && delta > 0) {
+  if (activeTourIndex === activeTourSteps.length - 1 && delta > 0) {
     closeGuideTour();
     return;
   }
-  activeTourIndex = Math.max(0, Math.min(tourSteps.length - 1, activeTourIndex + delta));
+  activeTourIndex = Math.max(0, Math.min(activeTourSteps.length - 1, activeTourIndex + delta));
   showTourStep();
 }
 
 async function showTourStep() {
-  const step = tourSteps[activeTourIndex];
+  const step = activeTourSteps[activeTourIndex];
   if (!step) return;
   const layer = document.querySelector("#tour-layer");
   const popover = document.querySelector("#tour-popover");
@@ -3876,12 +3921,12 @@ async function showTourStep() {
     activeTourTarget.classList.add("tour-highlight");
     activeTourTarget.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
   }
-  document.querySelector("#tour-progress").textContent = `Step ${activeTourIndex + 1} of ${tourSteps.length}`;
+  document.querySelector("#tour-progress").textContent = `Step ${activeTourIndex + 1} of ${activeTourSteps.length}`;
   document.querySelector("#tour-title").textContent = step.title;
   document.querySelector("#tour-body").textContent = step.voiceoverText;
   document.querySelector("#tour-voice").textContent = "Voiceover: " + step.voiceoverText;
   document.querySelector("#tour-prev").disabled = activeTourIndex === 0;
-  document.querySelector("#tour-next").textContent = activeTourIndex === tourSteps.length - 1 ? "Done" : "Next";
+  document.querySelector("#tour-next").textContent = activeTourIndex === activeTourSteps.length - 1 ? "Done" : "Next";
   const audio = await audioForTourStep(step);
   document.querySelector("#tour-play-voiceover").disabled = !audio;
   document.querySelector("#tour-play-voiceover").textContent = audio ? "Play voiceover" : "No audio yet";
@@ -3919,10 +3964,11 @@ function closeGuideTour() {
     activeTourAudio.pause();
     activeTourAudio = null;
   }
+  activeTourSteps = tourSteps;
 }
 
 async function playTourVoiceover() {
-  const step = tourSteps[activeTourIndex];
+  const step = activeTourSteps[activeTourIndex];
   const audioFile = await audioForTourStep(step);
   if (!audioFile) return;
   if (activeTourAudio) activeTourAudio.pause();

@@ -177,6 +177,65 @@ const tourSteps = [
   },
 ];
 
+const firstRunSteps = [
+  {
+    id: "first-run-company",
+    title: "1. Confirm the company and brand",
+    targetSelector: "#prototype-nav a[data-view=\"brands-view\"]",
+    voiceoverText: "Start by confirming the company, brand, and campaign. Diamond should always know who the post belongs to before you create or stage anything.",
+    checklistText: "Open Brands and confirm the company, brand, campaign, audience, voice, pillars, and approved phrases.",
+  },
+  {
+    id: "first-run-account",
+    title: "2. Confirm the social account",
+    targetSelector: "#prototype-nav a[data-view=\"accounts-view\"]",
+    voiceoverText: "Next, confirm the social account. The account must belong to the same company and brand, and the session should be ready before staging.",
+    checklistText: "Open Accounts, select the platform account, open the account page if needed, log in manually, and mark the session ready.",
+  },
+  {
+    id: "first-run-create",
+    title: "3. Create or open a post",
+    targetSelector: "#create-post",
+    voiceoverText: "Create a post package or open an existing draft. A post package is one source idea with platform-specific versions attached.",
+    checklistText: "Use Create or open a draft card. Check that the source idea matches the active campaign.",
+  },
+  {
+    id: "first-run-draft",
+    title: "4. Review the platform draft",
+    targetSelector: "#platform-previews",
+    voiceoverText: "Review the platform draft. Read the text, check the workflow checklist, and use Beginner Mode guidance if you are unsure.",
+    checklistText: "Read the platform text, character count, checklist, and action-button explanations.",
+  },
+  {
+    id: "first-run-evaluate",
+    title: "5. Evaluate and approve",
+    targetSelector: ".platform-action-row",
+    voiceoverText: "Evaluate first, then approve only if Diamond does not find a blocker. Evaluation checks quality, claims, risk, and repetition.",
+    checklistText: "Click Evaluate, read the result, edit if needed, then click Approve.",
+  },
+  {
+    id: "first-run-stage",
+    title: "6. Stage in the browser",
+    targetSelector: "#operator-toggle",
+    voiceoverText: "Stage the post in the visible browser. Staging prepares the composer, but you still publish manually inside the social platform.",
+    checklistText: "Click Stage, review the visible composer, and publish manually only when it looks right.",
+  },
+  {
+    id: "first-run-proof",
+    title: "7. Capture proof",
+    targetSelector: "#operator-toggle",
+    voiceoverText: "After staging or posting, capture proof. Proof gives you a record of what happened and helps keep the queue honest.",
+    checklistText: "Capture proof with a screenshot, URL, or run record before you mark the draft posted.",
+  },
+  {
+    id: "first-run-posted",
+    title: "8. Mark posted and review metrics",
+    targetSelector: "#prototype-nav a[data-view=\"analytics-view\"]",
+    voiceoverText: "Only mark posted after you see the live post. Later, use Analytics to add results like impressions, clicks, signups, and notes.",
+    checklistText: "Click Mark Posted only after the post is live, then add metrics later in Analytics.",
+  },
+];
+
 export function getDiamondGuideSections() {
   return guideSections.map((section) => ({
     ...section,
@@ -186,6 +245,13 @@ export function getDiamondGuideSections() {
 
 export function getDiamondTourSteps() {
   return tourSteps.map((step, index) => ({
+    ...step,
+    order: index + 1,
+  }));
+}
+
+export function getDiamondFirstRunSteps() {
+  return firstRunSteps.map((step, index) => ({
     ...step,
     order: index + 1,
   }));
