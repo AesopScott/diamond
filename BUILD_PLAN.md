@@ -9,9 +9,8 @@ This is the live top-level checklist for the three-build plan. Checked items are
 This is the current order for finishing the remaining checklist items.
 
 1. Platform-specific proof work: repeated X staging, then repeated manual proof for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook.
-2. Reddit monitoring capture workflow.
-3. Expert checklist review and Scott workflow signoff.
-4. Decide whether `auto_publish` ever becomes available.
+2. Expert checklist review and Scott workflow signoff.
+3. Decide whether `auto_publish` ever becomes available.
 
 ### Build 1: Standalone X Posting Loop
 
@@ -173,6 +172,8 @@ This is the current order for finishing the remaining checklist items.
   - [x] Response draft queue
   - [x] Human approval gate
   - [x] Escalation rules
+  - [x] Reddit monitoring capture workflow
+  - [x] Reddit response drafts remain approval-gated
 - [x] Cadence and do-not-engage controls
   - [x] Max posts/day
   - [x] Max replies/hour
@@ -200,6 +201,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] YouTube Shorts account/routine scaffold
   - [x] Facebook account/routine scaffold
   - [x] Reddit monitoring-only scaffold
+  - [x] Reddit thread/comment monitoring capture
   - [x] Platform adapter registry
   - [x] Manual staging mode for non-X writable platforms
   - [x] Platform adapter proof panel
@@ -489,7 +491,7 @@ Fail-closed rule: when Diamond is unsure about account, tenant, content risk, se
 | P1 | Run expert checklist review | Queued | Strategy, calendar, brand safety, assets, approvals, triage, cadence, metrics, memory, audit logs. Do this after legal/accessibility baseline and image template gaps are closed. |
 | P2 | Add Instagram, TikTok, and LinkedIn routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and TikTok login proof are wired. Assisted composer and media proofs remain queued. |
 | P2 | Add YouTube Shorts and Facebook routines | Partial | Platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, proof counters, and Facebook login proof are wired. Assisted composer and media proofs remain queued. |
-| P3 | Add Reddit monitoring only | Partial | Reddit account context and planned monitoring slot are wired, and staging refuses because Reddit is monitoring-only. Reply/monitoring capture remains queued. |
+| P3 | Add Reddit monitoring only | Built | Reddit account context, planned monitoring slot, staging refusal, thread/comment capture, classification, and approval-gated response drafts are wired. |
 
 ## First Milestone
 

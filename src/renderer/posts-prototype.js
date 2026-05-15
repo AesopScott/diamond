@@ -33,6 +33,7 @@ import {
   createElevenLabsSpeechRequest,
   getDiamondGuideSections,
   getDiamondTourSteps,
+  captureRedditMonitoringItem,
   createPlatformProofRecord,
   ensurePlatformProofRecords,
   evaluatePlatformProof,
@@ -137,6 +138,7 @@ const OPERATOR_LABELS_ES = {
   "Approve": "Aprobar",
   "Stage": "Preparar",
   "Capture Proof": "Capturar prueba",
+  "Capture Reddit": "Capturar Reddit",
   "Copy Proof": "Copiar prueba",
   "Copy Url": "Copiar URL",
   "Copy Screenshot": "Copiar captura",
@@ -1866,13 +1868,14 @@ function renderOperatorDrawer() {
     <section class="operator-panel">
       <header>
         <h3>${escapeHtml(t("Browser Staging"))}</h3>
-        <span class="count">4</span>
+        <span class="count">${account?.platform === "reddit" ? "5" : "4"}</span>
       </header>
       <div class="operator-action-grid">
         ${renderOperatorAction("Open Account", resolveLoginUrl(account) || "Login URL missing", "open-account", !resolveLoginUrl(account))}
         ${renderOperatorAction("Check Session", `Current state: ${statusLabel(account?.sessionStatus || "unknown")}`, "check-session", !account)}
         ${renderOperatorAction("Stage In Browser", resolveComposeUrl(account) || "Compose URL missing", "stage-browser", !account)}
         ${renderOperatorAction("Capture Proof", `${account?.proofCount || 0} proof captures saved`, "capture-proof", !account)}
+        ${account?.platform === "reddit" ? renderOperatorAction("Capture Reddit", "Capture a Reddit thread or comment into the response queue.", "capture-reddit", !account) : ""}
       </div>
     </section>
 
@@ -1929,6 +1932,9 @@ async function runOperatorAction(action) {
   }
   if (action === "capture-proof") {
     return captureOperatorProof(account, draft);
+  }
+  if (action === "capture-reddit") {
+    return captureRedditFromOperator(account);
   }
   if (action === "validate-package") {
     return validateOperatorPackage(account);
@@ -2015,6 +2021,33 @@ async function captureOperatorProof(account, draft) {
   await saveProductionState();
   await refreshProductionViews();
   return setOperatorMessage(`${platformLabel(account.platform)} proof recorded. Total proofs: ${account.proofCount}.`);
+}
+
+async function captureRedditFromOperator(account) {
+  if (!account) return setOperatorMessage("Reddit capture blocked: no active account.");
+  if (account.platform !== "reddit") return setOperatorMessage("Reddit capture blocked: active account is not Reddit.");
+  const sourceUrl = promptForText("Reddit thread/comment URL", account.accountUrl || "https://www.reddit.com/r/");
+  const text = promptForText("Reddit text to classify", "");
+  const result = captureRedditMonitoringItem({
+    context: {
+      ...(state.context || {}),
+      platform: "reddit",
+      socialAccountId: account.id,
+    },
+    socialAccountId: account.id,
+    sourceUrl,
+    text,
+    author: promptForText("Reddit author", "Reddit user"),
+    subreddit: sourceUrl,
+    threadTitle: promptForText("Reddit thread title", ""),
+  });
+  if (!result.ok) return setOperatorMessage(result.reason);
+  state.socialReplies ||= [];
+  state.socialResponseDrafts ||= [];
+  state.socialReplies.unshift(result.reply);
+  state.socialResponseDrafts.unshift(result.responseDraft);
+  await saveProductionState();
+  return setOperatorMessage(`Reddit monitoring captured: ${result.reason}`);
 }
 
 async function validateOperatorPackage(account) {

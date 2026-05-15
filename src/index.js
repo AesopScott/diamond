@@ -16,6 +16,7 @@ export * from "./post-package.js";
 export * from "./quality.js";
 export * from "./risk.js";
 export * from "./reply-classifier.js";
+export * from "./reddit-monitoring.js";
 export * from "./seed.js";
 export * from "./session.js";
 export * from "./social-account.js";
