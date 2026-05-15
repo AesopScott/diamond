@@ -270,6 +270,7 @@ let activeTourIndex = 0;
 let activeTourSteps = tourSteps;
 let activeTourTarget = null;
 let activeTourAudio = null;
+let accountCreatorOpen = false;
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -904,7 +905,9 @@ function renderAccounts(selectedAccountId) {
   if (selected) selectedAccountId = selected.id;
   if (scope) scope.innerHTML = renderAccountScope(selected);
   target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("");
-  detail.innerHTML = selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
+  detail.innerHTML = accountCreatorOpen
+    ? renderAccountCreator(selected)
+    : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
 }
 
 function renderAccountCard(account, selectedAccountId) {
@@ -1027,6 +1030,51 @@ function renderAccountCreationPanel(account, plan) {
       </ol>
       <p class="account-creation-note">Diamond does not store passwords and cannot bypass verification checks.</p>
     </section>
+  `;
+}
+
+function renderAccountCreator(selectedAccount = {}) {
+  const companyId = selectedAccount.companyId || state.context?.companyId || (state.companies || [])[0]?.id || "";
+  const brandId = selectedAccount.brandId || state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+  const platform = selectedAccount.platform || state.context?.platform || "x";
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  const brand = (state.brands || []).find((item) => item.id === brandId);
+  const plan = buildSocialAccountCreationPlan({ company, brand, platform });
+  return `
+    <article class="account-detail-card account-creator-card">
+      <header>
+        <div>
+          <span class="eyebrow">New account</span>
+          <h2>Add platform account</h2>
+          <p>Create the Diamond record first, then use the account creation panel to open official signup.</p>
+        </div>
+      </header>
+      <dl class="account-meta">
+        <div><dt>Company</dt><dd><select data-new-account-field="companyId">${companyOptions(companyId)}</select></dd></div>
+        <div><dt>Brand</dt><dd><select data-new-account-field="brandId">${brandOptions(companyId, brandId)}</select></dd></div>
+        <div><dt>Platform</dt><dd><select data-new-account-field="platform">${platformOptions(platform)}</select></dd></div>
+        <div><dt>Handle or page</dt><dd><input data-new-account-field="handle" type="text" value="${escapeHtml(plan.desiredHandle || "")}" placeholder="@parentalcareguide"></dd></div>
+      </dl>
+      <section class="account-creation-panel">
+        <header>
+          <div>
+            <h3>What Diamond will create</h3>
+            <p>This adds a brand-scoped account record, browser profile, login URL, compose URL, and official signup plan.</p>
+          </div>
+          <span>${escapeHtml(platformLabel(platform))}</span>
+        </header>
+        <dl class="account-creation-summary">
+          <div><dt>Display name</dt><dd>${escapeHtml(plan.displayName)}</dd></div>
+          <div><dt>Desired handle</dt><dd>${escapeHtml(plan.desiredHandle || "Set a handle")}</dd></div>
+          <div><dt>Signup</dt><dd>${escapeHtml(plan.signupUrl || "Not configured")}</dd></div>
+          <div><dt>Profile</dt><dd>${escapeHtml(plan.browserProfileId || "Auto-generated")}</dd></div>
+        </dl>
+      </section>
+      <section class="account-actions" aria-label="New account actions">
+        <button type="button" data-account-create-action="create">Create account record</button>
+        <button type="button" data-account-create-action="cancel">Cancel</button>
+      </section>
+    </article>
   `;
 }
 
@@ -1196,15 +1244,27 @@ async function addCampaignRecord() {
 }
 
 async function addSocialAccount() {
-  const platform = normalizeId(promptForText("Platform", "x"), "platform");
-  if (!platform) return;
-  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
-  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
-  if (!companyId || !brandId) return;
+  accountCreatorOpen = true;
+  renderAccounts(selectedAccountId);
+}
+
+async function createSocialAccountFromForm() {
+  const detail = document.querySelector("#account-detail");
+  if (!detail) return;
+  const valueFor = (field) => detail.querySelector(`[data-new-account-field="${field}"]`)?.value || "";
+  const companyId = normalizeId(valueFor("companyId") || state.context?.companyId || (state.companies || [])[0]?.id, "companyId");
+  const brandId = normalizeId(valueFor("brandId") || state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id, "brandId");
+  const platform = normalizeId(valueFor("platform") || "x", "platform");
+  if (!companyId || !brandId || !platform) return;
   const company = (state.companies || []).find((item) => item.id === companyId);
   const brand = (state.brands || []).find((item) => item.id === brandId);
-  const suggestedHandle = buildSocialAccountCreationPlan({ company, brand, platform }).desiredHandle || "";
-  const handle = promptForText("Handle or page", suggestedHandle) || "";
+  const plan = buildSocialAccountCreationPlan({
+    company,
+    brand,
+    platform,
+    desiredHandle: valueFor("handle") || brand?.name || company?.name || "",
+  });
+  const handle = plan.desiredHandle || valueFor("handle") || platform;
   const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
   const account = {
     id,
@@ -1212,12 +1272,13 @@ async function addSocialAccount() {
     brandId,
     platform,
     handle,
-    accountUrl: normalizeAccountUrl(handle, platform),
-    loginUrl: normalizeLoginUrl("", platform),
-    composeUrl: normalizeComposeUrl("", platform),
-    expectedHost: normalizeHost(normalizeAccountUrl(handle, platform)),
+    accountUrl: plan.accountUrl || normalizeAccountUrl(handle, platform),
+    loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
+    composeUrl: plan.composeUrl || normalizeComposeUrl("", platform),
+    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || normalizeAccountUrl(handle, platform)),
+    signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
-    browserProfileId: normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
     monitoringOnly: platform === "reddit",
     proofCount: 0,
     createdAt: new Date().toISOString(),
@@ -1233,12 +1294,25 @@ async function addSocialAccount() {
     socialAccountId: account.id,
     browserProfileId: account.browserProfileId,
   };
+  accountCreatorOpen = false;
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
 }
 
 async function handleAccountDetailClick(event) {
+  const createButton = event.target.closest("[data-account-create-action]");
+  if (createButton) {
+    if (createButton.dataset.accountCreateAction === "cancel") {
+      accountCreatorOpen = false;
+      renderAccounts(selectedAccountId);
+      return;
+    }
+    if (createButton.dataset.accountCreateAction === "create") {
+      await createSocialAccountFromForm();
+      return;
+    }
+  }
   const button = event.target.closest("[data-account-action]");
   if (!button) return;
   const account = (state.socialAccounts || []).find((item) => item.id === button.dataset.accountId);

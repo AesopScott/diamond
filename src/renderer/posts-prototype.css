@@ -1568,6 +1568,10 @@ textarea {
   padding: 20px;
 }
 
+.account-creator-card {
+  border-color: color-mix(in srgb, var(--line) 68%, var(--accent) 32%);
+}
+
 .account-detail-card > header {
   align-items: start;
   display: flex;
