@@ -2320,6 +2320,43 @@ textarea {
   width: 22px;
 }
 
+.theme-choice-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.theme-choice {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 112px;
+  padding: 12px;
+  text-align: left;
+}
+
+.theme-choice:hover,
+.theme-choice.active {
+  border-color: var(--accent);
+}
+
+.theme-choice strong,
+.theme-choice span {
+  display: block;
+}
+
+.theme-choice span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .legal-list {
   display: grid;
   gap: 12px;

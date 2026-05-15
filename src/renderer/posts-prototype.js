@@ -1622,6 +1622,10 @@ function renderSettings() {
 async function handleSettingsAction(event) {
   const button = event.target.closest("[data-settings-action]");
   if (!button) return;
+  if (button.dataset.settingsAction === "select-theme") {
+    await updateThemeSetting(button.dataset.themeId || state.themeId);
+    return;
+  }
   if (button.dataset.settingsAction === "go-first-run-step") {
     goToFirstRunStep(button.dataset.firstRunStep || "");
     return;
@@ -1637,10 +1641,7 @@ async function handleSettingsChange(event) {
   const field = event.target.closest("[data-settings-field]");
   if (!field) return;
   if (field.dataset.settingsField === "themeId") {
-    state.themeId = normalizeThemeId(field.value);
-    applyDiamondTheme(state.themeId);
-    await saveProductionState();
-    renderSettings();
+    await updateThemeSetting(field.value);
   }
   if (field.dataset.settingsField === "operatorLanguage") {
     state.operatorLanguage = normalizeOperatorLanguage(field.value);
@@ -1664,6 +1665,13 @@ async function handleSettingsChange(event) {
     renderSettings();
     reopenActiveDetail();
   }
+}
+
+async function updateThemeSetting(themeId) {
+  state.themeId = normalizeThemeId(themeId);
+  applyDiamondTheme(state.themeId);
+  await saveProductionState();
+  renderSettings();
 }
 
 function handleSettingsInput(event) {
@@ -1899,6 +1907,15 @@ function renderThemeSettingsPanel() {
         <div><dt>Swatches</dt><dd><span class="theme-swatch-row">${theme.swatches.map((color) => `<span class="theme-swatch" style="--theme-swatch:${escapeHtml(color)}" title="${escapeHtml(color)}"></span>`).join("")}</span></dd></div>
         <div><dt>Palette source</dt><dd>Professional mockups set</dd></div>
       </dl>
+      <div class="theme-choice-grid" aria-label="Theme choices">
+        ${themes.map((item) => `
+          <button type="button" class="theme-choice ${item.id === selectedTheme ? "active" : ""}" data-settings-action="select-theme" data-theme-id="${escapeHtml(item.id)}" aria-pressed="${item.id === selectedTheme ? "true" : "false"}">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.description)}</span>
+            <span class="theme-swatch-row">${item.swatches.map((color) => `<span class="theme-swatch" style="--theme-swatch:${escapeHtml(color)}" title="${escapeHtml(color)}"></span>`).join("")}</span>
+          </button>
+        `).join("")}
+      </div>
     </article>
   `;
 }
