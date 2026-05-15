@@ -261,6 +261,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] Contextual next-step help cards in platform drafts
   - [x] Active draft workflow checklist with next-step state
   - [x] Button-level workflow explanations
+  - [x] Beginner Mode setting for extra in-context guidance
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

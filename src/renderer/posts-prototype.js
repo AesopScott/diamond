@@ -246,6 +246,7 @@ const OPERATOR_LABELS_ES = {
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
 state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
+state.beginnerMode = normalizeBeginnerMode(state.beginnerMode);
 const APP_SESSION_ID = `diamond-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
@@ -265,6 +266,7 @@ let activeTourTarget = null;
 let activeTourAudio = null;
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
+applyBeginnerMode();
 renderBoard(board);
 renderCalendar();
 renderAccounts();
@@ -316,6 +318,7 @@ function hydrateSavedWorkspace(saved) {
     platformDrafts: saved.platformDrafts || [],
     context: saved.context || defaults.context,
   });
+  workspace.beginnerMode = normalizeBeginnerMode(saved.beginnerMode ?? defaults.beginnerMode);
   return ensurePlatformProofRecords(workspace);
 }
 
@@ -454,6 +457,7 @@ function buildSampleWorkspace() {
     platforms: workspace.socialAccounts.map((account) => account.platform),
   });
   workspace.themeId = "graphite-red";
+  workspace.beginnerMode = true;
   workspace.accessibility = {
     keyboardNavigation: "baseline",
     screenReaderLabels: "baseline",
@@ -1425,6 +1429,15 @@ async function handleSettingsChange(event) {
     renderOperatorDrawer();
     reopenActiveDetail();
   }
+  if (field.dataset.settingsField === "beginnerMode") {
+    state.beginnerMode = field.checked;
+    applyBeginnerMode();
+    await saveProductionState();
+    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderCalendar();
+    renderSettings();
+    reopenActiveDetail();
+  }
 }
 
 function handleSettingsInput(event) {
@@ -1552,8 +1565,10 @@ function saveSettingsForm() {
   state.licenseCache.email = getSettingsFieldValue("licenseEmail") || state.licenseCache.email;
   state.themeId = normalizeThemeId(getSettingsFieldValue("themeId") || state.themeId);
   state.operatorLanguage = normalizeOperatorLanguage(getSettingsFieldValue("operatorLanguage") || state.operatorLanguage);
+  state.beginnerMode = getSettingsChecked("beginnerMode", state.beginnerMode);
   applyDiamondTheme(state.themeId);
   applyOperatorLanguage();
+  applyBeginnerMode();
   state.accessibility = {
     keyboardNavigation: getSettingsFieldValue("keyboardNavigation") || "baseline",
     screenReaderLabels: getSettingsFieldValue("screenReaderLabels") || "baseline",
@@ -1585,6 +1600,11 @@ function getSettingsFieldValue(field) {
 function getSettingsNumber(field, fallback) {
   const value = Number.parseInt(getSettingsFieldValue(field), 10);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function getSettingsChecked(field, fallback = false) {
+  const input = document.querySelector(`[data-settings-field="${field}"]`);
+  return input ? Boolean(input.checked) : Boolean(fallback);
 }
 
 function renderLicenseSettingsPanel(license, licenseCheck, model) {
@@ -1656,11 +1676,12 @@ function renderThemeSettingsPanel() {
 
 function renderLanguageSettingsPanel() {
   const language = currentOperatorLanguage();
+  const beginnerMode = normalizeBeginnerMode(state.beginnerMode);
   return `
     <article class="settings-panel editable-settings">
       <header>
         <h2>${escapeHtml(t("Operator"))}</h2>
-        <span class="count">${escapeHtml(language === "es" ? "Espanol" : "English")}</span>
+        <span class="count">${escapeHtml(beginnerMode ? "Beginner on" : language === "es" ? "Espanol" : "English")}</span>
       </header>
       <dl>
         <div>
@@ -1674,6 +1695,15 @@ function renderLanguageSettingsPanel() {
         </div>
         <div><dt>Scope</dt><dd>${escapeHtml(language === "es" ? "Revision del operador" : "Operator review")}</dd></div>
         <div><dt>Status</dt><dd>${escapeHtml(language === "es" ? "Etiquetas principales traducidas" : "Core labels translated")}</dd></div>
+        <div class="settings-toggle-row">
+          <dt>Beginner mode</dt>
+          <dd>
+            <label class="settings-toggle">
+              <input data-settings-field="beginnerMode" type="checkbox" ${beginnerMode ? "checked" : ""}>
+              <span>Show extra workflow explanations while learning Diamond.</span>
+            </label>
+          </dd>
+        </div>
       </dl>
     </article>
   `;
@@ -1824,6 +1854,10 @@ function normalizeOperatorLanguage(language) {
   return language === "es" ? "es" : "en";
 }
 
+function normalizeBeginnerMode(value) {
+  return value !== false;
+}
+
 function currentOperatorLanguage() {
   return normalizeOperatorLanguage(state.operatorLanguage);
 }
@@ -1868,6 +1902,10 @@ function applyOperatorLanguage() {
   setStaticText("#detail-status", "Draft");
   setStaticText("#operator-close", "Close");
   setStaticText("#operator-drawer h2", "Operator Tools");
+}
+
+function applyBeginnerMode() {
+  document.body?.classList.toggle("beginner-mode", normalizeBeginnerMode(state.beginnerMode));
 }
 
 function setStaticText(selector, label) {
@@ -2713,6 +2751,7 @@ function renderPlatformPreview(draft) {
 function renderPlatformActionRow(draft, preflight, plan) {
   const actions = platformActionHelpItems(draft, preflight, plan);
   return `
+    ${renderBeginnerActionGuide(draft, preflight, plan, actions)}
     <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
       ${actions.map((item, index) => `
         <button type="button"
@@ -2729,6 +2768,48 @@ function renderPlatformActionRow(draft, preflight, plan) {
       `).join("")}
     </div>
   `;
+}
+
+function renderBeginnerActionGuide(draft, preflight, plan, actions) {
+  if (!normalizeBeginnerMode(state.beginnerMode)) return "";
+  const next = nextWorkflowStep(workflowChecklistForDraft(draft, preflight, plan));
+  const nextAction = beginnerActionForStep(next?.label);
+  const matchingAction = actions.find((item) => item.action === nextAction);
+  return `
+    <section class="beginner-action-guide" aria-label="${escapeHtml(platformLabel(draft.platform))} beginner help">
+      <header>
+        <strong>Beginner Mode</strong>
+        <span>${escapeHtml(matchingAction ? `Use ${matchingAction.label}` : "Read first")}</span>
+      </header>
+      <p>${escapeHtml(beginnerGuideText(draft, plan, matchingAction, next))}</p>
+      <ul>
+        <li>Start with the highlighted next step above, then use the matching button below.</li>
+        <li>Staging prepares a post; it does not publish it for you.</li>
+        <li>Only click Mark Posted after you personally see the post live on the social platform.</li>
+      </ul>
+    </section>
+  `;
+}
+
+function beginnerActionForStep(stepLabel = "") {
+  return {
+    "Evaluate": "evaluate",
+    "Approve": "approve",
+    "Add media if needed": "add-media",
+    "Stage in browser": "stage",
+    "Publish manually": "stage",
+    "Capture proof": "proof",
+    "Mark posted": "posted",
+  }[stepLabel] || "";
+}
+
+function beginnerGuideText(draft, plan, action, next) {
+  if (!next) return "This draft is finished. You can come back later to add metrics, screenshots, notes, or performance numbers.";
+  if (next.label === "Confirm target") return "Before using the action buttons, make sure this draft belongs to the correct company, brand, campaign, platform, and social account.";
+  if (next.label === "Add media if needed") return `${plan.label} needs media before staging. Use + Media above the button row, then confirm the file appears under the draft.`;
+  if (next.label === "Publish manually") return `Diamond has prepared the ${platformLabel(draft.platform)} composer. Review it inside the browser and press the platform's own post button yourself.`;
+  if (action) return `${action.label} is the next button to use. ${action.help}`;
+  return "Follow the checklist above from top to bottom. Diamond will keep the safest next step visible.";
 }
 
 function platformActionHelpItems(draft, preflight, plan) {
