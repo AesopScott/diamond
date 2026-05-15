@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const manual = readFileSync(new URL("../docs/DIAMOND_OPERATOR_MANUAL.md", import.meta.url), "utf8");
+const preload = readFileSync(new URL("../src/electron/preload.cjs", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/electron/main.cjs", import.meta.url), "utf8");
 
 assert.match(manual, /# Diamond Operator Manual/);
 assert.match(manual, /## 1\. The Basic Diamond Workflow/);
@@ -25,5 +27,10 @@ assert.match(manual, /account_session/);
 assert.match(manual, /auto-publish is locked/i);
 assert.ok((manual.match(/Example:/g) || []).length >= 20);
 assert.ok(manual.length > 20000);
+assert.match(preload, /getOperatorManual/);
+assert.match(preload, /openOperatorManual/);
+assert.match(main, /DIAMOND_OPERATOR_MANUAL\.md/);
+assert.match(main, /diamond:get-operator-manual/);
+assert.match(main, /diamond:open-operator-manual/);
 
 console.log("All Diamond operator manual tests passed.");

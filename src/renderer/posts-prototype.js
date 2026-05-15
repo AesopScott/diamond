@@ -249,6 +249,7 @@ state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
 const APP_SESSION_ID = `diamond-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const guideSections = getDiamondGuideSections();
 const tourSteps = getDiamondTourSteps();
+const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
@@ -258,6 +259,7 @@ let latestLicenseSync = null;
 let latestSyncExportPath = state.lastSyncExportPath || "";
 let latestOperatorMessage = "";
 let latestGuideMessage = "";
+let manualSearchTerm = "";
 let activeTourIndex = 0;
 let activeTourTarget = null;
 let activeTourAudio = null;
@@ -277,6 +279,16 @@ async function loadProductionState() {
   const saved = await window.diamond?.getState?.();
   if (saved && typeof saved === "object") return hydrateSavedWorkspace(saved);
   return buildSampleWorkspace();
+}
+
+async function loadOperatorManual() {
+  const result = await window.diamond?.getOperatorManual?.();
+  return result?.ok ? result : {
+    ok: false,
+    path: "docs/DIAMOND_OPERATOR_MANUAL.md",
+    text: "",
+    reason: result?.reason || "Operator manual is unavailable.",
+  };
 }
 
 function hydrateSavedWorkspace(saved) {
@@ -522,6 +534,7 @@ function wirePrototypeControls() {
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
+  document.querySelector("#settings-workspace")?.addEventListener("input", handleSettingsInput);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
   document.querySelector("#tour-start")?.addEventListener("click", startGuideTour);
@@ -1414,6 +1427,13 @@ async function handleSettingsChange(event) {
   }
 }
 
+function handleSettingsInput(event) {
+  const field = event.target.closest("[data-manual-search]");
+  if (!field) return;
+  manualSearchTerm = field.value || "";
+  renderUserManualResults();
+}
+
 async function runSettingsAction(action) {
   if (action === "save-settings") {
     saveSettingsForm();
@@ -1481,6 +1501,16 @@ async function runSettingsAction(action) {
   if (action === "copy-guide") {
     await window.diamond?.writeClipboard?.(buildGuideMarkdown());
     latestGuideMessage = "Copied the Diamond user guide.";
+    renderSettings();
+  }
+  if (action === "copy-operator-manual") {
+    await window.diamond?.writeClipboard?.(operatorManual.text || buildGuideMarkdown());
+    latestGuideMessage = operatorManual.ok ? "Copied the full Diamond operator manual." : "Copied the in-app guide because the manual file was unavailable.";
+    renderSettings();
+  }
+  if (action === "open-operator-manual") {
+    const result = await window.diamond?.openOperatorManual?.();
+    latestGuideMessage = result ? `Manual open result: ${result}` : "Opened the full Diamond operator manual.";
     renderSettings();
   }
   if (action === "copy-tour-script") {
@@ -1661,11 +1691,14 @@ function renderUserGuidePanel() {
         <div class="guide-actions">
           <button type="button" data-settings-action="start-tour">Start walkthrough</button>
           <button type="button" data-settings-action="copy-guide">Copy guide</button>
+          <button type="button" data-settings-action="copy-operator-manual">Copy full manual</button>
+          <button type="button" data-settings-action="open-operator-manual">Open manual file</button>
           <button type="button" data-settings-action="copy-tour-script">Copy script</button>
           <button type="button" data-settings-action="copy-elevenlabs-request">Copy ElevenLabs request</button>
         </div>
       </header>
       ${latestGuideMessage ? `<div class="guide-message">${escapeHtml(latestGuideMessage)}</div>` : ""}
+      ${renderOperatorManualBrowser()}
       <div class="guide-grid">
         ${guideSections.map((section) => `
           <article class="guide-card" id="guide-${escapeHtml(section.id)}">
@@ -1679,6 +1712,71 @@ function renderUserGuidePanel() {
       </div>
     </section>
   `;
+}
+
+function renderOperatorManualBrowser() {
+  const entries = operatorManualEntries(operatorManual.text);
+  return `
+    <section class="manual-browser" aria-label="Full Diamond operator manual">
+      <header>
+        <div>
+          <h3>Full operator manual</h3>
+          <p>${escapeHtml(operatorManual.ok ? `${entries.length} searchable sections from ${operatorManual.path}` : operatorManual.reason)}</p>
+        </div>
+        <input data-manual-search type="search" value="${escapeHtml(manualSearchTerm)}" placeholder="Search manual: proof, X, schedule, blocked...">
+      </header>
+      <div id="manual-results" class="manual-results">
+        ${renderManualResults(entries, manualSearchTerm)}
+      </div>
+    </section>
+  `;
+}
+
+function renderUserManualResults() {
+  const target = document.querySelector("#manual-results");
+  if (!target) return;
+  target.innerHTML = renderManualResults(operatorManualEntries(operatorManual.text), manualSearchTerm);
+}
+
+function renderManualResults(entries, query = "") {
+  const normalizedQuery = query.trim().toLowerCase();
+  const matches = normalizedQuery
+    ? entries.filter((entry) => `${entry.title} ${entry.body}`.toLowerCase().includes(normalizedQuery))
+    : entries.slice(0, 12);
+  return matches.slice(0, 16).map((entry) => `
+    <article class="manual-result">
+      <h4>${escapeHtml(entry.title)}</h4>
+      <p>${escapeHtml(excerptManualEntry(entry, normalizedQuery))}</p>
+    </article>
+  `).join("") || `<div class="manual-empty">No manual sections matched that search.</div>`;
+}
+
+function operatorManualEntries(text = "") {
+  const lines = String(text || "").split(/\r?\n/);
+  const entries = [];
+  let current = null;
+  for (const line of lines) {
+    const heading = line.match(/^##\s+(.+)/);
+    if (heading) {
+      if (current) entries.push(current);
+      current = { title: heading[1].trim(), body: "" };
+    } else if (current) {
+      current.body += `${line}\n`;
+    }
+  }
+  if (current) entries.push(current);
+  return entries.map((entry) => ({
+    title: entry.title,
+    body: entry.body.replace(/\n{3,}/g, "\n\n").trim(),
+  }));
+}
+
+function excerptManualEntry(entry, query = "") {
+  const body = entry.body.replace(/\s+/g, " ").trim();
+  if (!query) return body.slice(0, 260);
+  const index = body.toLowerCase().indexOf(query);
+  if (index < 0) return body.slice(0, 260);
+  return body.slice(Math.max(0, index - 90), index + 220);
 }
 
 function buildGuideMarkdown() {

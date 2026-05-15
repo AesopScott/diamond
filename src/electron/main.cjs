@@ -11,6 +11,7 @@ const SYNC_DIR = path.join(APP_DIR, "sync");
 const TOUR_AUDIO_DIR = path.join(APP_DIR, "tour-audio");
 const CHROMIUM_CACHE_DIR = path.join(APP_DIR, "chromium-cache");
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
+const OPERATOR_MANUAL_PATH = path.join(PROJECT_ROOT, "docs", "DIAMOND_OPERATOR_MANUAL.md");
 
 loadLocalEnv();
 app.setPath("userData", APP_DIR);
@@ -137,6 +138,25 @@ ipcMain.handle("diamond:get-voiceover-status", () => {
     files: listTourAudioFiles(),
   };
 });
+ipcMain.handle("diamond:get-operator-manual", () => {
+  try {
+    const text = fs.readFileSync(OPERATOR_MANUAL_PATH, "utf8");
+    return {
+      ok: true,
+      path: OPERATOR_MANUAL_PATH,
+      text,
+      updatedAt: fs.statSync(OPERATOR_MANUAL_PATH).mtime.toISOString(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      path: OPERATOR_MANUAL_PATH,
+      text: "",
+      reason: error.message || "Operator manual could not be read.",
+    };
+  }
+});
+ipcMain.handle("diamond:open-operator-manual", () => shell.openPath(OPERATOR_MANUAL_PATH));
 ipcMain.handle("diamond:generate-tour-voiceovers", async (_event, input = {}) => {
   ensureAppDir();
   const apiKey = process.env.ELEVENLABS_API_KEY;

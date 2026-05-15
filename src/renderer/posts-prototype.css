@@ -1913,6 +1913,68 @@ textarea {
   padding: 12px;
 }
 
+.manual-browser {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.manual-browser > header {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 360px);
+}
+
+.manual-browser h3 {
+  font-size: 17px;
+  margin: 0 0 5px;
+}
+
+.manual-browser input {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 9px 11px;
+}
+
+.manual-results {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  max-height: 520px;
+  overflow: auto;
+}
+
+.manual-result,
+.manual-empty {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.manual-result h4 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.manual-result p,
+.manual-empty {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .guide-grid {
   display: grid;
   gap: 14px;
@@ -2574,5 +2636,10 @@ textarea {
 
   .user-guide-panel > header {
     display: grid;
+  }
+
+  .manual-browser > header,
+  .manual-results {
+    grid-template-columns: 1fr;
   }
 }
