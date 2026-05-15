@@ -256,6 +256,7 @@ This is the current order for finishing the remaining checklist items.
   - [x] In-app user guide
   - [x] Detailed operator manual with examples for every major workflow
   - [x] Searchable in-app operator manual browser
+  - [x] Contextual next-step help cards in platform drafts
   - [x] Screen-highlight tour scaffold
   - [x] Tour voiceover script
   - [x] ElevenLabs request template

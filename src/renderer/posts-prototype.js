@@ -2683,6 +2683,7 @@ function renderPlatformPreview(draft) {
         </div>
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
+      ${renderContextHelpCard(draft, preflight, plan)}
       ${renderDraftReliability(draft, preflight)}
       ${renderStagingPlan(draft, plan)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
@@ -2717,6 +2718,104 @@ function renderPlatformPreview(draft) {
       </div>
     </article>
   `;
+}
+
+function renderContextHelpCard(draft, preflight, plan) {
+  const help = workflowHelpForDraft(draft, preflight, plan);
+  return `
+    <section class="context-help-card ${escapeHtml(help.tone)}" aria-label="${escapeHtml(platformLabel(draft.platform))} next step help">
+      <header>
+        <strong>${escapeHtml(help.title)}</strong>
+        <span>${escapeHtml(help.badge)}</span>
+      </header>
+      <p>${escapeHtml(help.body)}</p>
+      <ol>
+        ${help.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+    </section>
+  `;
+}
+
+function workflowHelpForDraft(draft, preflight, plan) {
+  if (draft.status === "published") {
+    return {
+      tone: "ready",
+      badge: "Done",
+      title: "This post is marked posted",
+      body: "Only change this if the post was marked posted by mistake or needs metrics added later.",
+      steps: ["Check Analytics later.", "Add URL, screenshot, impressions, clicks, signups, or notes when available."],
+    };
+  }
+  if (draft.status === "blocked") {
+    return {
+      tone: "blocked",
+      badge: "Stop",
+      title: "Do not stage this draft yet",
+      body: "Diamond found a blocker. Fix the text or abandon the draft before trying to publish.",
+      steps: ["Read the evaluation and risk notes.", "Edit the draft.", "Click Evaluate again.", "Approve only after the blocker is gone."],
+    };
+  }
+  if (draft.status === "needs_review" || !preflight.ok) {
+    return {
+      tone: "blocked",
+      badge: "Review",
+      title: "This draft needs attention first",
+      body: "Something is not ready: approval, session, license, media, or another preflight check.",
+      steps: ["Read the red or yellow warning.", "Fix the missing item.", "Click Evaluate.", "Click Approve only when the draft is safe."],
+    };
+  }
+  if (plan.mediaRequired && !(draft.media || []).length) {
+    return {
+      tone: "blocked",
+      badge: "Media",
+      title: `${plan.label} needs media`,
+      body: "This platform normally needs an image or video before it can be published.",
+      steps: ["Click + Media.", "Choose the correct image or video.", "Confirm the media file appears under the draft.", "Then stage the draft."],
+    };
+  }
+  if (!["approved", "staged", "scheduled"].includes(draft.status)) {
+    return {
+      tone: "attention",
+      badge: "Start",
+      title: "Start by evaluating this draft",
+      body: "Evaluation checks whether the text is safe, on-brand, and ready for a human approval decision.",
+      steps: ["Read the draft text.", "Click Evaluate.", "Edit anything that looks wrong.", "Click Approve when it is ready."],
+    };
+  }
+  if (draft.status === "approved" || draft.status === "scheduled") {
+    return {
+      tone: "ready",
+      badge: "Stage",
+      title: "This draft is ready to stage",
+      body: "Staging prepares the post in the platform browser. It does not mean Diamond has published it.",
+      steps: ["Click Stage.", "Review the browser composer yourself.", plan.supportsTextInsert ? "Confirm the text inserted correctly." : "Paste the copied text manually if needed.", "Publish manually only if it looks right."],
+    };
+  }
+  if (draft.status === "staged" && !draft.proofCapturedAt) {
+    return {
+      tone: "attention",
+      badge: "Proof",
+      title: "Capture proof before marking posted",
+      body: "Proof is the record that shows what happened in the social platform workflow.",
+      steps: ["Review the staged composer or live post.", "Publish manually if you have not already.", "Click Capture Proof.", "Then click Mark Posted."],
+    };
+  }
+  if (draft.status === "staged") {
+    return {
+      tone: "ready",
+      badge: "Finish",
+      title: "Finish the post record",
+      body: "Diamond has proof. If the post is live, mark it posted so the calendar, queue, and analytics stay accurate.",
+      steps: ["Confirm the post is live on the platform.", "Click Mark Posted.", "Add metrics later when you have them."],
+    };
+  }
+  return {
+    tone: "attention",
+    badge: "Next",
+    title: "Use the safe workflow",
+    body: "Read, evaluate, approve, stage, publish manually, capture proof, then mark posted.",
+    steps: ["Evaluate.", "Approve.", "Stage.", "Capture proof.", "Mark posted."],
+  };
 }
 
 function renderDraftProofPanel(draft) {
