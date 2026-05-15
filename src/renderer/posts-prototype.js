@@ -1697,7 +1697,11 @@ async function runOperatorAction(action) {
 async function stageOperatorDraft(account, draft) {
   if (!account) return setOperatorMessage("Browser staging blocked: no active account.");
   if (!draft) return setOperatorMessage("Browser staging blocked: no active draft.");
-  stagePlatformDraft(draft);
+  if (!stagePlatformDraft(draft)) {
+    await saveProductionState();
+    reopenActiveDetail();
+    return setOperatorMessage(draft.stageNote || "Browser staging blocked by preflight.");
+  }
   const composeUrl = resolveComposeUrl(account);
   if (!composeUrl) {
     draft.stageNote = "Compose URL missing; set the account compose URL first.";
@@ -2111,26 +2115,38 @@ function renderPlatformButtons(drafts) {
 
 function renderPlatformPreviews(drafts) {
   const target = document.querySelector("#platform-previews");
-  target.innerHTML = drafts.map((draft) => `
+  target.innerHTML = drafts.map(renderPlatformPreview).join("");
+}
+
+function renderPlatformPreview(draft) {
+  const preflight = platformDraftPreflight(draft);
+  return `
     <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}">
       <header>
         <div>
           <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
           <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(titleCase(draft.status || "draft"))}</em>
+          <em class="session-pill ${preflight.ok ? "ready" : "needs_login"}">${preflight.ok ? "Ready" : "Needs attention"}</em>
         </div>
         ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
+      ${renderDraftReliability(draft, preflight)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
-      <button type="button" class="media-button">+ Media</button>
+      <div class="draft-media-row">
+        <button type="button" class="media-button">+ Media</button>
+        <span>${escapeHtml(mediaStatus(draft))}</span>
+      </div>
       <div class="platform-action-row" aria-label="${escapeHtml(platformLabel(draft.platform))} actions">
         <button type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
         <button type="button" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}">Approve</button>
         <button type="button" data-platform-action="schedule" data-platform-draft-id="${escapeHtml(draft.id)}">Schedule</button>
         <button type="button" data-platform-action="stage" data-platform-draft-id="${escapeHtml(draft.id)}">Stage</button>
+        <button type="button" data-platform-action="proof" data-platform-draft-id="${escapeHtml(draft.id)}">Capture proof</button>
         <button type="button" data-platform-action="posted" data-platform-draft-id="${escapeHtml(draft.id)}">Mark posted</button>
         <button type="button" data-platform-action="abandoned" data-platform-draft-id="${escapeHtml(draft.id)}">Abandon</button>
       </div>
       ${renderDraftEvaluation(draft)}
+      <div class="platform-note">${escapeHtml(platformPostingNote(draft.platform))}</div>
       <div class="social-preview">
         <div class="avatar"></div>
         <div>
@@ -2140,7 +2156,26 @@ function renderPlatformPreviews(drafts) {
         <p>${escapeHtml(draft.text)}</p>
       </div>
     </article>
-  `).join("");
+  `;
+}
+
+function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)) {
+  const account = accountForDraft(draft);
+  const rows = [
+    ["Platform", platformLabel(draft.platform)],
+    ["Account", account?.handle || account?.id || "Missing"],
+    ["Session", titleCase(account?.sessionStatus || "unknown")],
+    ["Approval", titleCase(draft.status || "draft")],
+    ["Schedule", draft.scheduledAt ? formatDateTime(draft.scheduledAt) : "Not scheduled"],
+    ["Media", mediaStatus(draft)],
+    ["Proof", proofStatus(draft, account)],
+  ];
+  return `
+    <dl class="draft-reliability-grid">
+      ${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+    </dl>
+    ${preflight.issues.length ? `<div class="draft-preflight ${preflight.ok ? "ready" : "blocked"}">${preflight.issues.map((issue) => `<span>${escapeHtml(issue)}</span>`).join("")}</div>` : ""}
+  `;
 }
 
 function renderDraftEvaluation(draft) {
@@ -2171,6 +2206,7 @@ async function handlePlatformDraftAction(event) {
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "stage") stagePlatformDraft(draft);
+  if (action === "proof") capturePlatformDraftProof(draft);
   if (action === "posted") markPlatformDraftPosted(draft);
   if (action === "abandoned") markPlatformDraftAbandoned(draft);
   updatePostPackageFromDrafts(draft.postPackageId);
@@ -2313,13 +2349,19 @@ function schedulePlatformDraft(draft) {
 }
 
 function stagePlatformDraft(draft) {
-  if (!["approved", "scheduled", "staged"].includes(draft.status)) approvePlatformDraft(draft);
-  if (draft.status === "blocked") return;
+  const preflight = platformDraftPreflight(draft);
+  if (!preflight.ok) {
+    draft.status = draft.status === "published" ? draft.status : "needs_review";
+    draft.stageNote = `Staging blocked: ${preflight.issues.join(" ")}`;
+    draft.updatedAt = new Date().toISOString();
+    return false;
+  }
   draft.status = "staged";
   draft.stagedAt = new Date().toISOString();
   draft.stageUrl = resolveComposeUrl(accountForDraft(draft)) || "";
-  draft.stageNote = draft.stageUrl ? "Ready for browser staging in Operator tools." : "Compose URL missing; set account URL before staging.";
+  draft.stageNote = "Ready for browser staging in Operator tools.";
   draft.updatedAt = draft.stagedAt;
+  return true;
 }
 
 function markPlatformDraftPosted(draft) {
@@ -2348,6 +2390,32 @@ function markPlatformDraftPosted(draft) {
     schedule.postedAt = postedAt;
     schedule.updatedAt = postedAt;
   }
+}
+
+function capturePlatformDraftProof(draft) {
+  const account = accountForDraft(draft);
+  const capturedAt = new Date().toISOString();
+  if (account) {
+    account.proofCount = Number(account.proofCount || 0) + 1;
+    account.lastProofAt = capturedAt;
+  }
+  draft.proofCapturedAt = capturedAt;
+  draft.proofNote = `Proof captured for ${platformLabel(draft.platform)}${account?.handle ? ` / ${account.handle}` : ""}.`;
+  draft.updatedAt = capturedAt;
+  state.postRuns ||= [];
+  const run = {
+    id: `proof-${Date.now()}-${draft.platform}`,
+    draftId: draft.id,
+    postPackageId: draft.postPackageId,
+    context: draft.context,
+    status: "proof_captured",
+    text: draft.text,
+    media: draft.media || [],
+    createdAt: capturedAt,
+    platformUrl: draft.stageUrl || resolveComposeUrl(account) || resolveLoginUrl(account) || "",
+    note: draft.proofNote,
+  };
+  state.postRuns.unshift(run);
 }
 
 function markPlatformDraftAbandoned(draft) {
@@ -2473,6 +2541,59 @@ function approvalPolicyFor(draft) {
   return (state.approvalPolicies || []).find((policy) => policy.id === draft.context?.approvalPolicyId)
     || (state.approvalPolicies || []).find((policy) => policy.companyId === draft.companyId)
     || {};
+}
+
+function platformDraftPreflight(draft) {
+  const issues = [];
+  const account = accountForDraft(draft);
+  const text = String(draft.text || "").trim();
+  const license = state.licenseCache || createTemporaryUnlimitedDiamondLicense({
+    userId: "scott",
+    brands: [draft.brandId || draft.context?.brandId].filter(Boolean),
+    platforms: [draft.platform].filter(Boolean),
+  });
+  const licenseCheck = evaluateDiamondLicense(license, {
+    requestedBrands: [draft.brandId || draft.context?.brandId].filter(Boolean),
+    requestedPlatforms: [draft.platform].filter(Boolean),
+  });
+  if (!text) issues.push("Draft text is empty.");
+  if (draft.charLimit && text.length > draft.charLimit) issues.push(`Text exceeds ${draft.charLimit} characters.`);
+  if (!["approved", "scheduled", "staged", "published"].includes(draft.status)) issues.push("Draft must be approved before staging.");
+  if (!account) issues.push("No social account is assigned.");
+  if (account && account.sessionStatus !== "ready") issues.push(`${platformLabel(account.platform)} session is ${titleCase(account.sessionStatus || "unknown")}.`);
+  if (account && !resolveComposeUrl(account)) issues.push("Compose URL is missing.");
+  if (!licenseCheck.ok) issues.push(licenseCheck.reason || "License does not allow this brand/platform.");
+  return {
+    ok: issues.length === 0,
+    issues,
+    account,
+    licenseCheck,
+  };
+}
+
+function mediaStatus(draft) {
+  const count = (draft.media || []).length;
+  if (count) return `${count} media file${count === 1 ? "" : "s"} attached`;
+  if (["instagram", "tiktok", "youtube-shorts"].includes(draft.platform)) return "Media required or manual";
+  return "No media attached";
+}
+
+function proofStatus(draft, account) {
+  if (draft.proofCapturedAt) return `Captured ${formatDateTime(draft.proofCapturedAt)}`;
+  if (account?.lastProofAt) return `Account proof ${formatDateTime(account.lastProofAt)}`;
+  return `${account?.proofCount || 0} account proofs`;
+}
+
+function platformPostingNote(platform) {
+  return {
+    x: "X: stage text, review the composer, then post manually before marking posted.",
+    facebook: "Facebook: confirm the selected page/profile before posting.",
+    tiktok: "TikTok: media is usually required; use the browser to finish upload and caption checks.",
+    instagram: "Instagram: media is usually required; verify the account and crop before posting.",
+    linkedin: "LinkedIn: review formatting and link previews before publishing.",
+    reddit: "Reddit: treat as monitoring or manual posting unless a subreddit workflow is configured.",
+    "youtube-shorts": "YouTube Shorts: video media is required; finish upload details manually.",
+  }[platform] || "Review the visible composer before publishing.";
 }
 
 function brandLibraryFor(draft) {
