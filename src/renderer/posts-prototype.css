@@ -1731,17 +1731,18 @@ textarea {
 
 .account-login-browser {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  bottom: 28px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  bottom: 0;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
-  left: 268px;
+  left: 240px;
   margin-bottom: 0;
   overflow: hidden;
   position: fixed;
-  right: 28px;
-  top: 28px;
+  right: 0;
+  top: 0;
   z-index: 30;
 }
 
@@ -1752,17 +1753,17 @@ textarea {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .account-login-browser h3 {
-  font-size: 18px;
-  margin: 0 0 4px;
+  font-size: 16px;
+  margin: 0 0 2px;
 }
 
 .account-login-browser p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
   margin: 0;
 }
@@ -1776,12 +1777,13 @@ textarea {
   padding: 10px 12px;
 }
 
-.account-login-context div {
+.account-login-context div,
+.account-login-context label {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 8px;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 6px 8px;
 }
 
 .account-login-context span {
@@ -1801,6 +1803,19 @@ textarea {
   white-space: nowrap;
 }
 
+.account-login-context select {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  min-height: 30px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
 #account-login-browser-status {
   background: var(--pill);
   border: 1px solid var(--line);
@@ -1818,7 +1833,7 @@ textarea {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(7, minmax(96px, 1fr));
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .account-login-browser-toolbar button {
@@ -1828,8 +1843,8 @@ textarea {
   color: var(--text);
   cursor: pointer;
   font-weight: 900;
-  min-height: 38px;
-  padding: 8px 10px;
+  min-height: 34px;
+  padding: 6px 8px;
 }
 
 .account-login-webview-shell {
@@ -3881,10 +3896,10 @@ textarea {
   }
 
   .account-login-browser {
-    bottom: 14px;
-    left: 14px;
-    right: 14px;
-    top: 14px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
   }
 
   .expert-checklist-panel {

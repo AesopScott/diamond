@@ -581,6 +581,7 @@ function wirePrototypeControls() {
   });
   document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
+  document.querySelector("#account-detail")?.addEventListener("change", handleAccountDetailChange);
   document.querySelector("#company-workspace")?.addEventListener("click", handleCompanyWorkspaceClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#campaign-workspace")?.addEventListener("click", handleCampaignWorkspaceClick);
@@ -1214,24 +1215,22 @@ function refreshAccountLoginWebviewBounds() {
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
   const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
-  const company = companyName(account.companyId);
-  const brand = brandName(account.brandId);
   const handle = account.handle || account.id || "No handle set";
   return `
     <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
       <header>
         <div>
           <span class="eyebrow">Logging into</span>
-          <h3 id="account-login-browser-heading">${escapeHtml(company)} / ${escapeHtml(brand)}</h3>
+          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
           <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
       </header>
       <section class="account-login-context" aria-label="Selected account context">
-        <div><span>Company</span><strong>${escapeHtml(company)}</strong></div>
-        <div><span>Brand</span><strong>${escapeHtml(brand)}</strong></div>
+        <label><span>Company</span><select data-login-scope-field="companyId">${companyOptions(account.companyId)}</select></label>
+        <label><span>Brand</span><select data-login-scope-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></label>
+        <label><span>Account</span><select data-login-scope-field="accountId">${accountOptions(account.companyId, account.brandId, account.id)}</select></label>
         <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
-        <div><span>Account</span><strong>${escapeHtml(handle)}</strong></div>
       </section>
       <div class="account-login-browser-toolbar">
         <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
@@ -1253,6 +1252,13 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       </div>
     </section>
   `;
+}
+
+function accountOptions(companyId, brandId, selectedId) {
+  const options = accountsForScope(companyId, brandId).map((account) => `
+    <option value="${escapeHtml(account.id)}" ${account.id === selectedId ? "selected" : ""}>${escapeHtml(`${platformLabel(account.platform)} / ${account.handle || account.id}`)}</option>
+  `).join("");
+  return options || `<option value="">No accounts yet</option>`;
 }
 
 function renderAccountCreationPanel(account, plan) {
@@ -1768,6 +1774,47 @@ async function handleAccountDetailClick(event) {
   account.updatedAt = new Date().toISOString();
   await saveProductionState();
   renderAccounts(account.id);
+  renderOperatorDrawer();
+}
+
+async function handleAccountDetailChange(event) {
+  const field = event.target.closest("[data-login-scope-field]");
+  if (!field) return;
+  if (field.dataset.loginScopeField === "companyId") {
+    const companyId = normalizeId(field.value, "companyId");
+    const brandId = (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+    const account = accountsForScope(companyId, brandId)[0] || null;
+    state.context = {
+      ...state.context,
+      companyId,
+      brandId,
+      platform: account?.platform || state.context?.platform || "x",
+      socialAccountId: account?.id || "",
+      browserProfileId: account?.browserProfileId || "",
+    };
+    selectedAccountId = account?.id || null;
+  }
+  if (field.dataset.loginScopeField === "brandId") {
+    const brandId = normalizeId(field.value, "brandId");
+    const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+    const account = accountsForScope(brand.companyId || state.context?.companyId, brandId)[0] || null;
+    state.context = {
+      ...state.context,
+      companyId: brand.companyId || state.context?.companyId || "",
+      brandId,
+      platform: account?.platform || state.context?.platform || "x",
+      socialAccountId: account?.id || "",
+      browserProfileId: account?.browserProfileId || "",
+    };
+    selectedAccountId = account?.id || null;
+  }
+  if (field.dataset.loginScopeField === "accountId") {
+    const account = (state.socialAccounts || []).find((item) => item.id === field.value);
+    if (account) setActiveAccount(account);
+  }
+  accountCreatorOpen = false;
+  await saveProductionState();
+  renderAccounts(selectedAccountId);
   renderOperatorDrawer();
 }
 
