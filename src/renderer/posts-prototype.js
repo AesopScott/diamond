@@ -249,6 +249,16 @@ const OPERATOR_LABELS_ES = {
   "Operator Tools": "Herramientas de operador",
 };
 
+const DEFAULT_GUIDANCE_MODULES = Object.freeze([
+  { key: "brandVoice", title: "Voice", source: "brandLibrary", valueType: "text", placeholder: "Describe how the brand should sound" },
+  { key: "approvedPhrases", title: "Approved phrases", source: "brandLibrary", valueType: "list", placeholder: "One approved phrase per line" },
+  { key: "bannedPhrases", title: "Banned phrases", source: "brandLibrary", valueType: "list", placeholder: "One banned phrase per line" },
+  { key: "prizeLanguage", title: "Prize language", source: "claimLibrary", valueType: "list", placeholder: "One approved prize phrase per line" },
+  { key: "freeToPlayLanguage", title: "Free-to-play language", source: "claimLibrary", valueType: "list", placeholder: "One approved free-play phrase per line" },
+  { key: "requiresReviewClaims", title: "Requires review", source: "claimLibrary", valueType: "list", placeholder: "One review trigger per line" },
+  { key: "blockedClaims", title: "Blocked claims", source: "claimLibrary", valueType: "list", placeholder: "One blocked claim per line" },
+]);
+
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
 state.customThemeSwatches = normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor(state.themeId));
@@ -1576,16 +1586,6 @@ function renderBrands() {
     </section>
   `;
 }
-
-const DEFAULT_GUIDANCE_MODULES = Object.freeze([
-  { key: "brandVoice", title: "Voice", source: "brandLibrary", valueType: "text", placeholder: "Describe how the brand should sound" },
-  { key: "approvedPhrases", title: "Approved phrases", source: "brandLibrary", valueType: "list", placeholder: "One approved phrase per line" },
-  { key: "bannedPhrases", title: "Banned phrases", source: "brandLibrary", valueType: "list", placeholder: "One banned phrase per line" },
-  { key: "prizeLanguage", title: "Prize language", source: "claimLibrary", valueType: "list", placeholder: "One approved prize phrase per line" },
-  { key: "freeToPlayLanguage", title: "Free-to-play language", source: "claimLibrary", valueType: "list", placeholder: "One approved free-play phrase per line" },
-  { key: "requiresReviewClaims", title: "Requires review", source: "claimLibrary", valueType: "list", placeholder: "One review trigger per line" },
-  { key: "blockedClaims", title: "Blocked claims", source: "claimLibrary", valueType: "list", placeholder: "One blocked claim per line" },
-]);
 
 function guidanceModulesForBrand(brandId, library = {}, claims = {}) {
   state.brandGuidanceModules ||= [];

@@ -421,6 +421,10 @@ assert.match(js, /delete-guidance-module/);
 assert.match(js, /toggle-guidance-module/);
 assert.match(js, /guidanceForContext/);
 assert.match(js, /brandGuidanceModules/);
+assert.ok(
+  js.indexOf("const DEFAULT_GUIDANCE_MODULES") < js.indexOf("renderBrands();"),
+  "Default guidance modules must be initialized before startup calls renderBrands.",
+);
 assert.match(js, /renderCompanies/);
 assert.match(js, /renderCampaigns/);
 assert.match(js, /handleCompanyWorkspaceClick/);
