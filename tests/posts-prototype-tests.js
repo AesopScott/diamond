@@ -42,6 +42,8 @@ assert.match(html, /id="operator-toggle"/);
 assert.match(html, /id="operator-drawer"/);
 assert.match(html, /id="operator-workspace"/);
 assert.match(html, /id="prototype-nav"/);
+assert.match(html, /data-view="posts-view">Posts<\/a>\s*<a class="nav-child" href="#templates"/);
+assert.match(html, /data-view="templates-view">Templates<\/a>\s*<a href="#analytics"/);
 assert.match(html, /id="post-detail"/);
 assert.match(html, /id="idea-text"/);
 assert.match(html, /id="platform-previews"/);
