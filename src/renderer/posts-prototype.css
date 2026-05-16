@@ -290,7 +290,32 @@ button:disabled {
   color: var(--muted);
   font-weight: 800;
   padding: 11px 14px;
+  position: relative;
   text-decoration: none;
+}
+
+.prototype-sidebar a.nav-child {
+  margin-left: 14px;
+  padding-left: 22px;
+}
+
+.prototype-sidebar a.nav-grandchild {
+  margin-left: 28px;
+  padding-left: 22px;
+}
+
+.prototype-sidebar a.nav-child::before,
+.prototype-sidebar a.nav-grandchild::before {
+  background: var(--line-strong);
+  border-radius: 999px;
+  content: "";
+  height: 5px;
+  left: 9px;
+  opacity: 0.9;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
 }
 
 .prototype-sidebar a.active,
