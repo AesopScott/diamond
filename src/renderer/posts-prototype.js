@@ -1214,15 +1214,25 @@ function refreshAccountLoginWebviewBounds() {
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
   const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
+  const company = companyName(account.companyId);
+  const brand = brandName(account.brandId);
+  const handle = account.handle || account.id || "No handle set";
   return `
     <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
       <header>
         <div>
-          <h3 id="account-login-browser-heading">Login page</h3>
-          <p>Use this pane to sign into ${escapeHtml(platformLabel(account.platform))} and confirm the page is actually logged in.</p>
+          <span class="eyebrow">Logging into</span>
+          <h3 id="account-login-browser-heading">${escapeHtml(company)} / ${escapeHtml(brand)}</h3>
+          <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
       </header>
+      <section class="account-login-context" aria-label="Selected account context">
+        <div><span>Company</span><strong>${escapeHtml(company)}</strong></div>
+        <div><span>Brand</span><strong>${escapeHtml(brand)}</strong></div>
+        <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
+        <div><span>Account</span><strong>${escapeHtml(handle)}</strong></div>
+      </section>
       <div class="account-login-browser-toolbar">
         <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
         <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
