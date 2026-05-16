@@ -250,6 +250,7 @@ const OPERATOR_LABELS_ES = {
 
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
+state.customThemeSwatches = normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor(state.themeId));
 state.operatorLanguage = normalizeOperatorLanguage(state.operatorLanguage);
 state.beginnerMode = normalizeBeginnerMode(state.beginnerMode);
 const APP_SESSION_ID = `diamond-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -2542,6 +2543,9 @@ async function handleSettingsChange(event) {
   if (field.dataset.settingsField === "themeId") {
     await updateThemeSetting(field.value);
   }
+  if (field.dataset.settingsField === "customThemeSwatch") {
+    await updateCustomThemeSwatch(field.dataset.swatchIndex, field.value);
+  }
   if (field.dataset.settingsField === "operatorLanguage") {
     state.operatorLanguage = normalizeOperatorLanguage(field.value);
     applyOperatorLanguage();
@@ -2568,16 +2572,38 @@ async function handleSettingsChange(event) {
 
 async function updateThemeSetting(themeId) {
   state.themeId = normalizeThemeId(themeId);
+  if (state.themeId === "custom") {
+    state.customThemeSwatches = normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor("graphite-red"));
+  }
   applyDiamondTheme(state.themeId);
   await saveProductionState();
   renderSettings();
 }
 
 function handleSettingsInput(event) {
+  const colorField = event.target.closest('[data-settings-field="customThemeSwatch"]');
+  if (colorField) {
+    updateCustomThemeSwatch(colorField.dataset.swatchIndex, colorField.value, { save: false });
+    return;
+  }
   const field = event.target.closest("[data-manual-search]");
   if (!field) return;
   manualSearchTerm = field.value || "";
   renderUserManualResults();
+}
+
+async function updateCustomThemeSwatch(index, color, options = {}) {
+  const swatches = normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor(state.themeId));
+  const swatchIndex = Number(index);
+  if (!Number.isInteger(swatchIndex) || swatchIndex < 0 || swatchIndex > 3) return;
+  swatches[swatchIndex] = normalizeHexColor(color, swatches[swatchIndex]);
+  state.customThemeSwatches = swatches;
+  state.themeId = "custom";
+  applyDiamondTheme(state.themeId);
+  if (options.save !== false) {
+    await saveProductionState();
+    renderSettings();
+  }
 }
 
 async function runSettingsAction(action) {
@@ -2700,6 +2726,7 @@ function saveSettingsForm() {
   state.licenseCache.userId = getSettingsFieldValue("licenseUserId") || state.licenseCache.userId;
   state.licenseCache.email = getSettingsFieldValue("licenseEmail") || state.licenseCache.email;
   state.themeId = normalizeThemeId(getSettingsFieldValue("themeId") || state.themeId);
+  state.customThemeSwatches = readCustomThemeSwatchesFromSettings();
   state.operatorLanguage = normalizeOperatorLanguage(getSettingsFieldValue("operatorLanguage") || state.operatorLanguage);
   state.beginnerMode = getSettingsChecked("beginnerMode", state.beginnerMode);
   applyDiamondTheme(state.themeId);
@@ -2785,11 +2812,12 @@ function renderThemeSettingsPanel() {
   const themes = diamondThemes();
   const selectedTheme = normalizeThemeId(state.themeId);
   const theme = themes.find((item) => item.id === selectedTheme) || themes[0];
+  const customSwatches = normalizeCustomThemeSwatches(state.customThemeSwatches, theme.swatches);
   return `
     <article class="settings-panel editable-settings">
       <header>
         <h2>Theme</h2>
-        <span class="count">CSS module</span>
+        <span class="count">${selectedTheme === "custom" ? "Custom" : "CSS module"}</span>
       </header>
       <dl>
         <div>
@@ -2803,7 +2831,7 @@ function renderThemeSettingsPanel() {
         <div><dt>Current</dt><dd>${escapeHtml(theme.label)}</dd></div>
         <div><dt>Preview</dt><dd>Applies immediately and saves to this workspace.</dd></div>
         <div><dt>Use case</dt><dd>${escapeHtml(theme.description)}</dd></div>
-        <div><dt>Swatches</dt><dd><span class="theme-swatch-row">${theme.swatches.map((color) => `<span class="theme-swatch" style="--theme-swatch:${escapeHtml(color)}" title="${escapeHtml(color)}"></span>`).join("")}</span></dd></div>
+        <div><dt>Swatches</dt><dd>${renderCustomThemeSwatches(customSwatches)}</dd></div>
         <div><dt>Palette source</dt><dd>Professional mockups set</dd></div>
       </dl>
       <div class="theme-choice-grid" aria-label="Theme choices">
@@ -2816,6 +2844,20 @@ function renderThemeSettingsPanel() {
         `).join("")}
       </div>
     </article>
+  `;
+}
+
+function renderCustomThemeSwatches(swatches = []) {
+  const labels = ["Sidebar", "Panel", "Action", "Signal"];
+  return `
+    <span class="theme-swatch-row editable-theme-swatches">
+      ${normalizeCustomThemeSwatches(swatches).map((color, index) => `
+        <label class="theme-color-picker" title="${escapeHtml(`${labels[index]}: ${color}`)}">
+          <span class="theme-swatch" style="--theme-swatch:${escapeHtml(color)}"></span>
+          <input data-settings-field="customThemeSwatch" data-swatch-index="${index}" type="color" value="${escapeHtml(color)}" aria-label="${escapeHtml(labels[index])} color">
+        </label>
+      `).join("")}
+    </span>
   `;
 }
 
@@ -3158,13 +3200,29 @@ function buildGuideMarkdown() {
 }
 
 function diamondThemes() {
-  return PROFESSIONAL_THEMES;
+  return [
+    ...PROFESSIONAL_THEMES,
+    customThemeDefinition(),
+  ];
+}
+
+function customThemeDefinition() {
+  return {
+    id: "custom",
+    label: "Custom",
+    description: "Your four-dot palette for this workspace.",
+    swatches: normalizeCustomThemeSwatches(state.customThemeSwatches, PROFESSIONAL_THEMES[0].swatches),
+  };
+}
+
+function themeSwatchesFor(themeId) {
+  const requestedTheme = (themeId === "custom" ? customThemeDefinition() : PROFESSIONAL_THEMES.find((item) => item.id === themeId)) || PROFESSIONAL_THEMES[0];
+  return requestedTheme.swatches;
 }
 
 function normalizeThemeId(themeId) {
   const legacyThemeMap = {
     broadcast: "graphite-red",
-    custom: "graphite-red",
     charcoal: "executive-neutral",
     terminal: "evergreen",
     studio: "burgundy-desk",
@@ -3178,6 +3236,68 @@ function applyDiamondTheme(themeId) {
   const theme = normalizeThemeId(themeId);
   document.body?.classList.remove(...diamondThemes().map((item) => `theme-${item.id}`));
   document.body?.classList.add(`theme-${theme}`);
+  applyCustomThemeVariables(theme);
+}
+
+function normalizeCustomThemeSwatches(swatches = [], fallback = PROFESSIONAL_THEMES[0].swatches) {
+  const source = Array.isArray(swatches) && swatches.length ? swatches : fallback;
+  return [0, 1, 2, 3].map((index) => normalizeHexColor(source[index], fallback[index] || PROFESSIONAL_THEMES[0].swatches[index]));
+}
+
+function normalizeHexColor(value, fallback = "#11161d") {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : fallback;
+}
+
+function applyCustomThemeVariables(themeId) {
+  const body = document.body;
+  if (!body) return;
+  const customProperties = ["--sidebar", "--surface", "--surface-2", "--card", "--accent", "--metric", "--nav-active", "--line", "--line-strong", "--platform", "--platform-text", "--accent-text"];
+  if (themeId !== "custom") {
+    customProperties.forEach((property) => body.style.removeProperty(property));
+    return;
+  }
+  const [sidebar, panel, action, signal] = normalizeCustomThemeSwatches(state.customThemeSwatches);
+  body.style.setProperty("--sidebar", sidebar);
+  body.style.setProperty("--surface", panel);
+  body.style.setProperty("--surface-2", mixHexColors(panel, "#ffffff", 0.06));
+  body.style.setProperty("--card", mixHexColors(panel, "#000000", 0.28));
+  body.style.setProperty("--accent", action);
+  body.style.setProperty("--metric", signal);
+  body.style.setProperty("--nav-active", mixHexColors(sidebar, action, 0.18));
+  body.style.setProperty("--line", mixHexColors(panel, "#ffffff", 0.16));
+  body.style.setProperty("--line-strong", mixHexColors(panel, signal, 0.42));
+  body.style.setProperty("--platform", mixHexColors(panel, action, 0.18));
+  body.style.setProperty("--platform-text", mixHexColors("#ffffff", action, 0.35));
+  body.style.setProperty("--accent-text", readableTextColor(action));
+}
+
+function mixHexColors(left, right, rightWeight = 0.5) {
+  const leftRgb = hexToRgb(normalizeHexColor(left));
+  const rightRgb = hexToRgb(normalizeHexColor(right));
+  const weight = Math.min(1, Math.max(0, rightWeight));
+  const mixed = leftRgb.map((channel, index) => Math.round(channel * (1 - weight) + rightRgb[index] * weight));
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function hexToRgb(color) {
+  const hex = normalizeHexColor(color).slice(1);
+  return [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16));
+}
+
+function readableTextColor(background) {
+  const [red, green, blue] = hexToRgb(background).map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return luminance > 0.42 ? "#080808" : "#ffffff";
+}
+
+function readCustomThemeSwatchesFromSettings() {
+  const fields = [...document.querySelectorAll('[data-settings-field="customThemeSwatch"]')];
+  if (!fields.length) return normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor(state.themeId));
+  return normalizeCustomThemeSwatches(fields.map((field) => field.value), state.customThemeSwatches);
 }
 
 function normalizeOperatorLanguage(language) {

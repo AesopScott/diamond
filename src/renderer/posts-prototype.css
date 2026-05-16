@@ -2670,6 +2670,10 @@ textarea {
   gap: 8px;
 }
 
+.editable-theme-swatches {
+  flex-wrap: wrap;
+}
+
 .theme-swatch {
   background: var(--theme-swatch);
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -2677,6 +2681,27 @@ textarea {
   display: inline-flex;
   height: 22px;
   width: 22px;
+}
+
+.theme-color-picker {
+  cursor: pointer;
+  display: inline-flex;
+  position: relative;
+}
+
+.theme-color-picker input {
+  cursor: pointer;
+  height: 28px;
+  inset: -3px;
+  opacity: 0;
+  position: absolute;
+  width: 28px;
+}
+
+.theme-color-picker:focus-within .theme-swatch,
+.theme-color-picker:hover .theme-swatch {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .theme-choice-grid {
