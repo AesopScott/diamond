@@ -1143,8 +1143,8 @@ function initializeAccountLoginWebview(account) {
   }
   window.addEventListener("resize", () => requestAnimationFrame(refreshAccountLoginWebviewBounds));
   requestAnimationFrame(sizeAccountLoginWebview);
-  setTimeout(refreshAccountLoginWebviewBounds, 250);
-  setTimeout(refreshAccountLoginWebviewBounds, 900);
+  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 300);
+  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 900);
   updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
   scheduleAccountLoginResizePasses();
 }
@@ -1155,7 +1155,7 @@ function wireAccountLoginWebviewEvents(webview) {
   webview.addEventListener?.("dom-ready", () => {
     updateAccountLoginBrowserStatus("Login pane loaded.");
     sizeAccountLoginWebview();
-    setTimeout(refreshAccountLoginWebviewBounds, 120);
+    setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 180);
   });
   webview.addEventListener?.("did-navigate", () => updateAccountLoginBrowserStatus());
   webview.addEventListener?.("did-navigate-in-page", () => updateAccountLoginBrowserStatus());
@@ -1180,6 +1180,9 @@ function sizeAccountLoginWebview() {
   webview.style.minHeight = `${height}px`;
   webview.style.maxWidth = `${width}px`;
   webview.style.maxHeight = `${height}px`;
+  webview.style.display = "flex";
+  webview.style.flex = "1";
+  webview.style.position = "relative";
   webview.setAttribute("width", String(width));
   webview.setAttribute("height", String(height));
   if (typeof webview.executeJavaScript === "function") {
@@ -1191,12 +1194,16 @@ function sizeAccountLoginWebview() {
 }
 
 function scheduleAccountLoginResizePasses() {
-  [0, 80, 180, 350, 700, 1200].forEach((delay) => {
-    setTimeout(() => requestAnimationFrame(refreshAccountLoginWebviewBounds), delay);
+  [0, 80, 180].forEach((delay) => {
+    setTimeout(() => requestAnimationFrame(sizeAccountLoginWebview), delay);
+  });
+  [350, 900, 1400].forEach((delay) => {
+    setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), delay);
   });
 }
 
-function refreshAccountLoginWebviewBounds() {
+function refreshAccountLoginWebviewBounds(options = {}) {
+  const { force = false, reschedule = true } = options;
   const webview = document.querySelector("#account-login-webview");
   const shell = document.querySelector(".account-login-webview-shell");
   if (!webview || !shell) return;
@@ -1206,7 +1213,7 @@ function refreshAccountLoginWebviewBounds() {
   const partition = webview.getAttribute("partition") || "persist:diamond-account-login";
   const title = webview.getAttribute("title") || "Account login preview";
   const signature = `${dimensions.width}x${dimensions.height}:${partition}:${currentUrl}`;
-  if (webview.dataset.boundsSignature === signature) return;
+  if (!force && webview.dataset.boundsSignature === signature) return;
   const next = document.createElement("webview");
   next.id = "account-login-webview";
   next.dataset.boundsSignature = signature;
@@ -1222,9 +1229,18 @@ function refreshAccountLoginWebviewBounds() {
   next.style.minHeight = `${dimensions.height}px`;
   next.style.maxWidth = `${dimensions.width}px`;
   next.style.maxHeight = `${dimensions.height}px`;
+  next.style.display = "flex";
+  next.style.flex = "1";
+  next.style.position = "relative";
   webview.replaceWith(next);
   wireAccountLoginWebviewEvents(next);
-  scheduleAccountLoginResizePasses();
+  requestAnimationFrame(sizeAccountLoginWebview);
+  if (reschedule) scheduleAccountLoginResizePasses();
+}
+
+function forceRefreshAccountLoginWebviewBounds() {
+  refreshAccountLoginWebviewBounds({ force: true });
+  updateAccountLoginBrowserStatus("Browser surface refreshed at full size.");
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
@@ -1253,6 +1269,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
         <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
         <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
+        <button type="button" data-account-action="fit-login-panel" data-account-id="${escapeHtml(account.id)}">Fit browser</button>
         <button type="button" data-account-action="close-login-panel" data-account-id="${escapeHtml(account.id)}">Close pane</button>
       </div>
       <div class="account-login-webview-shell">
@@ -1766,6 +1783,10 @@ async function handleAccountDetailClick(event) {
   if (button.dataset.accountAction === "save-login") saveAccountForm(account);
   if (button.dataset.accountAction === "open-login") await openAccountLogin(account);
   if (button.dataset.accountAction === "reload-login-panel") reloadAccountLoginPanel();
+  if (button.dataset.accountAction === "fit-login-panel") {
+    forceRefreshAccountLoginWebviewBounds();
+    return;
+  }
   if (button.dataset.accountAction === "close-login-panel") {
     closeAccountLoginPanel();
     return;
@@ -1849,7 +1870,7 @@ async function openAccountLogin(account) {
 }
 
 function reloadAccountLoginPanel() {
-  refreshAccountLoginWebviewBounds();
+  refreshAccountLoginWebviewBounds({ force: true });
   const webview = document.querySelector("#account-login-webview");
   if (typeof webview?.reload === "function") webview.reload();
 }
@@ -1867,7 +1888,7 @@ function loadAccountLoginPanelUrl(url) {
   if (!webview || !url) return;
   webview.setAttribute("src", url);
   webview.src = url;
-  refreshAccountLoginWebviewBounds();
+  refreshAccountLoginWebviewBounds({ force: true });
   const status = document.querySelector("#account-login-browser-status");
   if (status) status.textContent = `Loading ${safeUrlLabel(url)}...`;
 }
