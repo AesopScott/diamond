@@ -197,7 +197,7 @@ const firstRunSteps = [
     title: "3. Create or open a post",
     targetSelector: "#create-post",
     voiceoverText: "Create a post package or open an existing draft. A post package is one source idea with platform-specific versions attached.",
-    checklistText: "Use Create or open a draft card. Check that the source idea matches the active campaign.",
+    checklistText: "Use Create or open a draft card. Check that the source idea matches the selected brand and campaign.",
   },
   {
     id: "first-run-draft",

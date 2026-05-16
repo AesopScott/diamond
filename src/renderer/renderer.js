@@ -1422,7 +1422,7 @@ async function saveCadencePolicy() {
   await window.diamond.saveState(state);
   renderValidation(getContext());
   renderRiskCard();
-  log("Cadence guardrails saved for the active campaign.");
+  log("Cadence guardrails saved for the selected campaign.");
 }
 
 async function saveBrandRules() {
