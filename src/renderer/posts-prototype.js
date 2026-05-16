@@ -1143,8 +1143,7 @@ function initializeAccountLoginWebview(account) {
   }
   window.addEventListener("resize", () => requestAnimationFrame(refreshAccountLoginWebviewBounds));
   requestAnimationFrame(sizeAccountLoginWebview);
-  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 300);
-  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 900);
+  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 450);
   updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
   scheduleAccountLoginResizePasses();
 }
@@ -1155,7 +1154,6 @@ function wireAccountLoginWebviewEvents(webview) {
   webview.addEventListener?.("dom-ready", () => {
     updateAccountLoginBrowserStatus("Login pane loaded.");
     sizeAccountLoginWebview();
-    setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 180);
   });
   webview.addEventListener?.("did-navigate", () => updateAccountLoginBrowserStatus());
   webview.addEventListener?.("did-navigate-in-page", () => updateAccountLoginBrowserStatus());
@@ -1185,6 +1183,11 @@ function sizeAccountLoginWebview() {
   webview.style.position = "relative";
   webview.setAttribute("width", String(width));
   webview.setAttribute("height", String(height));
+  if (!webview.dataset.boundsSignature) {
+    const currentUrl = webview.getAttribute("src") || webview.src || "about:blank";
+    const partition = webview.getAttribute("partition") || "persist:diamond-account-login";
+    webview.dataset.boundsSignature = `${width}x${height}:${partition}:${currentUrl}`;
+  }
   if (typeof webview.executeJavaScript === "function") {
     webview.executeJavaScript(
       "window.dispatchEvent(new Event('resize')); document.documentElement.style.minHeight='100vh'; document.body.style.minHeight='100vh';",
@@ -1194,11 +1197,8 @@ function sizeAccountLoginWebview() {
 }
 
 function scheduleAccountLoginResizePasses() {
-  [0, 80, 180].forEach((delay) => {
+  [0, 80, 180, 350, 700, 1200].forEach((delay) => {
     setTimeout(() => requestAnimationFrame(sizeAccountLoginWebview), delay);
-  });
-  [350, 900, 1400].forEach((delay) => {
-    setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), delay);
   });
 }
 
