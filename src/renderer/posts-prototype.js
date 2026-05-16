@@ -283,6 +283,7 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "check-login-panel": 60000,
   "fit-login-panel": 5000,
 };
+const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "facebook", "reddit"];
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -1300,10 +1301,15 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
 }
 
 function accountOptions(companyId, brandId, selectedId) {
-  const options = accountsForScope(companyId, brandId).map((account) => `
-    <option value="${escapeHtml(account.id)}" ${account.id === selectedId ? "selected" : ""}>${escapeHtml(`${platformLabel(account.platform)} / ${account.handle || account.id}`)}</option>
-  `).join("");
-  return options || `<option value="">No accounts yet</option>`;
+  const accounts = accountsForScope(companyId, brandId);
+  const options = SUPPORTED_SOCIAL_PLATFORMS.map((platform) => {
+    const account = accounts.find((item) => item.platform === platform);
+    const value = account?.id || `__new_platform__:${platform}`;
+    const selected = account?.id === selectedId ? "selected" : "";
+    const suffix = account ? account.handle || "configured" : "not added yet";
+    return `<option value="${escapeHtml(value)}" ${selected}>${escapeHtml(`${platformLabel(platform)} / ${suffix}`)}</option>`;
+  }).join("");
+  return `${options}<option value="__new_account__">+ Add custom account...</option>`;
 }
 
 function renderAccountCreationPanel(account, plan) {
@@ -1465,8 +1471,7 @@ function campaignOptions(companyId, brandId, selectedId) {
 }
 
 function platformOptions(selectedPlatform) {
-  const platforms = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "facebook", "reddit"];
-  return platforms.map((platform) => `
+  return SUPPORTED_SOCIAL_PLATFORMS.map((platform) => `
     <option value="${escapeHtml(platform)}" ${platform === selectedPlatform ? "selected" : ""}>${escapeHtml(platformLabel(platform))}</option>
   `).join("");
 }
@@ -1725,6 +1730,59 @@ async function addSocialAccount() {
   renderAccounts(selectedAccountId);
 }
 
+async function createSocialAccountForScope(platform) {
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id || "";
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
+  const existing = accountsForScope(companyId, brandId).find((account) => account.platform === platform);
+  if (existing) {
+    selectedAccountId = existing.id;
+    setActiveAccount(existing);
+    await saveProductionState();
+    return existing;
+  }
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  const brand = (state.brands || []).find((item) => item.id === brandId);
+  const plan = buildSocialAccountCreationPlan({
+    company,
+    brand,
+    platform,
+    desiredHandle: brand?.name || company?.name || platform,
+  });
+  const handle = plan.desiredHandle || brand?.name || company?.name || platform;
+  const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
+  const account = {
+    id,
+    companyId,
+    brandId,
+    platform,
+    handle,
+    accountUrl: plan.accountUrl || normalizeAccountUrl(handle, platform),
+    loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
+    composeUrl: plan.composeUrl || normalizeComposeUrl("", platform),
+    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || normalizeAccountUrl(handle, platform)),
+    signupUrl: plan.signupUrl,
+    sessionStatus: "unknown",
+    browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    monitoringOnly: platform === "reddit",
+    proofCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+  state.socialAccounts ||= [];
+  state.socialAccounts.push(account);
+  selectedAccountId = account.id;
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId,
+    platform,
+    socialAccountId: account.id,
+    browserProfileId: account.browserProfileId,
+  };
+  accountCreatorOpen = false;
+  await saveProductionState();
+  return account;
+}
+
 async function createSocialAccountFromForm() {
   const detail = document.querySelector("#account-detail");
   if (!detail) return;
@@ -1871,6 +1929,20 @@ async function handleAccountDetailChange(event) {
     selectedAccountId = account?.id || null;
   }
   if (field.dataset.loginScopeField === "accountId") {
+    if (field.value === "__new_account__") {
+      accountCreatorOpen = true;
+      await saveProductionState();
+      renderAccounts(selectedAccountId);
+      renderOperatorDrawer();
+      return;
+    }
+    if (field.value.startsWith("__new_platform__:")) {
+      const platform = normalizeId(field.value.split(":")[1] || "x", "platform");
+      const account = await createSocialAccountForScope(platform);
+      renderAccounts(account.id);
+      renderOperatorDrawer();
+      return;
+    }
     const account = (state.socialAccounts || []).find((item) => item.id === field.value);
     if (account) setActiveAccount(account);
   }
