@@ -332,6 +332,7 @@ function hydrateSavedWorkspace(saved) {
     socialTemplates: saved.socialTemplates?.length ? saved.socialTemplates : defaults.socialTemplates,
     brandLibraries: saved.brandLibraries?.length ? saved.brandLibraries : defaults.brandLibraries,
     claimLibraries: saved.claimLibraries?.length ? saved.claimLibraries : defaults.claimLibraries,
+    brandGuidanceModules: saved.brandGuidanceModules?.length ? saved.brandGuidanceModules : defaults.brandGuidanceModules || [],
     approvalPolicies: saved.approvalPolicies?.length ? saved.approvalPolicies : defaults.approvalPolicies,
     cadencePolicies: saved.cadencePolicies?.length ? saved.cadencePolicies : defaults.cadencePolicies,
     drafts: saved.drafts || [],
@@ -1546,6 +1547,7 @@ function renderBrands() {
     || {};
   const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || {};
   const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || {};
+  const modules = guidanceModulesForBrand(brand.id, library, claims);
   const campaigns = (state.campaigns || []).filter((item) => item.companyId === company.id && item.brandId === brand.id);
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Brand overview">
@@ -1569,14 +1571,67 @@ function renderBrands() {
       </article>
     </aside>
     <section class="brand-panels" aria-label="Brand operating rules">
-      ${renderEditableBrandPanel("Voice", "brandVoice", [library.voice].filter(Boolean), "Describe how the brand should sound")}
-      ${renderEditableBrandPanel("Approved phrases", "approvedPhrases", library.approvedPhrases, "One approved phrase per line")}
-      ${renderEditableBrandPanel("Banned phrases", "bannedPhrases", library.bannedPhrases, "One banned phrase per line")}
-      ${renderEditableBrandPanel("Prize language", "prizeLanguage", claims.prizeLanguage, "One approved prize phrase per line")}
-      ${renderEditableBrandPanel("Free-to-play language", "freeToPlayLanguage", claims.freeToPlayLanguage, "One approved free-play phrase per line")}
-      ${renderEditableBrandPanel("Requires review", "requiresReviewClaims", claims.requiresReviewClaims, "One review trigger per line")}
-      ${renderEditableBrandPanel("Blocked claims", "blockedClaims", claims.blockedClaims, "One blocked claim per line")}
+      ${renderGuidanceModuleBar(modules)}
+      ${modules.filter((module) => module.enabled !== false).map(renderGuidanceModulePanel).join("") || `<div class="empty-column">No guidance modules enabled for this brand.</div>`}
     </section>
+  `;
+}
+
+const DEFAULT_GUIDANCE_MODULES = Object.freeze([
+  { key: "brandVoice", title: "Voice", source: "brandLibrary", valueType: "text", placeholder: "Describe how the brand should sound" },
+  { key: "approvedPhrases", title: "Approved phrases", source: "brandLibrary", valueType: "list", placeholder: "One approved phrase per line" },
+  { key: "bannedPhrases", title: "Banned phrases", source: "brandLibrary", valueType: "list", placeholder: "One banned phrase per line" },
+  { key: "prizeLanguage", title: "Prize language", source: "claimLibrary", valueType: "list", placeholder: "One approved prize phrase per line" },
+  { key: "freeToPlayLanguage", title: "Free-to-play language", source: "claimLibrary", valueType: "list", placeholder: "One approved free-play phrase per line" },
+  { key: "requiresReviewClaims", title: "Requires review", source: "claimLibrary", valueType: "list", placeholder: "One review trigger per line" },
+  { key: "blockedClaims", title: "Blocked claims", source: "claimLibrary", valueType: "list", placeholder: "One blocked claim per line" },
+]);
+
+function guidanceModulesForBrand(brandId, library = {}, claims = {}) {
+  state.brandGuidanceModules ||= [];
+  const existing = state.brandGuidanceModules.filter((module) => module.brandId === brandId);
+  if (!brandId) return [];
+  if (!existing.length) {
+    const now = new Date().toISOString();
+    const seeded = DEFAULT_GUIDANCE_MODULES.map((definition, index) => {
+      const value = definition.key === "brandVoice"
+        ? library.voice || ""
+        : definition.source === "brandLibrary" ? library[definition.key] || [] : claims[definition.key] || [];
+      return {
+        id: normalizeId(`${brandId}-${definition.key}`, "guidanceModuleId"),
+        brandId,
+        key: definition.key,
+        title: definition.title,
+        source: definition.source,
+        valueType: definition.valueType,
+        enabled: true,
+        content: Array.isArray(value) ? value.join("\n") : String(value || ""),
+        placeholder: definition.placeholder,
+        sortOrder: index + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
+    state.brandGuidanceModules.push(...seeded);
+    return seeded;
+  }
+  return existing.sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
+}
+
+function renderGuidanceModuleBar(modules = []) {
+  return `
+    <nav class="guidance-module-bar" aria-label="Brand guidance modules">
+      ${modules.map((module) => `
+        <button
+          type="button"
+          class="${module.enabled === false ? "" : "active"}"
+          data-brand-action="toggle-guidance-module"
+          data-guidance-module-id="${escapeHtml(module.id)}"
+          aria-pressed="${module.enabled === false ? "false" : "true"}"
+        >${escapeHtml(module.title || "Guidance module")}</button>
+      `).join("")}
+      <button type="button" class="add-guidance-module" data-brand-action="add-guidance-module">+ Add guidance module</button>
+    </nav>
   `;
 }
 
@@ -1584,6 +1639,24 @@ function renderSimpleList(items = [], emptyText = "Nothing assigned yet.") {
   const values = (items || []).filter(Boolean);
   if (!values.length) return `<p>${escapeHtml(emptyText)}</p>`;
   return `<ul>${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function renderGuidanceModulePanel(module) {
+  const list = listValueFromText(module.content);
+  const rows = module.valueType === "text" ? 4 : 5;
+  return `
+    <article id="brand-guidance-${escapeHtml(module.id)}" class="brand-panel editable-brand-panel guidance-module-panel">
+      <header>
+        <h3>${escapeHtml(module.title || "Guidance module")}</h3>
+        <span class="count">${module.valueType === "text" ? (module.content ? 1 : 0) : list.length}</span>
+      </header>
+      <textarea data-guidance-module-content="${escapeHtml(module.id)}" rows="${rows}" placeholder="${escapeHtml(module.placeholder || "One guidance item per line")}">${escapeHtml(module.content || "")}</textarea>
+      <footer>
+        <span>${escapeHtml(module.valueType === "text" ? "Text guidance" : "List guidance")}</span>
+        <button type="button" class="danger-action" data-brand-action="delete-guidance-module" data-guidance-module-id="${escapeHtml(module.id)}">Delete module</button>
+      </footer>
+    </article>
+  `;
 }
 
 function renderEditableBrandPanel(title, field, items = [], placeholder = "") {
@@ -2207,6 +2280,18 @@ function setActiveAccount(account) {
 async function handleBrandWorkspaceClick(event) {
   const button = event.target.closest("[data-brand-action]");
   if (!button) return;
+  if (button.dataset.brandAction === "add-guidance-module") {
+    await addGuidanceModule();
+    return;
+  }
+  if (button.dataset.brandAction === "toggle-guidance-module") {
+    await toggleGuidanceModule(button.dataset.guidanceModuleId);
+    return;
+  }
+  if (button.dataset.brandAction === "delete-guidance-module") {
+    await deleteGuidanceModule(button.dataset.guidanceModuleId);
+    return;
+  }
   if (button.dataset.brandAction === "delete") {
     await deleteSelectedBrand();
     return;
@@ -2220,6 +2305,57 @@ async function handleBrandWorkspaceClick(event) {
   renderCampaigns();
   renderTemplates();
   renderOperatorDrawer();
+}
+
+async function addGuidanceModule() {
+  saveBrandWorkspace();
+  const brandId = state.context?.brandId || (state.brands || [])[0]?.id || "";
+  if (!brandId) return;
+  const title = promptForText("Guidance module name", "New guidance module");
+  if (!title) return;
+  const now = new Date().toISOString();
+  const modules = guidanceModulesForBrand(brandId);
+  const id = normalizeId(`${brandId}-${title}-${Date.now()}`, "guidanceModuleId");
+  state.brandGuidanceModules.push({
+    id,
+    brandId,
+    key: normalizeId(title, "guidanceModule"),
+    title,
+    source: "custom",
+    valueType: "list",
+    enabled: true,
+    content: "",
+    placeholder: "One guidance item per line",
+    sortOrder: modules.length + 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+  syncGuidanceModulesToLegacyLibraries(brandId);
+  await saveProductionState();
+  renderBrands();
+}
+
+async function toggleGuidanceModule(moduleId) {
+  saveBrandWorkspace();
+  const module = (state.brandGuidanceModules || []).find((item) => item.id === moduleId);
+  if (!module) return;
+  module.enabled = module.enabled === false;
+  module.updatedAt = new Date().toISOString();
+  syncGuidanceModulesToLegacyLibraries(module.brandId);
+  await saveProductionState();
+  renderBrands();
+}
+
+async function deleteGuidanceModule(moduleId) {
+  saveBrandWorkspace();
+  const module = (state.brandGuidanceModules || []).find((item) => item.id === moduleId);
+  if (!module) return;
+  const ok = window.confirm(`Delete guidance module "${module.title || module.id}"?`);
+  if (!ok) return;
+  state.brandGuidanceModules = (state.brandGuidanceModules || []).filter((item) => item.id !== moduleId);
+  syncGuidanceModulesToLegacyLibraries(module.brandId);
+  await saveProductionState();
+  renderBrands();
 }
 
 async function deleteSelectedBrand() {
@@ -2279,7 +2415,55 @@ function saveBrandWorkspace() {
     claims.blockedClaims = listValueFor("blockedClaims");
     claims.updatedAt = new Date().toISOString();
   }
+  (state.brandGuidanceModules || [])
+    .filter((module) => module.brandId === brandId)
+    .forEach((module) => {
+      const field = workspace?.querySelector(`[data-guidance-module-content="${module.id}"]`);
+      if (!field) return;
+      module.content = field.value || "";
+      module.updatedAt = new Date().toISOString();
+    });
+  syncGuidanceModulesToLegacyLibraries(brandId);
   return { companyId, brandId };
+}
+
+function syncGuidanceModulesToLegacyLibraries(brandId) {
+  const modules = (state.brandGuidanceModules || []).filter((module) => module.brandId === brandId && module.enabled !== false);
+  const library = (state.brandLibraries || []).find((item) => item.brandId === brandId);
+  const claims = (state.claimLibraries || []).find((item) => item.brandId === brandId);
+  const moduleByKey = (key) => modules.find((module) => module.key === key);
+  if (library) {
+    library.voice = moduleByKey("brandVoice")?.content || library.voice || "";
+    library.approvedPhrases = listValueFromText(moduleByKey("approvedPhrases")?.content);
+    library.bannedPhrases = listValueFromText(moduleByKey("bannedPhrases")?.content);
+    library.guidanceModules = modules.map(guidanceModuleSnapshot);
+    library.updatedAt = new Date().toISOString();
+  }
+  if (claims) {
+    claims.prizeLanguage = listValueFromText(moduleByKey("prizeLanguage")?.content);
+    claims.freeToPlayLanguage = listValueFromText(moduleByKey("freeToPlayLanguage")?.content);
+    claims.requiresReviewClaims = listValueFromText(moduleByKey("requiresReviewClaims")?.content);
+    claims.blockedClaims = listValueFromText(moduleByKey("blockedClaims")?.content);
+    claims.guidanceModules = modules.map(guidanceModuleSnapshot);
+    claims.updatedAt = new Date().toISOString();
+  }
+}
+
+function listValueFromText(value = "") {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function guidanceModuleSnapshot(module) {
+  return {
+    id: module.id,
+    key: module.key,
+    title: module.title,
+    content: module.content,
+    valueType: module.valueType || "list",
+  };
 }
 
 function renderCampaigns() {
@@ -2479,6 +2663,7 @@ function removeCampaignScopedRecords(campaignId) {
 function removeBrandCollectionRecords(brandIds = new Set()) {
   state.brandLibraries = (state.brandLibraries || []).filter((library) => !brandIds.has(library.brandId));
   state.claimLibraries = (state.claimLibraries || []).filter((library) => !brandIds.has(library.brandId));
+  state.brandGuidanceModules = (state.brandGuidanceModules || []).filter((module) => !brandIds.has(module.brandId));
 }
 
 function removeCampaignCollectionRecords(campaignIds = new Set()) {
@@ -2530,6 +2715,9 @@ async function ensureBrandSupportRecords(brand) {
       blockedClaims: [],
     });
   }
+  const library = (state.brandLibraries || []).find((item) => item.brandId === brand.id) || {};
+  const claims = (state.claimLibraries || []).find((item) => item.brandId === brand.id) || {};
+  guidanceModulesForBrand(brand.id, library, claims);
 }
 
 async function ensureStrategyRecord(campaign) {
@@ -4601,10 +4789,13 @@ function formatAutomation(value) {
 function openCreateDetail() {
   const context = state.context;
   const now = new Date().toISOString();
+  const guidance = guidanceForContext(context);
   const postPackage = createPostPackage({
     id: `package-${Date.now()}`,
     context,
     ideaText: "Write the core post idea here, then generate platform versions.",
+    brandGuidanceModules: guidance.modules,
+    brandGuidanceSummary: guidance.summary,
     tags: ["draft"],
     source: "diamond-shell",
     createdAt: now,
@@ -4618,6 +4809,8 @@ function openCreateDetail() {
     platform,
     socialAccountId: socialAccountIdForPlatform(platform),
     text: platformCopy(postPackage.ideaText, platform),
+    brandGuidanceModules: guidance.modules,
+    brandGuidanceSummary: guidance.summary,
     status: "draft",
     createdAt: now,
     updatedAt: now,
@@ -5240,17 +5433,21 @@ async function addPlatformToActivePackage() {
   if (!platform) return;
   if (prototypeModel.platformDrafts.some((draft) => draft.postPackageId === activePostPackageId && draft.platform === platform)) return;
   const now = new Date().toISOString();
+  const context = {
+    ...postPackage.context,
+    platform,
+    socialAccountId: socialAccountIdForPlatform(platform),
+  };
+  const guidance = guidanceForContext(context);
   const draft = createPlatformDraft({
     id: `${postPackage.id}-${platform}`,
     postPackage,
-    context: {
-      ...postPackage.context,
-      platform,
-      socialAccountId: socialAccountIdForPlatform(platform),
-    },
+    context,
     platform,
     socialAccountId: socialAccountIdForPlatform(platform),
     text: platformCopy(postPackage.ideaText || "", platform),
+    brandGuidanceModules: guidance.modules,
+    brandGuidanceSummary: guidance.summary,
     status: "draft",
     createdAt: now,
     updatedAt: now,
@@ -5281,11 +5478,14 @@ function evaluatePlatformDraft(draft) {
   const brandLibrary = brandLibraryFor(draft);
   const claimLibrary = claimLibraryFor(draft);
   const strategy = strategyFor(draft);
+  const guidance = guidanceForContext(draft.context || draft);
+  draft.brandGuidanceModules = guidance.modules;
+  draft.brandGuidanceSummary = guidance.summary;
   const risk = evaluateDraftRisk({
     text: draft.text,
     policy,
-    brandLibrary,
-    claimLibrary,
+    brandLibrary: brandLibraryWithGuidance(brandLibrary, guidance.modules),
+    claimLibrary: claimLibraryWithGuidance(claimLibrary, guidance.modules),
   });
   const quality = evaluateDraftQuality({
     draft: {
@@ -5789,6 +5989,49 @@ function brandLibraryFor(draft) {
 function claimLibraryFor(draft) {
   return (state.claimLibraries || []).find((library) => library.brandId === draft.brandId)
     || {};
+}
+
+function guidanceForContext(context = {}) {
+  const brandId = context.brandId || state.context?.brandId || "";
+  const modules = (state.brandGuidanceModules || [])
+    .filter((module) => module.brandId === brandId && module.enabled !== false)
+    .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
+    .map(guidanceModuleSnapshot);
+  return {
+    modules,
+    summary: modules.map((module) => `${module.title}: ${module.content}`).filter(Boolean).join("\n\n"),
+  };
+}
+
+function brandLibraryWithGuidance(library = {}, modules = []) {
+  const moduleByKey = (key) => modules.find((module) => module.key === key);
+  return {
+    ...library,
+    voice: moduleByKey("brandVoice")?.content || library.voice || "",
+    approvedPhrases: listValueFromText(moduleByKey("approvedPhrases")?.content || "").length
+      ? listValueFromText(moduleByKey("approvedPhrases")?.content)
+      : library.approvedPhrases,
+    bannedPhrases: listValueFromText(moduleByKey("bannedPhrases")?.content || "").length
+      ? listValueFromText(moduleByKey("bannedPhrases")?.content)
+      : library.bannedPhrases,
+    guidanceModules: modules,
+  };
+}
+
+function claimLibraryWithGuidance(library = {}, modules = []) {
+  const moduleByKey = (key) => modules.find((module) => module.key === key);
+  const listFor = (key, fallback) => {
+    const values = listValueFromText(moduleByKey(key)?.content || "");
+    return values.length ? values : fallback;
+  };
+  return {
+    ...library,
+    prizeLanguage: listFor("prizeLanguage", library.prizeLanguage),
+    freeToPlayLanguage: listFor("freeToPlayLanguage", library.freeToPlayLanguage),
+    requiresReviewClaims: listFor("requiresReviewClaims", library.requiresReviewClaims),
+    blockedClaims: listFor("blockedClaims", library.blockedClaims),
+    guidanceModules: modules,
+  };
 }
 
 function strategyFor(draft) {
