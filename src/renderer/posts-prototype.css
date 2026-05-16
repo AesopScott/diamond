@@ -296,26 +296,38 @@ button:disabled {
 
 .prototype-sidebar a.nav-child {
   margin-left: 14px;
-  padding-left: 22px;
+  padding-left: 26px;
 }
 
 .prototype-sidebar a.nav-grandchild {
   margin-left: 28px;
-  padding-left: 22px;
+  padding-left: 26px;
 }
 
-.prototype-sidebar a.nav-child::before,
-.prototype-sidebar a.nav-grandchild::before {
-  background: var(--line-strong);
-  border-radius: 999px;
+.prototype-sidebar a.nav-child::before {
+  border-bottom: 2px solid var(--line-strong);
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 0 0 5px;
   content: "";
-  height: 5px;
-  left: 9px;
+  height: 16px;
+  left: 7px;
+  opacity: 0.85;
+  position: absolute;
+  top: -3px;
+  width: 12px;
+}
+
+.prototype-sidebar a.nav-grandchild::before {
+  border-bottom: 2px solid var(--line-strong);
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 0 0 5px;
+  content: "";
+  height: 16px;
+  left: 7px;
   opacity: 0.9;
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 5px;
+  top: -3px;
+  width: 12px;
 }
 
 .prototype-sidebar a.active,
