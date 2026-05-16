@@ -276,6 +276,13 @@ let activeTourAudio = null;
 let accountCreatorOpen = false;
 let accountLoginResizeObserver = null;
 let calendarFilters = { platform: "all", window: "week", campaign: "all" };
+const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
+  "open-login": 30000,
+  "reload-login-panel": 30000,
+  "load-public-profile": 30000,
+  "check-login-panel": 60000,
+  "fit-login-panel": 5000,
+};
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -582,6 +589,7 @@ function wirePrototypeControls() {
   document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
   document.querySelector("#account-detail")?.addEventListener("change", handleAccountDetailChange);
+  document.querySelector("#account-detail")?.addEventListener("submit", handleAccountDetailSubmit);
   document.querySelector("#company-workspace")?.addEventListener("click", handleCompanyWorkspaceClick);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
   document.querySelector("#campaign-workspace")?.addEventListener("click", handleCampaignWorkspaceClick);
@@ -1253,6 +1261,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
           <span class="eyebrow">Logging into</span>
           <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
           <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
+          <p class="account-login-safety-note">For brand-new social accounts, finish first login in normal Chrome when possible. Diamond rate-limits login controls so platforms do not see rapid repeated login checks.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
       </header>
@@ -1262,6 +1271,11 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <label><span>Account</span><select data-login-scope-field="accountId">${accountOptions(account.companyId, account.brandId, account.id)}</select></label>
         <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
       </section>
+      <form class="account-login-address" data-account-login-address-form data-account-id="${escapeHtml(account.id)}" aria-label="Account browser address bar">
+        <label for="account-login-address-input">Address</label>
+        <input id="account-login-address-input" data-account-login-address-input type="text" value="${escapeHtml(previewUrl)}" autocomplete="off" spellcheck="false">
+        <button type="submit">Go</button>
+      </form>
       <div class="account-login-browser-toolbar">
         <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
         <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
@@ -1781,9 +1795,16 @@ async function handleAccountDetailClick(event) {
   const account = (state.socialAccounts || []).find((item) => item.id === button.dataset.accountId);
   if (!account) return;
   if (button.dataset.accountAction === "save-login") saveAccountForm(account);
-  if (button.dataset.accountAction === "open-login") await openAccountLogin(account);
-  if (button.dataset.accountAction === "reload-login-panel") reloadAccountLoginPanel();
+  if (button.dataset.accountAction === "open-login") {
+    if (!guardAccountLoginAction(account, "open-login")) return;
+    await openAccountLogin(account);
+  }
+  if (button.dataset.accountAction === "reload-login-panel") {
+    if (!guardAccountLoginAction(account, "reload-login-panel")) return;
+    reloadAccountLoginPanel(account);
+  }
   if (button.dataset.accountAction === "fit-login-panel") {
+    if (!guardAccountLoginAction(account, "fit-login-panel")) return;
     forceRefreshAccountLoginWebviewBounds();
     return;
   }
@@ -1791,8 +1812,14 @@ async function handleAccountDetailClick(event) {
     closeAccountLoginPanel();
     return;
   }
-  if (button.dataset.accountAction === "load-public-profile") loadAccountPublicProfile(account);
-  if (button.dataset.accountAction === "check-login-panel") checkAccountLoginPanel(account);
+  if (button.dataset.accountAction === "load-public-profile") {
+    if (!guardAccountLoginAction(account, "load-public-profile")) return;
+    loadAccountPublicProfile(account);
+  }
+  if (button.dataset.accountAction === "check-login-panel") {
+    if (!guardAccountLoginAction(account, "check-login-panel")) return;
+    checkAccountLoginPanel(account);
+  }
   if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
   if (button.dataset.accountAction === "copy-login-password") await copyAccountLoginPassword();
   if (button.dataset.accountAction === "mark-logged-in") markAccountLoggedIn(account);
@@ -1853,9 +1880,45 @@ async function handleAccountDetailChange(event) {
   renderOperatorDrawer();
 }
 
+async function handleAccountDetailSubmit(event) {
+  const form = event.target.closest("[data-account-login-address-form]");
+  if (!form) return;
+  event.preventDefault();
+  const account = (state.socialAccounts || []).find((item) => item.id === form.dataset.accountId);
+  if (!account) return;
+  const input = form.querySelector("[data-account-login-address-input]");
+  const nextUrl = normalizeAccountBrowserAddress(input?.value || "");
+  if (!nextUrl) {
+    updateAccountLoginBrowserStatus("Enter a web address first.");
+    return;
+  }
+  account.currentUrl = nextUrl;
+  account.loginPanelUrl = nextUrl;
+  account.lastManualNavigationAt = new Date().toISOString();
+  loadAccountLoginPanelUrl(nextUrl);
+  await saveProductionState();
+}
+
 function closeAccountLoginPanel() {
   destroyAccountLoginWebview();
   document.querySelector(".account-login-browser")?.remove();
+}
+
+function guardAccountLoginAction(account, action) {
+  const cooldownMs = ACCOUNT_LOGIN_ACTION_COOLDOWNS[action] || 0;
+  if (!cooldownMs) return true;
+  const lastAt = account.loginActionCooldowns?.[action] || "";
+  const elapsedMs = lastAt ? Date.now() - new Date(lastAt).getTime() : cooldownMs;
+  if (Number.isFinite(elapsedMs) && elapsedMs < cooldownMs) {
+    const seconds = Math.ceil((cooldownMs - elapsedMs) / 1000);
+    updateAccountLoginBrowserStatus(`Slow down: wait ${seconds}s before running that login action again.`);
+    return false;
+  }
+  account.loginActionCooldowns = {
+    ...(account.loginActionCooldowns || {}),
+    [action]: new Date().toISOString(),
+  };
+  return true;
 }
 
 async function openAccountLogin(account) {
@@ -1869,7 +1932,8 @@ async function openAccountLogin(account) {
   account.sessionNote = loginUrl ? "Loaded official login page in the pane." : "No login URL is configured.";
 }
 
-function reloadAccountLoginPanel() {
+function reloadAccountLoginPanel(account) {
+  if (account) account.sessionNote = "Reloaded login pane once. Wait before reloading again.";
   refreshAccountLoginWebviewBounds({ force: true });
   const webview = document.querySelector("#account-login-webview");
   if (typeof webview?.reload === "function") webview.reload();
@@ -1886,6 +1950,8 @@ function loadAccountPublicProfile(account) {
 function loadAccountLoginPanelUrl(url) {
   const webview = document.querySelector("#account-login-webview");
   if (!webview || !url) return;
+  const input = document.querySelector("[data-account-login-address-input]");
+  if (input) input.value = url;
   webview.setAttribute("src", url);
   webview.src = url;
   refreshAccountLoginWebviewBounds({ force: true });
@@ -1930,6 +1996,14 @@ function safeUrlLabel(url = "") {
   } catch {
     return url || "page";
   }
+}
+
+function normalizeAccountBrowserAddress(value = "") {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(about|data|file):/i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 async function copyAccountLoginUsername(account) {

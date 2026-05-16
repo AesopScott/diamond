@@ -1736,7 +1736,7 @@ textarea {
   border-radius: 0;
   bottom: 0;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   left: 240px;
   margin-bottom: 0;
   overflow: hidden;
@@ -1816,6 +1816,48 @@ textarea {
   width: 100%;
 }
 
+.account-login-address {
+  align-items: end;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  padding: 8px 10px;
+}
+
+.account-login-address label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 1000;
+  grid-column: 1 / -1;
+  margin-bottom: -4px;
+  text-transform: uppercase;
+}
+
+.account-login-address input {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: 800 13px/1.2 inherit;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+.account-login-address button {
+  background: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, white 16%);
+  border-radius: 8px;
+  color: var(--accent-ink);
+  cursor: pointer;
+  font-weight: 1000;
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
 #account-login-browser-status {
   background: var(--pill);
   border: 1px solid var(--line);
@@ -1827,6 +1869,15 @@ textarea {
   overflow-wrap: anywhere;
   padding: 7px 10px;
   text-align: right;
+}
+
+.account-login-safety-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 6px 0 0;
+  max-width: 760px;
 }
 
 .account-login-browser-toolbar {
