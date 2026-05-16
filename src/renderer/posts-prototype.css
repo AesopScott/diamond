@@ -1570,6 +1570,129 @@ textarea {
   gap: 10px;
 }
 
+.account-platform-status-board {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 10px;
+  padding: 10px;
+}
+
+.account-platform-status-board > header {
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+}
+
+.account-platform-status-board > header strong,
+.account-platform-status-board > header small {
+  display: block;
+}
+
+.account-platform-status-board > header small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+  max-width: 240px;
+  text-align: right;
+}
+
+.account-platform-status {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 8px;
+  text-align: left;
+}
+
+.account-platform-status.active,
+.account-platform-status:hover {
+  border-color: #e5e5e8;
+}
+
+.account-platform-status .status-dot {
+  background: #ff7777;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #ff7777 18%, transparent);
+  height: 9px;
+  width: 9px;
+}
+
+.account-platform-status.ready .status-dot {
+  background: #62e49a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #62e49a 20%, transparent);
+}
+
+.account-platform-status.monitoring .status-dot {
+  background: #8bbcff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #8bbcff 20%, transparent);
+}
+
+.account-platform-status.unknown .status-dot,
+.account-platform-status.not_added .status-dot {
+  background: #f6c85f;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #f6c85f 20%, transparent);
+}
+
+.account-platform-status strong,
+.account-platform-status small,
+.account-platform-status em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-platform-status small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.account-platform-status em {
+  background: var(--pill);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 1000;
+  padding: 5px 7px;
+  text-transform: uppercase;
+}
+
+.account-platform-status.ready em {
+  background: #12301e;
+  color: #62e49a;
+}
+
+.account-platform-status.needs_login em,
+.account-platform-status.blocked em {
+  background: #351414;
+  color: #ff7777;
+}
+
+.account-platform-status.monitoring em {
+  background: #162640;
+  color: #8bbcff;
+}
+
 .account-card {
   align-items: center;
   background: var(--surface);

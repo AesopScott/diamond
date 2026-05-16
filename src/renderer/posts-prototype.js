@@ -583,11 +583,22 @@ function wirePrototypeControls() {
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
   document.querySelector("#calendar-filters")?.addEventListener("change", handleCalendarFilterChange);
-  document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
+  document.querySelector("#accounts-grid")?.addEventListener("click", async (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
-    selectedAccountId = card.dataset.accountId;
+    if (card.dataset.accountId.startsWith("__new_platform__:")) {
+      const account = await createSocialAccountForScope(card.dataset.accountId.split(":")[1] || "x");
+      renderAccounts(account?.id);
+      renderOperatorDrawer();
+      return;
+    }
+    const account = (state.socialAccounts || []).find((item) => item.id === card.dataset.accountId);
+    if (account) {
+      setActiveAccount(account);
+      await saveProductionState();
+    }
     renderAccounts(card.dataset.accountId);
+    renderOperatorDrawer();
   });
   document.querySelector("#account-scope-strip")?.addEventListener("change", handleAccountScopeChange);
   document.querySelector("#account-detail")?.addEventListener("click", handleAccountDetailClick);
@@ -1015,7 +1026,10 @@ function renderAccounts(selectedAccountId) {
     || accounts[0];
   if (selected) selectedAccountId = selected.id;
   if (scope) scope.innerHTML = renderAccountScope(companyId, brandId, accounts);
-  target.innerHTML = accounts.map((account) => renderAccountCard(account, selected?.id)).join("") || `<div class="empty-column">No accounts for this company and brand yet.</div>`;
+  target.innerHTML = `
+    ${renderAccountPlatformStatusBoard(companyId, brandId, accounts, selected?.id)}
+    ${accounts.map((account) => renderAccountCard(account, selected?.id)).join("") || `<div class="empty-column">No accounts for this company and brand yet.</div>`}
+  `;
   detail.innerHTML = accountCreatorOpen
     ? renderAccountCreator(selected)
     : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
@@ -1027,6 +1041,38 @@ function accountsForScope(companyId, brandId) {
     return (!companyId || account.companyId === companyId)
       && (!brandId || account.brandId === brandId);
   });
+}
+
+function renderAccountPlatformStatusBoard(companyId, brandId, accounts = [], selectedAccountId = "") {
+  const scopedLabel = `${companyName(companyId)} / ${brandName(brandId)}`;
+  return `
+    <section class="account-platform-status-board" aria-label="Platform login status">
+      <header>
+        <div>
+          <span class="eyebrow">Platform status</span>
+          <strong>${escapeHtml(scopedLabel)}</strong>
+        </div>
+        <small>Click a platform to select it. Diamond will not load a login page until you ask it to.</small>
+      </header>
+      ${SUPPORTED_SOCIAL_PLATFORMS.map((platform) => {
+        const account = accounts.find((item) => item.platform === platform);
+        const status = account?.sessionStatus || "not_added";
+        const selectableId = account?.id || `__new_platform__:${platform}`;
+        const statusText = account ? statusLabel(status) : "Not added";
+        const handleText = account?.handle || (account ? account.id : "Create account record");
+        return `
+          <button class="account-platform-status ${account?.id === selectedAccountId ? "active" : ""} ${escapeHtml(status)}" type="button" data-account-id="${escapeHtml(selectableId)}" aria-label="${escapeHtml(`${platformLabel(platform)} ${statusText}`)}">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>
+              <strong>${escapeHtml(platformLabel(platform))}</strong>
+              <small>${escapeHtml(handleText)}</small>
+            </span>
+            <em>${escapeHtml(statusText)}</em>
+          </button>
+        `;
+      }).join("")}
+    </section>
+  `;
 }
 
 function renderAccountCard(account, selectedAccountId) {
@@ -1219,39 +1265,12 @@ function scheduleAccountLoginResizePasses() {
 }
 
 function refreshAccountLoginWebviewBounds(options = {}) {
-  const { force = false, reschedule = true } = options;
   const webview = document.querySelector("#account-login-webview");
   const shell = document.querySelector(".account-login-webview-shell");
   if (!webview || !shell) return;
   const dimensions = sizeAccountLoginWebview();
   if (!dimensions) return;
-  const currentUrl = accountLoginWebviewUrl() || webview.getAttribute("src") || "about:blank";
-  const partition = webview.getAttribute("partition") || "persist:diamond-account-login";
-  const title = webview.getAttribute("title") || "Account login preview";
-  const signature = `${dimensions.width}x${dimensions.height}:${partition}:${currentUrl}`;
-  if (!force && webview.dataset.boundsSignature === signature) return;
-  const next = document.createElement("webview");
-  next.id = "account-login-webview";
-  next.dataset.boundsSignature = signature;
-  next.setAttribute("title", title);
-  next.setAttribute("partition", partition);
-  next.setAttribute("src", currentUrl);
-  next.setAttribute("allowpopups", "");
-  next.setAttribute("width", String(dimensions.width));
-  next.setAttribute("height", String(dimensions.height));
-  next.style.width = `${dimensions.width}px`;
-  next.style.height = `${dimensions.height}px`;
-  next.style.minWidth = `${dimensions.width}px`;
-  next.style.minHeight = `${dimensions.height}px`;
-  next.style.maxWidth = `${dimensions.width}px`;
-  next.style.maxHeight = `${dimensions.height}px`;
-  next.style.display = "flex";
-  next.style.flex = "1";
-  next.style.position = "relative";
-  webview.replaceWith(next);
-  wireAccountLoginWebviewEvents(next);
-  requestAnimationFrame(sizeAccountLoginWebview);
-  if (reschedule) scheduleAccountLoginResizePasses();
+  webview.dataset.boundsSignature = `${dimensions.width}x${dimensions.height}:${webview.getAttribute("partition") || "persist:diamond-account-login"}`;
 }
 
 function forceRefreshAccountLoginWebviewBounds() {
@@ -1260,7 +1279,7 @@ function forceRefreshAccountLoginWebviewBounds() {
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
-  const previewUrl = account.loginPanelUrl || account.currentUrl || loginUrl || "about:blank";
+  const previewUrl = account.loginPanelUrl || account.currentUrl || "about:blank";
   const handle = account.handle || account.id || "No handle set";
   return `
     <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
@@ -5894,6 +5913,10 @@ function platformIcon(platform) {
     instagram: "IG",
     tiktok: "TT",
     facebook: "f",
+    "youtube-shorts": "YS",
+    "youtube-longform": "YT",
+    pinterest: "P",
+    reddit: "r/",
   }[platform] || "+";
 }
 
@@ -5904,6 +5927,10 @@ function platformLabel(platform) {
     instagram: "Instagram",
     tiktok: "TikTok",
     facebook: "Facebook",
+    "youtube-shorts": "YouTube Shorts",
+    "youtube-longform": "YouTube Long Form",
+    pinterest: "Pinterest",
+    reddit: "Reddit",
   }[platform] || platform;
 }
 

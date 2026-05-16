@@ -51,6 +51,16 @@ assert.doesNotMatch(
   /reload\(|setAttribute\("src"|\.src\s*=/,
   "Webview load events must not trigger automatic remote navigation or reload.",
 );
+assert.doesNotMatch(
+  functionBody("refreshAccountLoginWebviewBounds"),
+  /replaceWith|document\.createElement\("webview"\)|setAttribute\("src"/,
+  "Resizing the account browser must not recreate or reload a live social webview.",
+);
+assert.doesNotMatch(
+  functionBody("renderAccountLoginBrowser"),
+  /account\.loginPanelUrl \|\| account\.currentUrl \|\| loginUrl/,
+  "Selecting an account must not automatically load the platform login page.",
+);
 assert.match(
   js,
   /ACCOUNT_LOGIN_ACTION_COOLDOWNS/,
