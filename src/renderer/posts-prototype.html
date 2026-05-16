@@ -146,13 +146,12 @@
               <h1 id="templates-heading">Templates</h1>
               <p>Manage reusable campaign formats, creative assets, safe zones, and platform-specific template needs.</p>
             </div>
-            <button class="create-button" type="button" disabled title="Template creation lands after the default shell flip.">Add template</button>
+            <button id="add-template-record" class="create-button" type="button">Add template</button>
           </header>
-          <section class="prototype-toolbar" aria-label="Template filters">
-            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">All templates</button>
-            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">Assets</button>
-            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">World Cup</button>
-            <button type="button" class="filter-pill" disabled title="Template filters land after the default shell flip.">Needs media</button>
+          <section id="template-shortcuts" class="prototype-toolbar" aria-label="Template shortcuts">
+            <button type="button" class="filter-pill" data-template-shortcut="template-creative-column" title="Jump to creative templates">Templates</button>
+            <button type="button" class="filter-pill" data-template-shortcut="template-asset-column" title="Jump to asset library">Assets</button>
+            <button type="button" class="filter-pill" data-template-shortcut="template-needs-column" title="Jump to creative needs">Needs media</button>
           </section>
           <section id="templates-workspace" class="templates-workspace" aria-label="Template and asset workspace"></section>
         </section>
@@ -201,10 +200,10 @@
               <button id="add-brand-record" class="create-button" type="button">Add brand</button>
             </div>
           </header>
-          <section class="prototype-toolbar" aria-label="Brand filters">
-            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Active company</button>
-            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Claim rules</button>
-            <button type="button" class="filter-pill" disabled title="Brand filters land after the default shell flip.">Voice</button>
+          <section id="brand-shortcuts" class="prototype-toolbar" aria-label="Brand shortcuts">
+            <button type="button" class="filter-pill" data-brand-shortcut="brand-identity" title="Jump to brand identity">Identity</button>
+            <button type="button" class="filter-pill" data-brand-shortcut="brand-panel-approvedPhrases" title="Jump to claim rules">Claim rules</button>
+            <button type="button" class="filter-pill" data-brand-shortcut="brand-panel-brandVoice" title="Jump to voice">Voice</button>
           </section>
           <section id="brand-workspace" class="brand-workspace" aria-label="Brand strategy workspace"></section>
         </section>

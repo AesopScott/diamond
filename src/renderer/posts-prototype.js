@@ -542,6 +542,7 @@ function wirePrototypeControls() {
   document.querySelector("#add-company-record")?.addEventListener("click", addCompanyRecord);
   document.querySelector("#add-brand-record")?.addEventListener("click", addBrandRecord);
   document.querySelector("#add-campaign-record")?.addEventListener("click", addCampaignRecord);
+  document.querySelector("#add-template-record")?.addEventListener("click", addTemplateRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector("#posts-board").addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-board-action]");
@@ -585,6 +586,8 @@ function wirePrototypeControls() {
   document.querySelector("#campaign-workspace")?.addEventListener("click", handleCampaignWorkspaceClick);
   document.querySelector("#campaign-workspace")?.addEventListener("change", handleCampaignWorkspaceChange);
   document.querySelector("#templates-workspace")?.addEventListener("change", handleTemplateScopeChange);
+  document.querySelector("#template-shortcuts")?.addEventListener("click", handleTemplateShortcut);
+  document.querySelector("#brand-shortcuts")?.addEventListener("click", handleBrandShortcut);
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
   document.querySelector("#settings-workspace")?.addEventListener("input", handleSettingsInput);
@@ -1453,7 +1456,7 @@ function renderBrands() {
   const campaigns = (state.campaigns || []).filter((item) => item.companyId === company.id && item.brandId === brand.id);
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Brand overview">
-      <article class="brand-identity-card">
+      <article id="brand-identity" class="brand-identity-card">
         <span class="eyebrow">Brand</span>
         <h2>${escapeHtml(brand.name || brand.id || "Brand")}</h2>
         <dl class="brand-facts">
@@ -1493,8 +1496,9 @@ function renderSimpleList(items = [], emptyText = "Nothing assigned yet.") {
 function renderEditableBrandPanel(title, field, items = [], placeholder = "") {
   const list = (items || []).filter(Boolean);
   const rows = field === "brandVoice" ? 4 : 5;
+  const panelId = `brand-panel-${field}`;
   return `
-    <article class="brand-panel editable-brand-panel">
+    <article id="${escapeHtml(panelId)}" class="brand-panel editable-brand-panel">
       <header>
         <h3>${escapeHtml(title)}</h3>
         <span class="count">${list.length}</span>
@@ -1618,6 +1622,33 @@ async function addCampaignRecord() {
   renderCompanies();
   renderCampaigns();
   renderTemplates();
+}
+
+async function addTemplateRecord() {
+  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
+  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
+  const campaignId = state.context?.campaignId || (state.campaigns || []).find((campaign) => campaign.companyId === companyId && campaign.brandId === brandId)?.id || "";
+  if (!companyId || !brandId) return;
+  const platform = state.context?.platform || "x";
+  const type = "campaign";
+  const id = normalizeId(`${brandId}-${campaignId || "general"}-${type}-${platform}-${Date.now()}`, "template");
+  state.socialTemplates ||= [];
+  state.socialTemplates.unshift({
+    id,
+    companyId,
+    brandId,
+    campaignId,
+    platform,
+    language: currentOperatorLanguage(),
+    type,
+    safeZone: "Center 80%; keep text away from crop edges.",
+    notes: "New campaign explainer template.",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  await saveProductionState();
+  renderTemplates();
+  document.getElementById("template-creative-column")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function uniqueRecordName(baseName, records = []) {
@@ -2257,7 +2288,7 @@ function renderTemplates() {
       </article>
     </aside>
     <section class="template-columns" aria-label="Reusable template columns">
-      <article class="template-column">
+      <article id="template-creative-column" class="template-column">
         <header>
           <h2>Creative templates</h2>
           <span class="count">${templateGroups.length}</span>
@@ -2266,7 +2297,7 @@ function renderTemplates() {
           ${templateGroups.map(renderTemplateCard).join("") || `<div class="empty-column">No templates</div>`}
         </div>
       </article>
-      <article class="template-column">
+      <article id="template-asset-column" class="template-column">
         <header>
           <h2>Asset library</h2>
           <span class="count">${assets.length}</span>
@@ -2275,7 +2306,7 @@ function renderTemplates() {
           ${assets.map(renderAssetCard).join("") || `<div class="empty-column">No assets</div>`}
         </div>
       </article>
-      <article class="template-column">
+      <article id="template-needs-column" class="template-column">
         <header>
           <h2>Creative needs</h2>
           <span class="count">${slots.length}</span>
@@ -2286,6 +2317,18 @@ function renderTemplates() {
       </article>
     </section>
   `;
+}
+
+function handleTemplateShortcut(event) {
+  const button = event.target.closest("[data-template-shortcut]");
+  if (!button) return;
+  document.getElementById(button.dataset.templateShortcut || "")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleBrandShortcut(event) {
+  const button = event.target.closest("[data-brand-shortcut]");
+  if (!button) return;
+  document.getElementById(button.dataset.brandShortcut || "")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function handleTemplateScopeChange(event) {
