@@ -1064,35 +1064,39 @@ function renderAccountDetail(account) {
 function initializeAccountLoginWebview(account) {
   const webview = document.querySelector("#account-login-webview");
   if (!webview) return;
-  const updateFromWebview = (message = "") => {
-    const currentUrl = accountLoginWebviewUrl();
-    const status = document.querySelector("#account-login-browser-status");
-    if (status) status.textContent = message || (currentUrl ? `Viewing ${safeUrlLabel(currentUrl)}` : "Login pane is ready.");
-  };
-  webview.addEventListener?.("dom-ready", () => updateFromWebview("Login pane loaded."));
-  webview.addEventListener?.("dom-ready", sizeAccountLoginWebview);
-  webview.addEventListener?.("did-navigate", () => updateFromWebview());
-  webview.addEventListener?.("did-navigate-in-page", () => updateFromWebview());
-  webview.addEventListener?.("did-fail-load", (event) => {
-    const status = document.querySelector("#account-login-browser-status");
-    if (status) status.textContent = event?.errorDescription || "The platform blocked or failed to load in the pane.";
-  });
+  wireAccountLoginWebviewEvents(webview);
   if (accountLoginResizeObserver) accountLoginResizeObserver.disconnect();
   const shell = document.querySelector(".account-login-webview-shell");
   if (shell && typeof ResizeObserver !== "undefined") {
-    accountLoginResizeObserver = new ResizeObserver(() => requestAnimationFrame(sizeAccountLoginWebview));
+    accountLoginResizeObserver = new ResizeObserver(() => requestAnimationFrame(refreshAccountLoginWebviewBounds));
     accountLoginResizeObserver.observe(shell);
   }
-  window.addEventListener("resize", () => requestAnimationFrame(sizeAccountLoginWebview), { once: true });
+  window.addEventListener("resize", () => requestAnimationFrame(refreshAccountLoginWebviewBounds));
   requestAnimationFrame(sizeAccountLoginWebview);
-  setTimeout(sizeAccountLoginWebview, 250);
-  updateFromWebview(account.sessionNote || "Ready to load login page.");
+  setTimeout(refreshAccountLoginWebviewBounds, 250);
+  setTimeout(refreshAccountLoginWebviewBounds, 900);
+  updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
+}
+
+function wireAccountLoginWebviewEvents(webview) {
+  if (!webview || webview.dataset.wired === "true") return;
+  webview.dataset.wired = "true";
+  webview.addEventListener?.("dom-ready", () => {
+    updateAccountLoginBrowserStatus("Login pane loaded.");
+    sizeAccountLoginWebview();
+    setTimeout(refreshAccountLoginWebviewBounds, 120);
+  });
+  webview.addEventListener?.("did-navigate", () => updateAccountLoginBrowserStatus());
+  webview.addEventListener?.("did-navigate-in-page", () => updateAccountLoginBrowserStatus());
+  webview.addEventListener?.("did-fail-load", (event) => {
+    updateAccountLoginBrowserStatus(event?.errorDescription || "The platform blocked or failed to load in the pane.");
+  });
 }
 
 function sizeAccountLoginWebview() {
   const webview = document.querySelector("#account-login-webview");
   const shell = document.querySelector(".account-login-webview-shell");
-  if (!webview || !shell) return;
+  if (!webview || !shell) return null;
   const rect = shell.getBoundingClientRect();
   const width = Math.max(360, Math.floor(rect.width));
   const height = Math.max(560, Math.floor(rect.height));
@@ -1107,6 +1111,36 @@ function sizeAccountLoginWebview() {
       "window.dispatchEvent(new Event('resize')); document.documentElement.style.minHeight='100vh'; document.body.style.minHeight='100vh';",
     ).catch(() => {});
   }
+  return { width, height };
+}
+
+function refreshAccountLoginWebviewBounds() {
+  const webview = document.querySelector("#account-login-webview");
+  const shell = document.querySelector(".account-login-webview-shell");
+  if (!webview || !shell) return;
+  const dimensions = sizeAccountLoginWebview();
+  if (!dimensions) return;
+  const currentUrl = accountLoginWebviewUrl() || webview.getAttribute("src") || "about:blank";
+  const partition = webview.getAttribute("partition") || "persist:diamond-account-login";
+  const title = webview.getAttribute("title") || "Account login preview";
+  const signature = `${dimensions.width}x${dimensions.height}:${partition}:${currentUrl}`;
+  if (webview.dataset.boundsSignature === signature) return;
+  const next = document.createElement("webview");
+  next.id = "account-login-webview";
+  next.dataset.boundsSignature = signature;
+  next.setAttribute("title", title);
+  next.setAttribute("partition", partition);
+  next.setAttribute("src", currentUrl);
+  next.setAttribute("allowpopups", "");
+  next.setAttribute("width", String(dimensions.width));
+  next.setAttribute("height", String(dimensions.height));
+  next.style.width = `${dimensions.width}px`;
+  next.style.height = `${dimensions.height}px`;
+  next.style.minWidth = `${dimensions.width}px`;
+  next.style.minHeight = `${dimensions.height}px`;
+  webview.replaceWith(next);
+  wireAccountLoginWebviewEvents(next);
+  requestAnimationFrame(sizeAccountLoginWebview);
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
@@ -1608,8 +1642,8 @@ async function openAccountLogin(account) {
 }
 
 function reloadAccountLoginPanel() {
+  refreshAccountLoginWebviewBounds();
   const webview = document.querySelector("#account-login-webview");
-  sizeAccountLoginWebview();
   if (typeof webview?.reload === "function") webview.reload();
 }
 
@@ -1626,7 +1660,7 @@ function loadAccountLoginPanelUrl(url) {
   if (!webview || !url) return;
   webview.setAttribute("src", url);
   webview.src = url;
-  sizeAccountLoginWebview();
+  refreshAccountLoginWebviewBounds();
   const status = document.querySelector("#account-login-browser-status");
   if (status) status.textContent = `Loading ${safeUrlLabel(url)}...`;
 }
@@ -1652,7 +1686,13 @@ function checkAccountLoginPanel(account) {
 
 function updateAccountLoginBrowserStatus(message) {
   const status = document.querySelector("#account-login-browser-status");
-  if (status) status.textContent = message;
+  if (!status) return;
+  if (message) {
+    status.textContent = message;
+    return;
+  }
+  const currentUrl = accountLoginWebviewUrl();
+  status.textContent = currentUrl ? `Viewing ${safeUrlLabel(currentUrl)}` : "Login pane is ready.";
 }
 
 function safeUrlLabel(url = "") {
