@@ -34,6 +34,7 @@ import {
   summarizeFirestoreSyncBundle,
   buildFirestoreSyncBundle,
   buildTourVoiceoverScript,
+  browserProfilePath,
   createElevenLabsSpeechRequest,
   autoPublishDecisionMarkdown,
   expertChecklistMarkdown,
@@ -1050,6 +1051,22 @@ function renderAccountCard(account, selectedAccountId) {
   `;
 }
 
+function accountBrowserPartition(account) {
+  const browserProfileId = normalizeBrowserProfileId(account.browserProfileId || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
+  const profilePath = browserProfilePath({
+    ...state.context,
+    companyId: account.companyId,
+    brandId: account.brandId,
+    platform: account.platform,
+    socialAccountId: account.id,
+    browserProfileId,
+    campaignId: state.context?.campaignId || "default-campaign",
+    approvalPolicyId: state.context?.approvalPolicyId || "default-risk-review",
+    postingMode: state.context?.postingMode || "stage_for_review",
+  });
+  return `persist:${profilePath.replace(/[^a-z0-9-]+/gi, "-")}`;
+}
+
 function renderAccountScope(companyId, brandId, accounts = []) {
   return `
     <label>
@@ -1081,8 +1098,7 @@ function renderAccountDetail(account) {
   const proof = getPlatformProofForAccount(account);
   const loginUrl = resolveLoginUrl(account);
   const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
-  const browserProfileId = normalizeBrowserProfileId(account.browserProfileId || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
-  const partition = `persist:${browserProfileId.replace(/[^a-z0-9-]+/gi, "-")}`;
+  const partition = accountBrowserPartition(account);
   const lastLoginProof = account.lastLoginProofAt || proof?.lastLoginProofAt || proof?.lastProofAt;
   return `
     <article class="account-detail-card account-login-panel">
