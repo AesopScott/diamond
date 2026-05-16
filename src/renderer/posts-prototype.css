@@ -1664,8 +1664,16 @@ textarea {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
-  margin-bottom: 16px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  left: 268px;
+  margin-bottom: 0;
   overflow: hidden;
+  position: fixed;
+  right: 28px;
+  top: 28px;
+  z-index: 30;
 }
 
 .account-login-browser > header {
@@ -1723,8 +1731,9 @@ textarea {
 
 .account-login-webview-shell {
   background: #030405;
-  height: min(62vh, 720px);
-  min-height: 460px;
+  flex: 1;
+  height: auto;
+  min-height: 0;
   overflow: hidden;
   width: 100%;
 }
@@ -1734,7 +1743,7 @@ textarea {
   border: 0;
   display: block;
   height: 100%;
-  min-height: 560px;
+  min-height: 100%;
   min-width: 100%;
   width: 100%;
 }
@@ -3727,6 +3736,13 @@ textarea {
 
   .account-login-browser > header {
     flex-direction: column;
+  }
+
+  .account-login-browser {
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    top: 14px;
   }
 
   .expert-checklist-panel {
