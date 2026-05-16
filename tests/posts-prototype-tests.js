@@ -319,6 +319,8 @@ assert.match(js, /renderAccountDetail/);
 assert.match(js, /renderAccountScope/);
 assert.match(js, /browserProfilePath/);
 assert.match(js, /accountBrowserPartition/);
+assert.match(js, /browserPartitionId/);
+assert.match(js, /Persistent session/);
 assert.match(js, /accountsForScope/);
 assert.match(js, /handleAccountScopeChange/);
 assert.match(js, /data-account-scope-field="companyId"/);

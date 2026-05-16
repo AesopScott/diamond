@@ -31,7 +31,7 @@ function ensureAppDir() {
 
 function readState() {
   try {
-    return JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+    return attachBrowserPartitions(JSON.parse(fs.readFileSync(STATE_PATH, "utf8")));
   } catch {
     return null;
   }
@@ -39,8 +39,49 @@ function readState() {
 
 function writeState(state) {
   ensureAppDir();
-  fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2), "utf8");
-  return state;
+  const next = attachBrowserPartitions(state);
+  fs.writeFileSync(STATE_PATH, JSON.stringify(next, null, 2), "utf8");
+  return next;
+}
+
+function attachBrowserPartitions(state) {
+  if (!state || typeof state !== "object") return state;
+  const next = structuredClone(state);
+  next.socialAccounts = (next.socialAccounts || []).map((account) => ({
+    ...account,
+    browserPartitionId: resolveBrowserPartitionId(account),
+  }));
+  return next;
+}
+
+function resolveBrowserPartitionId(account = {}) {
+  const browserProfileId = sanitizePartitionPart(account.browserProfileId || [
+    account.companyId,
+    account.brandId,
+    account.platform,
+    account.id,
+  ].filter(Boolean).join("-"));
+  const canonical = sanitizePartitionPart([
+    "browser-profiles",
+    account.companyId,
+    account.platform,
+    account.id,
+    browserProfileId,
+  ].filter(Boolean).join("-"));
+  const candidates = [
+    account.browserPartitionId,
+    browserProfileId,
+    canonical,
+  ].filter(Boolean).map(sanitizePartitionPart);
+  return candidates.find((candidate) => partitionExists(candidate)) || canonical || browserProfileId;
+}
+
+function sanitizePartitionPart(value) {
+  return String(value || "").replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "diamond-account";
+}
+
+function partitionExists(partitionId) {
+  return fs.existsSync(path.join(APP_DIR, "Partitions", partitionId));
 }
 
 function repairVolatileChromiumStorage() {

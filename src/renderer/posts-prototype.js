@@ -1052,6 +1052,7 @@ function renderAccountCard(account, selectedAccountId) {
 }
 
 function accountBrowserPartition(account) {
+  if (account.browserPartitionId) return `persist:${account.browserPartitionId.replace(/[^a-z0-9-]+/gi, "-")}`;
   const browserProfileId = normalizeBrowserProfileId(account.browserProfileId || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
   const profilePath = browserProfilePath({
     ...state.context,
@@ -1064,7 +1065,7 @@ function accountBrowserPartition(account) {
     approvalPolicyId: state.context?.approvalPolicyId || "default-risk-review",
     postingMode: state.context?.postingMode || "stage_for_review",
   });
-  return `persist:${profilePath.replace(/[^a-z0-9-]+/gi, "-")}`;
+  return `persist:${(browserProfileId || profilePath).replace(/[^a-z0-9-]+/gi, "-")}`;
 }
 
 function renderAccountScope(companyId, brandId, accounts = []) {
@@ -1133,6 +1134,7 @@ function renderAccountDetail(account) {
         <div><dt>Brand</dt><dd><select data-account-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></dd></div>
         <div><dt>Platform</dt><dd><select data-account-field="platform">${platformOptions(account.platform)}</select></dd></div>
         <div><dt>Browser profile</dt><dd><input data-account-field="browserProfileId" type="text" value="${escapeHtml(account.browserProfileId || "")}"></dd></div>
+        <div><dt>Persistent session</dt><dd>${escapeHtml(account.browserPartitionId || "Auto-detected on restart")}</dd></div>
         <div><dt>Public account</dt><dd><input data-account-field="accountUrl" type="url" value="${escapeHtml(account.accountUrl || "")}"></dd></div>
         <div><dt>Login URL</dt><dd><input data-account-field="loginUrl" type="url" value="${escapeHtml(loginUrl || "")}"></dd></div>
         <div><dt>Compose URL</dt><dd><input data-account-field="composeUrl" type="url" value="${escapeHtml(resolveComposeUrl(account) || "")}"></dd></div>
@@ -1779,6 +1781,7 @@ async function createSocialAccountForScope(platform) {
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    browserPartitionId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
     monitoringOnly: platform === "reddit",
     proofCount: 0,
     createdAt: new Date().toISOString(),
@@ -1830,6 +1833,7 @@ async function createSocialAccountFromForm() {
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    browserPartitionId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
     monitoringOnly: platform === "reddit",
     proofCount: 0,
     createdAt: new Date().toISOString(),

@@ -5,6 +5,7 @@ const html = readFileSync(new URL("../src/renderer/posts-prototype.html", import
 const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.meta.url), "utf8");
 const css = readFileSync(new URL("../src/renderer/posts-prototype.css", import.meta.url), "utf8");
 const preload = readFileSync(new URL("../src/electron/preload.cjs", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/electron/main.cjs", import.meta.url), "utf8");
 
 const staticButtons = [...html.matchAll(/<button\b[^>]*>/g)].map((match) => match[0]);
 const riskyButtons = staticButtons.filter((button) => {
@@ -19,6 +20,12 @@ assert.match(js, /attachMediaToActiveDrafts/);
 assert.match(js, /addPlatformToActivePackage/);
 assert.match(js, /pickMedia/);
 assert.match(preload, /inspectMedia/);
+assert.match(js, /browserPartitionId/);
+assert.match(js, /accountBrowserPartition/);
+assert.match(js, /Persistent session/);
+assert.match(main, /attachBrowserPartitions/);
+assert.match(main, /resolveBrowserPartitionId/);
+assert.match(main, /Partitions/);
 assert.match(html, /disabled title="Filtering lands after the default shell flip\."/);
 assert.match(html, /disabled title="List view lands after the default shell flip\."/);
 assert.match(css, /button:disabled/);
