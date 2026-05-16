@@ -275,6 +275,7 @@ let activeTourTarget = null;
 let activeTourAudio = null;
 let accountCreatorOpen = false;
 let accountLoginResizeObserver = null;
+let calendarFilters = { platform: "all", window: "week", campaign: "all" };
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -570,6 +571,7 @@ function wirePrototypeControls() {
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
+  document.querySelector("#calendar-filters")?.addEventListener("change", handleCalendarFilterChange);
   document.querySelector("#accounts-grid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-account-id]");
     if (!card) return;
@@ -779,6 +781,7 @@ async function deletePostPackage(packageId) {
 function renderCalendar() {
   const target = document.querySelector("#calendar-board");
   if (!target) return;
+  renderCalendarFilters();
   const groups = calendarGroups(calendarSchedulesForActiveScope());
   target.innerHTML = groups.map((group) => `
     <article class="calendar-group ${escapeHtml(group.id)}" aria-labelledby="calendar-${escapeHtml(group.id)}">
@@ -794,6 +797,52 @@ function renderCalendar() {
       </div>
     </article>
   `).join("");
+}
+
+function renderCalendarFilters() {
+  const target = document.querySelector("#calendar-filters");
+  if (!target) return;
+  const platformSelect = target.querySelector('[data-calendar-filter="platform"]');
+  const campaignSelect = target.querySelector('[data-calendar-filter="campaign"]');
+  if (platformSelect) {
+    platformSelect.innerHTML = calendarPlatformOptions(calendarFilters.platform);
+    platformSelect.value = calendarFilters.platform;
+  }
+  if (campaignSelect) {
+    campaignSelect.innerHTML = calendarCampaignOptions(calendarFilters.campaign);
+    campaignSelect.value = calendarFilters.campaign;
+  }
+  const windowSelect = target.querySelector('[data-calendar-filter="window"]');
+  if (windowSelect) windowSelect.value = calendarFilters.window;
+}
+
+function calendarPlatformOptions(selectedPlatform = "all") {
+  const platforms = [...new Set((state.scheduledPosts || []).map((schedule) => schedule.context?.platform).filter(Boolean))].sort();
+  return [
+    `<option value="all" ${selectedPlatform === "all" ? "selected" : ""}>All platforms</option>`,
+    ...platforms.map((platform) => `<option value="${escapeHtml(platform)}" ${platform === selectedPlatform ? "selected" : ""}>${escapeHtml(platformLabel(platform))}</option>`),
+  ].join("");
+}
+
+function calendarCampaignOptions(selectedCampaign = "all") {
+  const context = state.context || {};
+  const campaigns = (state.campaigns || [])
+    .filter((campaign) => (!context.companyId || campaign.companyId === context.companyId) && (!context.brandId || campaign.brandId === context.brandId))
+    .sort((left, right) => (left.name || left.id).localeCompare(right.name || right.id));
+  return [
+    `<option value="all" ${selectedCampaign === "all" ? "selected" : ""}>All campaigns</option>`,
+    ...campaigns.map((campaign) => `<option value="${escapeHtml(campaign.id)}" ${campaign.id === selectedCampaign ? "selected" : ""}>${escapeHtml(campaign.name || campaign.id)}</option>`),
+  ].join("");
+}
+
+function handleCalendarFilterChange(event) {
+  const field = event.target.closest("[data-calendar-filter]");
+  if (!field) return;
+  calendarFilters = {
+    ...calendarFilters,
+    [field.dataset.calendarFilter]: field.value || "all",
+  };
+  renderCalendar();
 }
 
 function calendarGroups(schedules) {
@@ -848,8 +897,23 @@ function calendarSchedulesForActiveScope() {
     const scheduleContext = schedule.context || {};
     return (!context.companyId || scheduleContext.companyId === context.companyId)
       && (!context.brandId || scheduleContext.brandId === context.brandId)
-      && (!context.campaignId || scheduleContext.campaignId === context.campaignId);
+      && (calendarFilters.campaign === "all" || scheduleContext.campaignId === calendarFilters.campaign)
+      && (calendarFilters.platform === "all" || scheduleContext.platform === calendarFilters.platform)
+      && scheduleMatchesCalendarWindow(schedule, calendarFilters.window);
   });
+}
+
+function scheduleMatchesCalendarWindow(schedule, windowId = "week") {
+  if (windowId === "all") return true;
+  const scheduledAt = new Date(schedule.scheduledAt);
+  if (Number.isNaN(scheduledAt.getTime())) return true;
+  const now = new Date();
+  if (windowId === "today") return isSameLocalDay(scheduledAt, now);
+  if (windowId === "upcoming") return scheduledAt.getTime() >= now.getTime();
+  const weekEnd = new Date(now);
+  weekEnd.setDate(now.getDate() + 7);
+  weekEnd.setHours(23, 59, 59, 999);
+  return scheduledAt.getTime() <= weekEnd.getTime();
 }
 
 async function handleCalendarAction(event) {

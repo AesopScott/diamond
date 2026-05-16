@@ -102,10 +102,24 @@
             </div>
             <button id="calendar-create-schedule" class="create-button" type="button">Schedule</button>
           </header>
-          <section class="prototype-toolbar" aria-label="Calendar filters">
-            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">All platforms</button>
-            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">This week</button>
-            <button type="button" class="filter-pill" disabled title="Calendar filters land after the default shell flip.">Campaign</button>
+          <section id="calendar-filters" class="prototype-toolbar" aria-label="Calendar filters">
+            <label class="filter-control">
+              <span>Platform</span>
+              <select data-calendar-filter="platform"></select>
+            </label>
+            <label class="filter-control">
+              <span>Window</span>
+              <select data-calendar-filter="window">
+                <option value="week">This week</option>
+                <option value="today">Today</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="all">All dates</option>
+              </select>
+            </label>
+            <label class="filter-control">
+              <span>Campaign</span>
+              <select data-calendar-filter="campaign"></select>
+            </label>
           </section>
           <section id="calendar-board" class="calendar-board" aria-label="Scheduled post calendar"></section>
         </section>
