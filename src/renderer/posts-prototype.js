@@ -659,12 +659,6 @@ function destroyAccountLoginWebview() {
   }
   const webview = document.querySelector("#account-login-webview");
   if (!webview) return;
-  try {
-    webview.setAttribute("src", "about:blank");
-    webview.src = "about:blank";
-  } catch {
-    // Best effort cleanup for Electron's native webview surface.
-  }
   webview.remove();
 }
 
@@ -1171,7 +1165,6 @@ function initializeAccountLoginWebview(account) {
   }
   window.addEventListener("resize", () => requestAnimationFrame(refreshAccountLoginWebviewBounds));
   requestAnimationFrame(sizeAccountLoginWebview);
-  setTimeout(() => refreshAccountLoginWebviewBounds({ force: true, reschedule: false }), 450);
   updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
   scheduleAccountLoginResizePasses();
 }
@@ -1215,11 +1208,6 @@ function sizeAccountLoginWebview() {
     const currentUrl = webview.getAttribute("src") || webview.src || "about:blank";
     const partition = webview.getAttribute("partition") || "persist:diamond-account-login";
     webview.dataset.boundsSignature = `${width}x${height}:${partition}:${currentUrl}`;
-  }
-  if (typeof webview.executeJavaScript === "function") {
-    webview.executeJavaScript(
-      "window.dispatchEvent(new Event('resize')); document.documentElement.style.minHeight='100vh'; document.body.style.minHeight='100vh';",
-    ).catch(() => {});
   }
   return { width, height };
 }
@@ -1267,8 +1255,8 @@ function refreshAccountLoginWebviewBounds(options = {}) {
 }
 
 function forceRefreshAccountLoginWebviewBounds() {
-  refreshAccountLoginWebviewBounds({ force: true });
-  updateAccountLoginBrowserStatus("Browser surface refreshed at full size.");
+  sizeAccountLoginWebview();
+  updateAccountLoginBrowserStatus("Browser surface fitted without reloading the page.");
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
@@ -2040,7 +2028,7 @@ async function openAccountLogin(account) {
 
 function reloadAccountLoginPanel(account) {
   if (account) account.sessionNote = "Reloaded login pane once. Wait before reloading again.";
-  refreshAccountLoginWebviewBounds({ force: true });
+  sizeAccountLoginWebview();
   const webview = document.querySelector("#account-login-webview");
   if (typeof webview?.reload === "function") webview.reload();
 }
@@ -2073,7 +2061,7 @@ function loadAccountLoginPanelUrl(url) {
   if (input) input.value = url;
   webview.setAttribute("src", url);
   webview.src = url;
-  refreshAccountLoginWebviewBounds({ force: true });
+  requestAnimationFrame(sizeAccountLoginWebview);
   const status = document.querySelector("#account-login-browser-status");
   if (status) status.textContent = `Loading ${safeUrlLabel(url)}...`;
 }
