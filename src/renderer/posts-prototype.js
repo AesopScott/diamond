@@ -1912,19 +1912,26 @@ function renderCampaigns() {
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
         </section>
       </article>
-      <article class="strategy-card">
-        <h3>Primary CTA</h3>
-        <textarea data-campaign-field="strategyCta" rows="3">${escapeHtml(strategy.cta || "")}</textarea>
-        <h3>Offer</h3>
-        <textarea data-campaign-field="strategyOffer" rows="3">${escapeHtml(strategy.offer || "")}</textarea>
-      </article>
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
+      ${renderEditableCampaignTextPanel("Primary CTA", "strategyCta", strategy.cta, "The main action this campaign should drive")}
+      ${renderEditableCampaignTextPanel("Offer", "strategyOffer", strategy.offer, "The promise, prize, hook, or value offered")}
       ${renderEditableCampaignPanel("Goals", "strategyGoals", strategy.goals, "One campaign goal per line")}
       ${renderEditableCampaignPanel("Audience", "strategyAudience", strategy.audience, "One audience segment per line")}
       ${renderEditableCampaignPanel("Pillars", "strategyPillars", strategy.pillars, "One campaign content pillar per line")}
       ${renderEditableCampaignPanel("Reference accounts", "referenceAccounts", strategy.referenceAccounts, "One reference account per line")}
     </section>
+  `;
+}
+
+function renderEditableCampaignTextPanel(title, field, value = "", placeholder = "") {
+  return `
+    <article class="brand-panel editable-brand-panel">
+      <header>
+        <h3>${escapeHtml(title)}</h3>
+      </header>
+      <textarea data-campaign-field="${escapeHtml(field)}" rows="4" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value || "")}</textarea>
+    </article>
   `;
 }
 
