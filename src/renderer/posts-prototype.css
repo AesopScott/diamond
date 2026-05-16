@@ -2389,9 +2389,12 @@ textarea {
 }
 
 .brand-panels {
+  align-content: start;
   display: grid;
   gap: 12px;
   align-items: start;
+  grid-auto-flow: row;
+  grid-auto-rows: 292px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   min-width: 0;
 }
@@ -2498,6 +2501,18 @@ textarea {
 .guidance-module-panel footer button {
   min-height: 30px;
   padding: 5px 9px;
+}
+
+.guidance-module-panel {
+  display: flex;
+  flex-direction: column;
+  height: 292px;
+}
+
+.guidance-module-panel textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
 }
 
 .templates-workspace {
