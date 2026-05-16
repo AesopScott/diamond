@@ -1886,9 +1886,11 @@ function saveBrandWorkspace() {
 function renderCampaigns() {
   const target = document.querySelector("#campaign-workspace");
   if (!target) return;
-  const company = (state.companies || []).find((item) => item.id === state.context?.companyId) || (state.companies || [])[0] || {};
-  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId && item.companyId === company.id)
-    || (state.brands || []).find((item) => item.companyId === company.id)
+  const brand = (state.brands || []).find((item) => item.id === state.context?.brandId)
+    || (state.brands || [])[0]
+    || {};
+  const company = (state.companies || []).find((item) => item.id === brand.companyId)
+    || (state.companies || []).find((item) => item.id === state.context?.companyId)
     || {};
   const campaign = (state.campaigns || []).find((item) => item.id === state.context?.campaignId && item.companyId === company.id && item.brandId === brand.id)
     || (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id)
@@ -1900,12 +1902,10 @@ function renderCampaigns() {
         <span class="eyebrow">Campaign</span>
         <h2>${escapeHtml(campaign.name || campaign.id || "Campaign")}</h2>
         <dl class="brand-facts">
-          <div><dt>Company</dt><dd><select data-campaign-field="contextCompanyId">${companyOptions(company.id)}</select></dd></div>
-          <div><dt>Brand</dt><dd><select data-campaign-field="contextBrandId">${brandOptions(company.id, brand.id)}</select></dd></div>
+          <div><dt>Brand</dt><dd><select data-campaign-field="contextBrandId">${brandOptions("", brand.id)}</select></dd></div>
           <div><dt>Campaign</dt><dd><select data-campaign-field="contextCampaignId">${campaignOptions(company.id, brand.id, campaign.id)}</select></dd></div>
           <div><dt>Campaign name</dt><dd><input data-campaign-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
           <div><dt>Status</dt><dd><input data-campaign-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
-          <div><dt>Assigned brand</dt><dd>${escapeHtml(brand.name || brand.id || "No brand selected")}</dd></div>
         </dl>
         <section class="account-actions" aria-label="Campaign actions">
           <button type="button" data-campaign-action="save">Save campaign</button>
@@ -1943,17 +1943,12 @@ function renderEditableCampaignPanel(title, field, items = [], placeholder = "")
 
 async function handleCampaignWorkspaceChange(event) {
   const field = event.target.closest("[data-campaign-field]");
-  if (!field || !["contextCompanyId", "contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
-  if (field.dataset.campaignField === "contextCompanyId") {
-    const companyId = normalizeId(field.value, "companyId");
-    const brandId = (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
-    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === companyId && campaign.brandId === brandId)?.id || "";
-    state.context = { ...state.context, companyId, brandId, campaignId };
-  }
+  if (!field || !["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
   if (field.dataset.campaignField === "contextBrandId") {
     const brandId = normalizeId(field.value, "brandId");
-    const campaignId = (state.campaigns || []).find((campaign) => campaign.brandId === brandId)?.id || "";
-    state.context = { ...state.context, brandId, campaignId };
+    const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
+    state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
   }
   if (field.dataset.campaignField === "contextCampaignId") {
     state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
@@ -1979,8 +1974,9 @@ async function handleCampaignWorkspaceClick(event) {
 
 async function deleteSelectedCampaign() {
   const workspace = document.querySelector("#campaign-workspace");
-  const companyId = normalizeId(workspace?.querySelector('[data-campaign-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
   const brandId = normalizeId(workspace?.querySelector('[data-campaign-field="contextBrandId"]')?.value || state.context?.brandId, "brandId");
+  const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+  const companyId = brand.companyId || state.context?.companyId || "";
   const campaignId = normalizeId(workspace?.querySelector('[data-campaign-field="contextCampaignId"]')?.value || state.context?.campaignId, "campaignId");
   if (!campaignId || !(state.campaigns || []).some((campaign) => campaign.id === campaignId)) return;
   const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
@@ -2009,8 +2005,9 @@ function saveCampaignWorkspace() {
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
-  const companyId = normalizeId(valueFor("contextCompanyId") || state.context?.companyId, "companyId");
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
+  const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+  const companyId = brand.companyId || state.context?.companyId || "";
   const campaignId = normalizeId(valueFor("contextCampaignId") || state.context?.campaignId, "campaignId");
   const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
   if (campaign) {
