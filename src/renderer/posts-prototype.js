@@ -1162,6 +1162,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
         <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
         <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
+        <button type="button" data-account-action="close-login-panel" data-account-id="${escapeHtml(account.id)}">Close pane</button>
       </div>
       <div class="account-login-webview-shell">
         <webview
@@ -1639,6 +1640,10 @@ async function handleAccountDetailClick(event) {
   if (button.dataset.accountAction === "save-login") saveAccountForm(account);
   if (button.dataset.accountAction === "open-login") await openAccountLogin(account);
   if (button.dataset.accountAction === "reload-login-panel") reloadAccountLoginPanel();
+  if (button.dataset.accountAction === "close-login-panel") {
+    closeAccountLoginPanel();
+    return;
+  }
   if (button.dataset.accountAction === "load-public-profile") loadAccountPublicProfile(account);
   if (button.dataset.accountAction === "check-login-panel") checkAccountLoginPanel(account);
   if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
@@ -1658,6 +1663,11 @@ async function handleAccountDetailClick(event) {
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
+}
+
+function closeAccountLoginPanel() {
+  destroyAccountLoginWebview();
+  document.querySelector(".account-login-browser")?.remove();
 }
 
 async function openAccountLogin(account) {
