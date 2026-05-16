@@ -1146,6 +1146,7 @@ function initializeAccountLoginWebview(account) {
   setTimeout(refreshAccountLoginWebviewBounds, 250);
   setTimeout(refreshAccountLoginWebviewBounds, 900);
   updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
+  scheduleAccountLoginResizePasses();
 }
 
 function wireAccountLoginWebviewEvents(webview) {
@@ -1168,12 +1169,17 @@ function sizeAccountLoginWebview() {
   const shell = document.querySelector(".account-login-webview-shell");
   if (!webview || !shell) return null;
   const rect = shell.getBoundingClientRect();
-  const width = Math.max(360, Math.floor(rect.width));
-  const height = Math.max(560, Math.floor(rect.height));
+  const browser = document.querySelector(".account-login-browser");
+  const browserRect = browser?.getBoundingClientRect();
+  const fallbackHeight = browserRect ? browserRect.height - shell.offsetTop : window.innerHeight - shell.getBoundingClientRect().top;
+  const width = Math.max(360, Math.floor(rect.width || browserRect?.width || window.innerWidth - 240));
+  const height = Math.max(560, Math.floor(rect.height || fallbackHeight || window.innerHeight - 170));
   webview.style.width = `${width}px`;
   webview.style.height = `${height}px`;
   webview.style.minWidth = `${width}px`;
   webview.style.minHeight = `${height}px`;
+  webview.style.maxWidth = `${width}px`;
+  webview.style.maxHeight = `${height}px`;
   webview.setAttribute("width", String(width));
   webview.setAttribute("height", String(height));
   if (typeof webview.executeJavaScript === "function") {
@@ -1182,6 +1188,12 @@ function sizeAccountLoginWebview() {
     ).catch(() => {});
   }
   return { width, height };
+}
+
+function scheduleAccountLoginResizePasses() {
+  [0, 80, 180, 350, 700, 1200].forEach((delay) => {
+    setTimeout(() => requestAnimationFrame(refreshAccountLoginWebviewBounds), delay);
+  });
 }
 
 function refreshAccountLoginWebviewBounds() {
@@ -1208,9 +1220,11 @@ function refreshAccountLoginWebviewBounds() {
   next.style.height = `${dimensions.height}px`;
   next.style.minWidth = `${dimensions.width}px`;
   next.style.minHeight = `${dimensions.height}px`;
+  next.style.maxWidth = `${dimensions.width}px`;
+  next.style.maxHeight = `${dimensions.height}px`;
   webview.replaceWith(next);
   wireAccountLoginWebviewEvents(next);
-  requestAnimationFrame(sizeAccountLoginWebview);
+  scheduleAccountLoginResizePasses();
 }
 
 function renderAccountLoginBrowser(account, partition, loginUrl) {
