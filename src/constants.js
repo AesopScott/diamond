@@ -4,7 +4,9 @@ export const PLATFORMS = Object.freeze([
   "tiktok",
   "linkedin",
   "youtube-shorts",
+  "youtube-longform",
   "facebook",
+  "pinterest",
   "reddit",
 ]);
 

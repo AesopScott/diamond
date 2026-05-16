@@ -284,7 +284,7 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "check-login-panel": 60000,
   "fit-login-panel": 5000,
 };
-const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "facebook", "reddit"];
+const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "youtube-longform", "facebook", "pinterest", "reddit"];
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -1748,6 +1748,12 @@ async function addSocialAccount() {
   renderAccounts(selectedAccountId);
 }
 
+function sharedBrowserPartitionForPlatform(companyId, brandId, platform) {
+  if (!String(platform || "").startsWith("youtube-")) return "";
+  const existing = accountsForScope(companyId, brandId).find((account) => String(account.platform || "").startsWith("youtube-") && account.browserPartitionId);
+  return existing?.browserPartitionId || normalizeBrowserProfileId(`${companyId}-${brandId}-youtube`);
+}
+
 async function createSocialAccountForScope(platform) {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id || "";
   const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id || "";
@@ -1760,6 +1766,7 @@ async function createSocialAccountForScope(platform) {
   }
   const company = (state.companies || []).find((item) => item.id === companyId);
   const brand = (state.brands || []).find((item) => item.id === brandId);
+  const sharedBrowserPartitionId = sharedBrowserPartitionForPlatform(companyId, brandId, platform);
   const plan = buildSocialAccountCreationPlan({
     company,
     brand,
@@ -1781,7 +1788,7 @@ async function createSocialAccountForScope(platform) {
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
-    browserPartitionId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    browserPartitionId: sharedBrowserPartitionId || plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
     monitoringOnly: platform === "reddit",
     proofCount: 0,
     createdAt: new Date().toISOString(),
@@ -1812,6 +1819,7 @@ async function createSocialAccountFromForm() {
   if (!companyId || !brandId || !platform) return;
   const company = (state.companies || []).find((item) => item.id === companyId);
   const brand = (state.brands || []).find((item) => item.id === brandId);
+  const sharedBrowserPartitionId = sharedBrowserPartitionForPlatform(companyId, brandId, platform);
   const plan = buildSocialAccountCreationPlan({
     company,
     brand,
@@ -1833,7 +1841,7 @@ async function createSocialAccountFromForm() {
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
-    browserPartitionId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
+    browserPartitionId: sharedBrowserPartitionId || plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
     monitoringOnly: platform === "reddit",
     proofCount: 0,
     createdAt: new Date().toISOString(),
@@ -5711,11 +5719,14 @@ function mediaReadiness(draft, plan = platformStagingPlan(draft.platform, { medi
   const missingCount = inspectedItems.filter((item) => item.exists === false).length;
   const kinds = new Set(inspectedItems.map((item) => item.kind));
   let typeMismatch = "";
-  if (draft.platform === "youtube-shorts" && media.length && !kinds.has("video")) {
-    typeMismatch = "YouTube Shorts needs video media.";
+  if ((draft.platform === "youtube-shorts" || draft.platform === "youtube-longform") && media.length && !kinds.has("video")) {
+    typeMismatch = `${platformLabel(draft.platform)} needs video media.`;
   }
   if (draft.platform === "tiktok" && media.length && !kinds.has("video")) {
     typeMismatch = "TikTok should use video media.";
+  }
+  if (draft.platform === "pinterest" && media.length && !kinds.has("image") && !kinds.has("video")) {
+    typeMismatch = "Pinterest should use image or video media.";
   }
   return {
     requiredMissing: Boolean(plan.mediaRequired && !media.length),

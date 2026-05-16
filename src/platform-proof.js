@@ -286,7 +286,7 @@ export function mediaProofGuideForAdapter(adapter = {}) {
   if (!adapter.mediaRequired && !adapter.supportsMediaPicker && !adapter.candidateMediaInputSelector) {
     return `${adapter.label || "This platform"} does not require media proof unless a post uses media.`;
   }
-  if (adapter.platform === "tiktok" || adapter.platform === "youtube-shorts") {
+  if (adapter.platform === "tiktok" || adapter.platform === "youtube-shorts" || adapter.platform === "youtube-longform") {
     return `Record video upload proof for ${adapter.label}: upload screen visible, file accepted, caption/details visible, and screenshot or URL saved.`;
   }
   if (adapter.platform === "instagram") {

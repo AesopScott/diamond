@@ -22,7 +22,9 @@ export const SOCIAL_SIGNUP_URLS = Object.freeze({
   tiktok: "https://www.tiktok.com/signup",
   linkedin: "https://www.linkedin.com/signup",
   "youtube-shorts": "https://accounts.google.com/signup/v2/webcreateaccount",
+  "youtube-longform": "https://accounts.google.com/signup/v2/webcreateaccount",
   facebook: "https://www.facebook.com/r.php",
+  pinterest: "https://www.pinterest.com/business/create/",
   reddit: "https://www.reddit.com/register/",
 });
 

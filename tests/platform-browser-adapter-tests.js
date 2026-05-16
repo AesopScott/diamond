@@ -45,6 +45,18 @@ assert.equal(facebook.stageMode, "manual");
 assert.equal(platformHasCandidateComposerAdapter("facebook"), true);
 assert.match(buildCandidateComposerScript("hello", "facebook"), /contenteditable/);
 
+const youtubeLongform = getPlatformBrowserAdapter("youtube-longform");
+assert.equal(youtubeLongform.stageMode, "manual");
+assert.equal(youtubeLongform.mediaRequired, true);
+assert.equal(platformHasCandidateMediaAdapter("youtube-longform"), true);
+assert.match(platformStagingPlan("youtube-longform", { media: [] }).blockers.join(" "), /requires media/);
+
+const pinterest = getPlatformBrowserAdapter("pinterest");
+assert.equal(pinterest.stageMode, "manual");
+assert.equal(pinterest.mediaRequired, true);
+assert.equal(platformHasCandidateMediaAdapter("pinterest"), true);
+assert.match(platformStagingPlan("pinterest", { media: [] }).blockers.join(" "), /requires media/);
+
 assert.equal(platformHasCandidateComposerAdapter("reddit"), false);
 
 const reddit = getPlatformBrowserAdapter("reddit");

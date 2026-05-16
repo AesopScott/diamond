@@ -56,6 +56,14 @@ export const PLATFORM_BROWSER_ADAPTERS = Object.freeze({
     proofTarget: "Upload details screen or published Short URL",
     manualFinish: "Upload short-form video, complete title/details, confirm checks, then publish manually.",
   }),
+  "youtube-longform": manualAdapter("youtube-longform", "YouTube Long Form", {
+    composeUrl: "https://studio.youtube.com/",
+    candidateComposerSelector: YOUTUBE_SHORTS_DETAILS_SELECTOR,
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
+    mediaRequired: true,
+    proofTarget: "Upload details screen or published video URL",
+    manualFinish: "Upload long-form video, complete title/description/details, confirm checks, then publish manually.",
+  }),
   facebook: manualAdapter("facebook", "Facebook", {
     composeUrl: "https://www.facebook.com/",
     candidateComposerSelector: FACEBOOK_COMPOSER_SELECTOR,
@@ -63,6 +71,14 @@ export const PLATFORM_BROWSER_ADAPTERS = Object.freeze({
     mediaRequired: false,
     proofTarget: "Page composer screenshot or published post URL",
     manualFinish: "Confirm the correct page/profile, paste the draft, attach media if needed, then publish manually.",
+  }),
+  pinterest: manualAdapter("pinterest", "Pinterest", {
+    composeUrl: "https://www.pinterest.com/pin-builder/",
+    candidateComposerSelector: 'textarea, div[contenteditable="true"][role="textbox"], [contenteditable="true"]',
+    candidateMediaInputSelector: GENERIC_MEDIA_INPUT_SELECTOR,
+    mediaRequired: true,
+    proofTarget: "Pin builder screenshot or published Pin URL",
+    manualFinish: "Upload the pin asset, set title/description/link/board, then publish manually.",
   }),
   reddit: {
     platform: "reddit",

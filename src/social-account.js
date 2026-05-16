@@ -40,6 +40,16 @@ export const SOCIAL_PLATFORM_CONFIG = Object.freeze({
     composeUrl: "https://studio.youtube.com/",
     expectedHost: "youtube.com",
     monitoringOnly: false,
+    sharedAccountGroup: "youtube",
+  },
+  "youtube-longform": {
+    label: "YouTube Long Form",
+    accountBaseUrl: "https://www.youtube.com/",
+    loginUrl: "https://accounts.google.com/",
+    composeUrl: "https://studio.youtube.com/",
+    expectedHost: "youtube.com",
+    monitoringOnly: false,
+    sharedAccountGroup: "youtube",
   },
   facebook: {
     label: "Facebook",
@@ -47,6 +57,14 @@ export const SOCIAL_PLATFORM_CONFIG = Object.freeze({
     loginUrl: "https://www.facebook.com/login/",
     composeUrl: "https://www.facebook.com/",
     expectedHost: "facebook.com",
+    monitoringOnly: false,
+  },
+  pinterest: {
+    label: "Pinterest",
+    accountBaseUrl: "https://www.pinterest.com/",
+    loginUrl: "https://www.pinterest.com/login/",
+    composeUrl: "https://www.pinterest.com/pin-builder/",
+    expectedHost: "pinterest.com",
     monitoringOnly: false,
   },
   reddit: {
@@ -92,6 +110,10 @@ export function defaultExpectedHostForPlatform(platform) {
 
 export function isMonitoringOnlyPlatform(platform) {
   return Boolean(platformConfig(platform)?.monitoringOnly);
+}
+
+export function sharedAccountGroupForPlatform(platform) {
+  return platformConfig(platform)?.sharedAccountGroup || normalizeId(platform, "platform");
 }
 
 export function normalizeLoginUrl(value, platform) {

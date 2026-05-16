@@ -7,7 +7,9 @@ const EXPANSION_PLATFORMS = Object.freeze([
   "tiktok",
   "linkedin",
   "youtube-shorts",
+  "youtube-longform",
   "facebook",
+  "pinterest",
   "reddit",
 ]);
 
@@ -219,6 +221,7 @@ export function createSeedWorkspace() {
 
 export function createSeedSocialAccount(context, platform) {
   const id = platform === "x" ? context.socialAccountId : `the-card-${platform}`;
+  const youtubeProfileId = `${context.companyId}-youtube-${context.brandId}`;
   return {
     id,
     companyId: context.companyId,
@@ -229,7 +232,8 @@ export function createSeedSocialAccount(context, platform) {
     composeUrl: defaultComposeUrlForPlatform(platform),
     expectedHost: defaultExpectedHostForPlatform(platform),
     sessionStatus: "unknown",
-    browserProfileId: platform === "x" ? context.browserProfileId : `${context.companyId}-${platform}-${id}`,
+    browserProfileId: platform === "x" ? context.browserProfileId : platform.startsWith("youtube-") ? youtubeProfileId : `${context.companyId}-${platform}-${id}`,
+    browserPartitionId: platform.startsWith("youtube-") ? youtubeProfileId : undefined,
     monitoringOnly: platform === "reddit",
   };
 }

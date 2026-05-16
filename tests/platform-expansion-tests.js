@@ -12,18 +12,23 @@ import {
   resolveLoginUrl,
 } from "../src/index.js";
 
-const expectedPlatforms = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "facebook", "reddit"];
+const expectedPlatforms = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "youtube-longform", "facebook", "pinterest", "reddit"];
 assert.deepEqual(PLATFORMS, expectedPlatforms);
 
 assert.equal(platformLabel("x"), "X");
 assert.equal(platformLabel("instagram"), "Instagram");
 assert.equal(platformLabel("youtube-shorts"), "YouTube Shorts");
+assert.equal(platformLabel("youtube-longform"), "YouTube Long Form");
+assert.equal(platformLabel("pinterest"), "Pinterest");
 
 assert.equal(defaultLoginUrlForPlatform("instagram"), "https://www.instagram.com/accounts/login/");
 assert.equal(defaultComposeUrlForPlatform("tiktok"), "https://www.tiktok.com/upload");
 assert.equal(defaultExpectedHostForPlatform("linkedin"), "linkedin.com");
+assert.equal(defaultComposeUrlForPlatform("youtube-longform"), "https://studio.youtube.com/");
+assert.equal(defaultExpectedHostForPlatform("pinterest"), "pinterest.com");
 assert.equal(normalizeAccountUrl("thecard", "instagram"), "https://www.instagram.com/thecard");
 assert.equal(normalizeAccountUrl("thecard", "facebook"), "https://www.facebook.com/thecard");
+assert.equal(normalizeAccountUrl("thecard", "pinterest"), "https://www.pinterest.com/thecard");
 assert.equal(normalizeAccountUrl("thecard", "reddit"), "https://www.reddit.com/user/thecard");
 assert.equal(isMonitoringOnlyPlatform("reddit"), true);
 assert.equal(isMonitoringOnlyPlatform("facebook"), false);
@@ -31,7 +36,12 @@ assert.equal(isMonitoringOnlyPlatform("facebook"), false);
 const workspace = createSeedWorkspace();
 const seededPlatforms = workspace.socialAccounts.map((account) => account.platform);
 assert.deepEqual(seededPlatforms, expectedPlatforms);
-assert.equal(new Set(workspace.socialAccounts.map((account) => account.browserProfileId)).size, expectedPlatforms.length);
+assert.equal(new Set(workspace.socialAccounts.map((account) => account.id)).size, expectedPlatforms.length);
+assert.equal(new Set(workspace.socialAccounts.map((account) => account.browserProfileId)).size, expectedPlatforms.length - 1);
+assert.equal(
+  workspace.socialAccounts.find((account) => account.platform === "youtube-shorts").browserPartitionId,
+  workspace.socialAccounts.find((account) => account.platform === "youtube-longform").browserPartitionId,
+);
 
 expectedPlatforms.forEach((platform) => {
   const account = workspace.socialAccounts.find((item) => item.platform === platform);
@@ -50,4 +60,3 @@ assert.deepEqual([...slotPlatforms], expectedPlatforms);
 assert.equal(workspace.editorialSlots.find((slot) => slot.platform === "reddit").assetNeed, "monitoring brief");
 
 console.log("All Diamond platform expansion tests passed.");
-
