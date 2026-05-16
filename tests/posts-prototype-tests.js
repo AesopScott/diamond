@@ -24,6 +24,8 @@ assert.match(html, /id="brands-view"/);
 assert.match(html, /id="brand-workspace"/);
 assert.match(html, /id="campaigns-view"/);
 assert.match(html, /id="campaign-workspace"/);
+assert.match(html, /class="active nav-parent" href="#posts"/);
+assert.match(html, /class="nav-child" href="#templates"/);
 assert.match(html, /class="nav-parent" href="#companies"/);
 assert.match(html, /class="nav-child" href="#brands"/);
 assert.match(html, /class="nav-grandchild" href="#campaigns"/);
