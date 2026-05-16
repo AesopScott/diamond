@@ -281,6 +281,7 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "open-login": 30000,
   "reload-login-panel": 30000,
   "load-public-profile": 30000,
+  "load-compose-page": 30000,
   "check-login-panel": 60000,
   "fit-login-panel": 5000,
 };
@@ -1298,6 +1299,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       <div class="account-login-browser-toolbar">
         <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
         <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
+        <button type="button" data-account-action="load-compose-page" data-account-id="${escapeHtml(account.id)}">Load composer</button>
         <button type="button" data-account-action="load-public-profile" data-account-id="${escapeHtml(account.id)}">Load profile</button>
         <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
         <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
@@ -1902,6 +1904,10 @@ async function handleAccountDetailClick(event) {
     if (!guardAccountLoginAction(account, "load-public-profile")) return;
     loadAccountPublicProfile(account);
   }
+  if (button.dataset.accountAction === "load-compose-page") {
+    if (!guardAccountLoginAction(account, "load-compose-page")) return;
+    loadAccountComposePage(account);
+  }
   if (button.dataset.accountAction === "check-login-panel") {
     if (!guardAccountLoginAction(account, "check-login-panel")) return;
     checkAccountLoginPanel(account);
@@ -2045,6 +2051,19 @@ function loadAccountPublicProfile(account) {
   account.loginPanelUrl = publicUrl;
   loadAccountLoginPanelUrl(publicUrl);
   account.sessionNote = "Loaded public profile page in the pane.";
+}
+
+function loadAccountComposePage(account) {
+  const composeUrl = resolveComposeUrl(account);
+  if (!composeUrl) {
+    updateAccountLoginBrowserStatus("No composer URL is configured for this platform.");
+    return;
+  }
+  account.loginPanelUrl = composeUrl;
+  loadAccountLoginPanelUrl(composeUrl);
+  account.sessionNote = account.platform?.startsWith("youtube-")
+    ? "Loaded YouTube Studio. Use Create > Upload videos for Shorts or long-form uploads."
+    : "Loaded platform composer page in the pane.";
 }
 
 function loadAccountLoginPanelUrl(url) {
