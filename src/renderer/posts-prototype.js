@@ -588,6 +588,7 @@ function wirePrototypeControls() {
   document.querySelector("#settings-workspace")?.addEventListener("click", handleSettingsAction);
   document.querySelector("#settings-workspace")?.addEventListener("change", handleSettingsChange);
   document.querySelector("#settings-workspace")?.addEventListener("input", handleSettingsInput);
+  document.querySelector("#settings-shortcuts")?.addEventListener("click", handleSettingsShortcut);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
   document.querySelector("#tour-start")?.addEventListener("click", startGuideTour);
@@ -2580,7 +2581,7 @@ function renderSettings() {
       ${renderExpertChecklistPanel(expertReview)}
       ${renderAutoPublishGatePanel(autoPublishReadiness)}
     </section>
-    <section class="legal-settings" aria-label="Legal drafts">
+    <section id="settings-legal" class="legal-settings" aria-label="Legal drafts">
       <header>
         <h2>Legal drafts</h2>
         <span class="count">${legalDocuments.length}</span>
@@ -2591,6 +2592,14 @@ function renderSettings() {
     </section>
     ${renderUserGuidePanel()}
   `;
+}
+
+function handleSettingsShortcut(event) {
+  const button = event.target.closest("[data-settings-shortcut]");
+  if (!button) return;
+  const target = document.getElementById(button.dataset.settingsShortcut || "");
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function handleSettingsAction(event) {
@@ -2846,7 +2855,7 @@ function getSettingsChecked(field, fallback = false) {
 
 function renderLicenseSettingsPanel(license, licenseCheck, model) {
   return `
-    <article class="settings-panel editable-settings">
+    <article id="settings-license" class="settings-panel editable-settings">
       <header>
         <h2>License</h2>
         <span class="count">${escapeHtml(licenseCheck.ok ? "Ready" : "Blocked")}</span>
@@ -3444,7 +3453,7 @@ function setStaticText(selector, label) {
 function renderAccessibilitySettingsPanel() {
   const accessibility = state.accessibility || {};
   return `
-    <article class="settings-panel editable-settings">
+    <article id="settings-accessibility" class="settings-panel editable-settings">
       <header>
         <h2>Accessibility</h2>
         <span class="count">Baseline</span>
@@ -4172,7 +4181,7 @@ function countBy(items, mapper) {
 
 function renderSettingsPanel(title, rows) {
   return `
-    <article class="settings-panel">
+    <article id="settings-${escapeHtml(normalizeId(title, "settings"))}" class="settings-panel">
       <header>
         <h2>${escapeHtml(t(title))}</h2>
       </header>
