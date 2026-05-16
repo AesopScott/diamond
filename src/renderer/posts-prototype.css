@@ -2057,6 +2057,17 @@ textarea {
   width: 100%;
 }
 
+.danger-action {
+  border-color: rgba(239, 80, 72, 0.55);
+  color: #ffb3ad;
+}
+
+.danger-action:hover,
+.danger-action:focus-visible {
+  background: rgba(239, 80, 72, 0.16);
+  border-color: rgba(239, 80, 72, 0.8);
+}
+
 .strategy-card h3 {
   color: var(--muted);
   font-size: 12px;

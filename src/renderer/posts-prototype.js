@@ -1357,6 +1357,7 @@ function renderCompanies() {
         </dl>
         <section class="account-actions" aria-label="Company actions">
           <button type="button" data-company-action="save">Save company</button>
+          <button type="button" class="danger-action" data-company-action="delete">Delete company</button>
         </section>
       </article>
     </aside>
@@ -1396,6 +1397,7 @@ function renderBrands() {
         </dl>
         <section class="account-actions" aria-label="Brand actions">
           <button type="button" data-brand-action="save">Save brand</button>
+          <button type="button" class="danger-action" data-brand-action="delete">Delete brand</button>
         </section>
       </article>
       <article class="strategy-card">
@@ -1442,6 +1444,10 @@ function renderBrandPanel(title, items = []) {
 async function handleCompanyWorkspaceClick(event) {
   const button = event.target.closest("[data-company-action]");
   if (!button) return;
+  if (button.dataset.companyAction === "delete") {
+    await deleteSelectedCompany();
+    return;
+  }
   if (button.dataset.companyAction !== "save") return;
   const workspace = document.querySelector("#company-workspace");
   const companyId = normalizeId(workspace?.querySelector('[data-company-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
@@ -1460,6 +1466,29 @@ async function handleCompanyWorkspaceClick(event) {
   renderBrands();
   renderCampaigns();
   renderTemplates();
+}
+
+async function deleteSelectedCompany() {
+  const workspace = document.querySelector("#company-workspace");
+  const companyId = normalizeId(workspace?.querySelector('[data-company-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
+  if (!companyId || !(state.companies || []).some((company) => company.id === companyId)) return;
+  const company = (state.companies || []).find((item) => item.id === companyId);
+  const ok = window.confirm(`Delete ${company?.name || companyId}? This also removes its brands, campaigns, accounts, templates, and campaign strategy.`);
+  if (!ok) return;
+  const brandIds = new Set((state.brands || []).filter((brand) => brand.companyId === companyId).map((brand) => brand.id));
+  const campaignIds = new Set((state.campaigns || []).filter((campaign) => campaign.companyId === companyId || brandIds.has(campaign.brandId)).map((campaign) => campaign.id));
+  removeCompanyScopedRecords(companyId, brandIds, campaignIds);
+  state.companies = (state.companies || []).filter((item) => item.id !== companyId);
+  selectFirstAvailableScope();
+  selectedAccountId = (state.socialAccounts || []).some((account) => account.id === selectedAccountId) ? selectedAccountId : "";
+  accountCreatorOpen = false;
+  await saveProductionState();
+  renderCompanies();
+  renderBrands();
+  renderCampaigns();
+  renderAccounts(selectedAccountId);
+  renderTemplates();
+  renderOperatorDrawer();
 }
 
 async function addCompanyRecord() {
@@ -1779,6 +1808,10 @@ function setActiveAccount(account) {
 async function handleBrandWorkspaceClick(event) {
   const button = event.target.closest("[data-brand-action]");
   if (!button) return;
+  if (button.dataset.brandAction === "delete") {
+    await deleteSelectedBrand();
+    return;
+  }
   if (button.dataset.brandAction !== "save") return;
   const scope = saveBrandWorkspace();
   state.context = { ...state.context, companyId: scope.companyId, brandId: scope.brandId };
@@ -1786,6 +1819,36 @@ async function handleBrandWorkspaceClick(event) {
   renderBrands();
   renderAccounts(selectedAccountId);
   renderCampaigns();
+  renderTemplates();
+  renderOperatorDrawer();
+}
+
+async function deleteSelectedBrand() {
+  const workspace = document.querySelector("#brand-workspace");
+  const companyId = normalizeId(workspace?.querySelector('[data-brand-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
+  const brandId = normalizeId(workspace?.querySelector('[data-brand-field="contextBrandId"]')?.value || state.context?.brandId, "brandId");
+  if (!brandId || !(state.brands || []).some((brand) => brand.id === brandId)) return;
+  const brand = (state.brands || []).find((item) => item.id === brandId);
+  const ok = window.confirm(`Delete ${brand?.name || brandId}? This also removes its campaigns, accounts, templates, and brand rules.`);
+  if (!ok) return;
+  const campaignIds = new Set((state.campaigns || []).filter((campaign) => campaign.brandId === brandId).map((campaign) => campaign.id));
+  removeBrandScopedRecords(companyId, brandId, campaignIds);
+  state.brands = (state.brands || []).filter((item) => item.id !== brandId);
+  const nextBrand = (state.brands || []).find((item) => item.companyId === companyId) || (state.brands || [])[0] || {};
+  const nextCampaign = (state.campaigns || []).find((item) => item.companyId === (nextBrand.companyId || companyId) && item.brandId === nextBrand.id) || {};
+  state.context = {
+    ...state.context,
+    companyId: nextBrand.companyId || companyId,
+    brandId: nextBrand.id || "",
+    campaignId: nextCampaign.id || "",
+  };
+  selectedAccountId = (state.socialAccounts || []).some((account) => account.id === selectedAccountId) ? selectedAccountId : "";
+  accountCreatorOpen = false;
+  await saveProductionState();
+  renderCompanies();
+  renderBrands();
+  renderCampaigns();
+  renderAccounts(selectedAccountId);
   renderTemplates();
   renderOperatorDrawer();
 }
@@ -1846,7 +1909,7 @@ function renderCampaigns() {
         </dl>
         <section class="account-actions" aria-label="Campaign actions">
           <button type="button" data-campaign-action="save">Save campaign</button>
-          <button type="button" data-campaign-action="set-active">Set active campaign</button>
+          <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
         </section>
       </article>
       <article class="strategy-card">
@@ -1902,9 +1965,38 @@ async function handleCampaignWorkspaceChange(event) {
 async function handleCampaignWorkspaceClick(event) {
   const button = event.target.closest("[data-campaign-action]");
   if (!button) return;
+  if (button.dataset.campaignAction === "delete") {
+    await deleteSelectedCampaign();
+    return;
+  }
   const scope = saveCampaignWorkspace();
   state.context = { ...state.context, ...scope };
   await saveProductionState();
+  renderCampaigns();
+  renderTemplates();
+  renderOperatorDrawer();
+}
+
+async function deleteSelectedCampaign() {
+  const workspace = document.querySelector("#campaign-workspace");
+  const companyId = normalizeId(workspace?.querySelector('[data-campaign-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
+  const brandId = normalizeId(workspace?.querySelector('[data-campaign-field="contextBrandId"]')?.value || state.context?.brandId, "brandId");
+  const campaignId = normalizeId(workspace?.querySelector('[data-campaign-field="contextCampaignId"]')?.value || state.context?.campaignId, "campaignId");
+  if (!campaignId || !(state.campaigns || []).some((campaign) => campaign.id === campaignId)) return;
+  const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
+  const ok = window.confirm(`Delete ${campaign?.name || campaignId}? This removes its strategy and campaign-specific drafts/templates.`);
+  if (!ok) return;
+  removeCampaignScopedRecords(campaignId);
+  state.campaigns = (state.campaigns || []).filter((item) => item.id !== campaignId);
+  const nextCampaign = (state.campaigns || []).find((item) => item.companyId === companyId && item.brandId === brandId) || {};
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId,
+    campaignId: nextCampaign.id || "",
+  };
+  await saveProductionState();
+  renderCompanies();
   renderCampaigns();
   renderTemplates();
   renderOperatorDrawer();
@@ -1951,6 +2043,62 @@ function listValueForBrandField(workspace, field) {
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function removeCompanyScopedRecords(companyId, brandIds = new Set(), campaignIds = new Set()) {
+  removeBrandCollectionRecords(brandIds);
+  removeCampaignCollectionRecords(campaignIds);
+  state.brands = (state.brands || []).filter((brand) => brand.companyId !== companyId);
+  state.campaigns = (state.campaigns || []).filter((campaign) => campaign.companyId !== companyId && !campaignIds.has(campaign.id));
+  state.socialAccounts = (state.socialAccounts || []).filter((account) => account.companyId !== companyId);
+  state.socialTemplates = (state.socialTemplates || []).filter((template) => template.companyId !== companyId);
+  state.creativeAssets = (state.creativeAssets || []).filter((asset) => asset.companyId !== companyId);
+  state.creativeNeeds = (state.creativeNeeds || []).filter((need) => need.context?.companyId !== companyId);
+  state.approvalPolicies = (state.approvalPolicies || []).filter((policy) => policy.companyId !== companyId);
+}
+
+function removeBrandScopedRecords(companyId, brandId, campaignIds = new Set()) {
+  removeBrandCollectionRecords(new Set([brandId]));
+  removeCampaignCollectionRecords(campaignIds);
+  state.campaigns = (state.campaigns || []).filter((campaign) => campaign.brandId !== brandId);
+  state.socialAccounts = (state.socialAccounts || []).filter((account) => account.brandId !== brandId);
+  state.socialTemplates = (state.socialTemplates || []).filter((template) => template.brandId !== brandId);
+  state.creativeAssets = (state.creativeAssets || []).filter((asset) => asset.brandId !== brandId);
+  state.creativeNeeds = (state.creativeNeeds || []).filter((need) => need.context?.brandId !== brandId);
+  state.approvalPolicies = (state.approvalPolicies || []).filter((policy) => policy.brandId !== brandId);
+  state.context = { ...state.context, companyId, brandId: "", campaignId: "" };
+}
+
+function removeCampaignScopedRecords(campaignId) {
+  removeCampaignCollectionRecords(new Set([campaignId]));
+}
+
+function removeBrandCollectionRecords(brandIds = new Set()) {
+  state.brandLibraries = (state.brandLibraries || []).filter((library) => !brandIds.has(library.brandId));
+  state.claimLibraries = (state.claimLibraries || []).filter((library) => !brandIds.has(library.brandId));
+}
+
+function removeCampaignCollectionRecords(campaignIds = new Set()) {
+  state.contentStrategies = (state.contentStrategies || []).filter((strategy) => !campaignIds.has(strategy.campaignId));
+  state.socialTemplates = (state.socialTemplates || []).filter((template) => !campaignIds.has(template.campaignId));
+  state.creativeAssets = (state.creativeAssets || []).filter((asset) => !campaignIds.has(asset.campaignId));
+  state.creativeNeeds = (state.creativeNeeds || []).filter((need) => !campaignIds.has(need.context?.campaignId));
+  state.postPackages = (state.postPackages || []).filter((postPackage) => !campaignIds.has(postPackage.context?.campaignId));
+  state.platformDrafts = (state.platformDrafts || []).filter((draft) => !campaignIds.has(draft.context?.campaignId) && !campaignIds.has(draft.campaignId));
+  state.drafts = (state.drafts || []).filter((draft) => !campaignIds.has(draft.context?.campaignId) && !campaignIds.has(draft.campaignId));
+  state.scheduledPosts = (state.scheduledPosts || []).filter((post) => !campaignIds.has(post.context?.campaignId));
+}
+
+function selectFirstAvailableScope() {
+  const company = (state.companies || [])[0] || {};
+  const brand = (state.brands || []).find((item) => item.companyId === company.id) || {};
+  const campaign = (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id) || {};
+  state.context = {
+    ...state.context,
+    companyId: company.id || "",
+    brandId: brand.id || "",
+    campaignId: campaign.id || "",
+  };
 }
 
 async function ensureBrandSupportRecords(brand) {
