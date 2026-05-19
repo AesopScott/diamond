@@ -1,3 +1,15 @@
 {
-  "tasks": []
+  "tasks": [
+    {
+      "number": 1,
+      "title": "Build the 25 experts automation engine.",
+      "description": "Build the engine that will take the videos that have been synced to Aesop Academy courses and create new content for all social media platforms, and build a schedule to share them.",
+      "category": "feature",
+      "priority": 80,
+      "status": "backlog",
+      "created_at": "2026-05-19",
+      "completed_at": null,
+      "dependencies": []
+    }
+  ]
 }
