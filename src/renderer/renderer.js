@@ -234,6 +234,8 @@ document.querySelector("#create-company").addEventListener("click", createCompan
 document.querySelector("#create-brand").addEventListener("click", createBrandFromForm);
 document.querySelector("#cancel-company").addEventListener("click", () => hideTenantForms());
 document.querySelector("#cancel-brand").addEventListener("click", () => hideTenantForms());
+document.querySelector("#delete-company").addEventListener("click", deleteSelectedCompany);
+document.querySelector("#delete-brand").addEventListener("click", deleteSelectedBrand);
 els.newCompanyName.addEventListener("keydown", (event) => {
   if (event.key === "Enter") createCompanyFromForm();
   if (event.key === "Escape") hideTenantForms();
@@ -341,7 +343,10 @@ document.querySelector("#pick-media").addEventListener("click", async () => {
 [els.company, els.brand, els.campaign, els.account].forEach((select) => {
   select.addEventListener("change", () => {
     activeDraft = null;
-    if (select === els.company || select === els.brand) hydrateDependentSelectors();
+    if (select === els.company || select === els.brand) {
+      hydrateDependentSelectors();
+      if (select === els.company) hideTenantForms();
+    }
     render();
   });
 });
@@ -784,6 +789,62 @@ async function createBrandFromForm() {
   setSelectIfPresent(els.account, account.id);
   hideTenantForms();
   log(`Brand created: ${brand.name}. A General campaign and X account shell were added.`);
+  render();
+}
+
+async function deleteSelectedCompany() {
+  const companyId = els.company.value;
+  if (!companyId) {
+    log("Delete company refused: no company selected.");
+    return;
+  }
+  const company = state.companies.find((row) => row.id === companyId);
+  if (!company) return;
+
+  const dependentBrands = state.brands.filter((row) => row.companyId === companyId);
+  if (dependentBrands.length > 0) {
+    log(`Delete company refused: ${dependentBrands.length} brand(s) depend on this company. Delete those first.`);
+    return;
+  }
+
+  state.companies = state.companies.filter((row) => row.id !== companyId);
+  if (state.approvalPolicies) {
+    state.approvalPolicies = state.approvalPolicies.filter((row) => row.companyId !== companyId);
+  }
+  await window.diamond.saveState(state);
+  fillSelect(els.company, state.companies);
+  hydrateDependentSelectors();
+  hideTenantForms();
+  log(`Company deleted: ${company.name}.`);
+  render();
+}
+
+async function deleteSelectedBrand() {
+  const brandId = els.brand.value;
+  if (!brandId) {
+    log("Delete brand refused: no brand selected.");
+    return;
+  }
+  const brand = state.brands.find((row) => row.id === brandId);
+  if (!brand) return;
+
+  const dependentCampaigns = state.campaigns.filter((row) => row.brandId === brandId);
+  if (dependentCampaigns.length > 0) {
+    log(`Delete brand refused: ${dependentCampaigns.length} campaign(s) depend on this brand. Delete those first.`);
+    return;
+  }
+
+  const dependentAccounts = state.socialAccounts.filter((row) => row.brandId === brandId);
+  if (dependentAccounts.length > 0) {
+    log(`Delete brand refused: ${dependentAccounts.length} social account(s) depend on this brand. Delete those first.`);
+    return;
+  }
+
+  state.brands = state.brands.filter((row) => row.id !== brandId);
+  await window.diamond.saveState(state);
+  hydrateDependentSelectors();
+  hideTenantForms();
+  log(`Brand deleted: ${brand.name}.`);
   render();
 }
 

@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session } = require("electron");
+const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -17,7 +18,6 @@ loadLocalEnv();
 app.setPath("userData", APP_DIR);
 app.commandLine.appendSwitch("disk-cache-dir", CHROMIUM_CACHE_DIR);
 app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
-repairVolatileChromiumStorage();
 
 function ensureAppDir() {
   fs.mkdirSync(APP_DIR, { recursive: true });
@@ -84,26 +84,6 @@ function partitionExists(partitionId) {
   return fs.existsSync(path.join(APP_DIR, "Partitions", partitionId));
 }
 
-function repairVolatileChromiumStorage() {
-  [
-    CHROMIUM_CACHE_DIR,
-    path.join(APP_DIR, "Cache"),
-    path.join(APP_DIR, "Code Cache"),
-    path.join(APP_DIR, "DawnCache"),
-    path.join(APP_DIR, "GPUCache"),
-    path.join(APP_DIR, "Service Worker", "Database"),
-    path.join(APP_DIR, "Service Worker", "ScriptCache"),
-    path.join(APP_DIR, "QuotaManager"),
-    path.join(APP_DIR, "QuotaManager-journal"),
-  ].forEach((target) => {
-    try {
-      fs.rmSync(target, { recursive: true, force: true });
-    } catch {
-      // Cache repair is best-effort. Never block the app over disposable Chromium storage.
-    }
-  });
-}
-
 function createWindow() {
   ensureAppDir();
   const win = new BrowserWindow({
@@ -150,6 +130,7 @@ ipcMain.handle("diamond:get-paths", () => ({
   syncDir: SYNC_DIR,
   chromiumCacheDir: CHROMIUM_CACHE_DIR,
 }));
+ipcMain.handle("diamond:inspect-account-session", async (_event, input = {}) => inspectAccountSession(input));
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));
@@ -162,6 +143,102 @@ ipcMain.handle("diamond:get-firebase-admin-status", () => {
     reason: configuredPath ? exists ? "Firebase admin JSON path is configured and exists." : "Firebase admin JSON path is configured but the file was not found." : "No Firebase admin JSON path configured.",
   };
 });
+
+async function inspectAccountSession(input = {}) {
+  const account = input.account || {};
+  const partition = String(input.partition || "").startsWith("persist:")
+    ? String(input.partition)
+    : `persist:${sanitizePartitionPart(input.partition || account.browserPartitionId || account.browserProfileId)}`;
+  const urls = accountSessionProbeUrls(account);
+  const authCookieNames = authCookieNamesForPlatform(account.platform);
+  if (!urls.length || !authCookieNames.length) {
+    return { ok: true, status: "unknown", note: "No session cookie probe is configured for this platform.", partition };
+  }
+  try {
+    const store = session.fromPartition(partition);
+    const cookieGroups = await Promise.all(urls.map(async (url) => {
+      try {
+        return await store.cookies.get({ url });
+      } catch {
+        return [];
+      }
+    }));
+    const cookies = cookieGroups.flat();
+    const names = new Set(cookies.map((cookie) => cookie.name));
+    const hasAuthCookie = authCookieNames.some((name) => names.has(name));
+    if (hasAuthCookie) {
+      return {
+        ok: true,
+        status: "ready",
+        note: `${platformLabel(account.platform)} session cookies are present in Diamond's browser profile.`,
+        partition,
+        cookieCount: cookies.length,
+      };
+    }
+    return {
+      ok: true,
+      status: "unknown",
+      note: `${platformLabel(account.platform)} session cookies were not found in Diamond's browser profile.`,
+      partition,
+      cookieCount: cookies.length,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "unknown",
+      note: error?.message || "Could not inspect the Diamond browser session.",
+      partition,
+    };
+  }
+}
+
+function accountSessionProbeUrls(account = {}) {
+  const defaults = {
+    linkedin: ["https://www.linkedin.com/", "https://linkedin.com/"],
+    facebook: ["https://www.facebook.com/", "https://facebook.com/"],
+    x: ["https://x.com/", "https://twitter.com/"],
+    instagram: ["https://www.instagram.com/", "https://instagram.com/"],
+    tiktok: ["https://www.tiktok.com/", "https://tiktok.com/"],
+    "youtube-shorts": ["https://www.youtube.com/", "https://studio.youtube.com/"],
+    "youtube-longform": ["https://www.youtube.com/", "https://studio.youtube.com/"],
+    pinterest: ["https://www.pinterest.com/", "https://pinterest.com/"],
+    reddit: ["https://www.reddit.com/", "https://reddit.com/"],
+  };
+  return [
+    account.accountUrl,
+    account.currentUrl,
+    account.loginPanelUrl,
+    ...(defaults[account.platform] || []),
+  ].filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index);
+}
+
+function authCookieNamesForPlatform(platform = "") {
+  return {
+    linkedin: ["li_at"],
+    facebook: ["c_user", "xs"],
+    x: ["auth_token"],
+    instagram: ["sessionid", "ds_user_id"],
+    tiktok: ["sessionid", "sid_tt", "sid_guard"],
+    "youtube-shorts": ["SAPISID", "APISID", "SSID", "HSID"],
+    "youtube-longform": ["SAPISID", "APISID", "SSID", "HSID"],
+    pinterest: ["_pinterest_sess"],
+    reddit: ["reddit_session"],
+  }[platform] || [];
+}
+
+function platformLabel(platform = "") {
+  return {
+    linkedin: "LinkedIn",
+    facebook: "Facebook",
+    x: "X",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    "youtube-shorts": "YouTube Shorts",
+    "youtube-longform": "YouTube Long Form",
+    pinterest: "Pinterest",
+    reddit: "Reddit",
+  }[platform] || platform || "Platform";
+}
 ipcMain.handle("diamond:get-firebase-license", (_event, input = {}) => fetchFirebaseLicense(input));
 ipcMain.handle("diamond:export-sync-bundle", (_event, input = {}) => {
   ensureAppDir();
@@ -262,6 +339,8 @@ ipcMain.handle("diamond:write-clipboard", (_event, text) => {
   clipboard.writeText(String(text || ""));
   return true;
 });
+ipcMain.handle("diamond:dashlane-search", async (_event, input = {}) => searchDashlane(input));
+ipcMain.handle("diamond:dashlane-copy-field", async (_event, input = {}) => copyDashlaneField(input));
 ipcMain.handle("diamond:save-screenshot", (_event, input = {}) => {
   ensureAppDir();
   const name = String(input.name || `screenshot-${Date.now()}`).replace(/[^a-z0-9_.-]+/gi, "-");
@@ -376,6 +455,187 @@ function inspectMediaPath(filePath) {
     exists,
     size,
   };
+}
+
+async function searchDashlane(input = {}) {
+  const query = dashlaneQuery(input);
+  if (!query) return { ok: false, reason: "No account URL, handle, or platform query is available.", entries: [] };
+  const result = await runDashlane(["p", query, "-o", "json"]);
+  if (!result.ok) return { ...result, entries: [] };
+  const entries = parseDashlaneEntries(result.stdout);
+  return {
+    ok: true,
+    query,
+    entries: entries.map(redactDashlaneEntry),
+  };
+}
+
+async function copyDashlaneField(input = {}) {
+  const field = normalizeDashlaneField(input.field);
+  if (!field) return { ok: false, reason: "Unsupported Dashlane field." };
+  const query = dashlaneQuery(input);
+  if (!query) return { ok: false, reason: "No account URL, handle, or platform query is available." };
+  const result = await runDashlane(["p", query, "-f", field, "-o", "console"]);
+  if (!result.ok) return result;
+  const value = String(result.stdout || "").trim();
+  if (!value) return { ok: false, reason: `Dashlane did not return a ${field} value for this account.` };
+  clipboard.writeText(value);
+  return {
+    ok: true,
+    query,
+    field,
+    copied: true,
+  };
+}
+
+function dashlaneQuery(input = {}) {
+  if (input.dashlaneId) return `id=${input.dashlaneId}`;
+  const candidates = [
+    input.accountUrl,
+    input.loginUrl,
+    input.expectedHost,
+    input.handle,
+    input.platform,
+  ];
+  return String(candidates.find((value) => String(value || "").trim()) || "").trim();
+}
+
+function normalizeDashlaneField(field) {
+  const value = String(field || "").trim().toLowerCase();
+  if (["login", "email", "password", "otp"].includes(value)) return value;
+  return "";
+}
+
+function parseDashlaneEntries(stdout = "") {
+  const text = String(stdout || "").trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed.items)) return parsed.items;
+    if (Array.isArray(parsed.data)) return parsed.data;
+    return [parsed];
+  } catch {
+    return [];
+  }
+}
+
+function redactDashlaneEntry(entry = {}) {
+  const title = entry.title || entry.name || entry.itemName || "";
+  const url = entry.url || entry.website || entry.domain || "";
+  const login = entry.login || entry.email || entry.username || "";
+  const id = entry.id || entry.itemId || "";
+  return {
+    id: String(id || ""),
+    title: String(title || ""),
+    url: String(url || ""),
+    login: String(login || ""),
+    hasPassword: Boolean(entry.password || entry.hasPassword || entry.otp),
+    hasOtp: Boolean(entry.otp || entry.hasOtp),
+  };
+}
+
+function runDashlane(args = []) {
+  return new Promise((resolve) => {
+    const candidates = dashlaneCommandCandidates();
+    runDashlaneCandidate(candidates, args, [], resolve);
+  });
+}
+
+function dashlaneCommandCandidates() {
+  const configured = process.env.DIAMOND_DASHLANE_CLI || process.env.DASHLANE_CLI || "";
+  return [
+    configured,
+    "dcli",
+    "dcli.exe",
+    "dcli.cmd",
+    "C:\\Tools\\Dashlane\\dcli.exe",
+  ].filter(Boolean).filter((value, index, list) => list.indexOf(value) === index);
+}
+
+function runDashlaneCandidate(candidates, args, failures, done) {
+  const [command, ...rest] = candidates;
+  if (!command) {
+    done({
+      ok: false,
+      reason: dashlaneUnavailableReason(failures),
+      stdout: "",
+      stderr: failures.map((failure) => `${failure.command}: ${failure.reason}`).join("\n"),
+    });
+    return;
+  }
+  runDashlaneCommand(command, args, (result) => {
+    if (result.ok) return done({ ...result, command });
+    const nextFailures = [...failures, { command, reason: result.reason }];
+    if (isDashlaneLaunchFailure(result)) return runDashlaneCandidate(rest, args, nextFailures, done);
+    return done({ ...result, command });
+  });
+}
+
+function runDashlaneCommand(command, args, done) {
+  let child = null;
+  let settled = false;
+  const finish = (result) => {
+    if (settled) return;
+    settled = true;
+    done(result);
+  };
+  try {
+    child = execFile(command, args, {
+      windowsHide: true,
+      timeout: 30000,
+      maxBuffer: 1024 * 1024,
+    }, (error, stdout, stderr) => {
+      if (error) {
+        finish({
+          ok: false,
+          reason: dashlaneErrorReason(error, stderr),
+          stdout: "",
+          stderr: String(stderr || ""),
+        });
+        return;
+      }
+      finish({
+        ok: true,
+        stdout: String(stdout || ""),
+        stderr: String(stderr || ""),
+      });
+    });
+  } catch (error) {
+    finish({
+      ok: false,
+      reason: dashlaneErrorReason(error, ""),
+      stdout: "",
+      stderr: String(error?.message || ""),
+    });
+    return;
+  }
+  child?.on?.("error", (error) => {
+    if (error?.code === "EINVAL") {
+      finish({
+        ok: false,
+        reason: dashlaneErrorReason(error, ""),
+        stdout: "",
+        stderr: String(error?.message || ""),
+      });
+    }
+  });
+}
+
+function dashlaneErrorReason(error, stderr = "") {
+  const message = String(stderr || error?.message || "").trim();
+  if (error?.code === "ENOENT") return "Dashlane CLI was not found. Install and sign in to dcli, then try again.";
+  if (error?.code === "EINVAL") return "Dashlane CLI could not be started from this path.";
+  return message || "Dashlane CLI command failed.";
+}
+
+function isDashlaneLaunchFailure(result = {}) {
+  return /not found|could not be started from this path/i.test(result.reason || "");
+}
+
+function dashlaneUnavailableReason(failures = []) {
+  const tried = failures.map((failure) => failure.command).filter(Boolean).join(", ");
+  return `Dashlane CLI could not be started from Diamond${tried ? ` after trying: ${tried}` : ""}.`;
 }
 
 function safeName(value) {

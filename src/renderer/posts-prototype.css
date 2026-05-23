@@ -1811,6 +1811,80 @@ textarea {
   padding: 12px 14px;
 }
 
+.account-dashlane-panel {
+  background: color-mix(in srgb, var(--surface-2) 88%, #1473e6 12%);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, #4f9cff 30%);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px;
+}
+
+.account-dashlane-panel header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.account-dashlane-panel h3,
+.account-dashlane-panel p {
+  margin: 0;
+}
+
+.account-dashlane-panel p,
+.account-dashlane-panel header > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.account-dashlane-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.account-dashlane-actions button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 950;
+  min-height: 36px;
+  padding: 7px 9px;
+}
+
+.account-dashlane-actions button:first-child {
+  background: color-mix(in srgb, #1473e6 28%, var(--surface));
+  border-color: color-mix(in srgb, #4f9cff 60%, var(--line));
+}
+
+.account-dashlane-match {
+  display: grid;
+  gap: 6px;
+}
+
+.account-dashlane-match span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.account-dashlane-match select {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 850;
+  min-height: 36px;
+  padding: 7px 9px;
+  width: 100%;
+}
+
 .eyebrow {
   color: var(--muted);
   display: block;
@@ -1859,7 +1933,7 @@ textarea {
   border-radius: 0;
   bottom: 0;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
   left: 240px;
   margin-bottom: 0;
   overflow: hidden;
@@ -2021,6 +2095,59 @@ textarea {
   padding: 6px 8px;
 }
 
+.account-dashlane-inline {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-2) 86%, #1473e6 14%);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.2fr) repeat(4, minmax(120px, 160px));
+  padding: 8px 10px;
+}
+
+.account-dashlane-inline div {
+  min-width: 0;
+}
+
+.account-dashlane-inline strong,
+.account-dashlane-inline span {
+  display: block;
+}
+
+.account-dashlane-inline strong {
+  font-size: 12px;
+}
+
+.account-dashlane-inline span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-dashlane-inline button,
+.account-dashlane-inline select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 950;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.account-dashlane-inline button {
+  cursor: pointer;
+}
+
+.account-dashlane-inline [data-account-action="dashlane-find"] {
+  background: color-mix(in srgb, #1473e6 32%, var(--surface));
+  border-color: color-mix(in srgb, #4f9cff 62%, var(--line));
+}
+
 .account-login-webview-shell {
   background: #030405;
   display: flex;
@@ -2030,6 +2157,33 @@ textarea {
   overflow: hidden;
   position: relative;
   width: 100%;
+}
+
+.account-login-placeholder {
+  align-items: center;
+  background: linear-gradient(180deg, #10151d 0%, #07090d 100%);
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  z-index: 1;
+}
+
+.account-login-placeholder strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.account-login-placeholder span {
+  font-size: 13px;
+  font-weight: 800;
+  max-width: 520px;
 }
 
 #account-login-webview {
@@ -2390,12 +2544,13 @@ textarea {
 
 .brand-panels {
   align-content: start;
+  align-items: start;
   display: grid;
   gap: 12px;
-  align-items: start;
   grid-auto-flow: row;
   grid-auto-rows: 292px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto;
   min-width: 0;
 }
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const js = readFileSync(new URL("../src/renderer/posts-prototype.js", import.meta.url), "utf8");
+const main = readFileSync(new URL("../src/electron/main.cjs", import.meta.url), "utf8");
 
 function functionBody(name) {
   const start = js.indexOf(`function ${name}`);
@@ -24,6 +25,7 @@ const accountBrowserFunctions = [
   "scheduleAccountLoginResizePasses",
   "refreshAccountLoginWebviewBounds",
   "forceRefreshAccountLoginWebviewBounds",
+  "accountVisibleBrowserUrl",
   "reloadAccountLoginPanel",
   "loadAccountLoginPanelUrl",
   "destroyAccountLoginWebview",
@@ -62,6 +64,26 @@ assert.doesNotMatch(
   "Selecting an account must not automatically load the platform login page.",
 );
 assert.match(
+  functionBody("accountAutoRestoreUrl"),
+  /sessionStatus !== "ready"/,
+  "Only accounts marked ready should automatically restore a platform page.",
+);
+assert.doesNotMatch(
+  functionBody("accountAutoRestoreUrl"),
+  /loginUrl|normalizeLoginUrl|resolveLoginUrl/,
+  "Automatic account restore must not choose the platform login URL.",
+);
+assert.match(
+  functionBody("accountVisibleBrowserUrl"),
+  /accountBrowserLoadedAccountIds\.has/,
+  "Manual account loads should survive the save/render cycle for the selected account.",
+);
+assert.match(
+  js,
+  /accountBrowserLoadedAccountIds\.add\(account\.id\)/,
+  "Load actions should mark the selected account as intentionally loaded in this app session.",
+);
+assert.match(
   js,
   /ACCOUNT_LOGIN_ACTION_COOLDOWNS/,
   "Manual login controls should remain rate-limited.",
@@ -70,6 +92,11 @@ assert.match(
   functionBody("forceRefreshAccountLoginWebviewBounds"),
   /sizeAccountLoginWebview/,
   "Fit browser should only resize the surface, not reload or recreate it.",
+);
+assert.doesNotMatch(
+  main,
+  /repairVolatileChromiumStorage\(\)|Service Worker|QuotaManager|fs\.rmSync\(target/,
+  "App startup must not delete Chromium storage that can hold social login state.",
 );
 
 console.log("All Diamond account browser safety tests passed.");

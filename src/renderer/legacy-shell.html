@@ -32,14 +32,20 @@
               <button id="save-state" type="button" aria-label="Save tenant selection">Save</button>
             </div>
           </div>
-          <label>
-            Company
-            <select id="company-select"></select>
-          </label>
-          <label>
-            Brand
-            <select id="brand-select"></select>
-          </label>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <label style="flex: 1;">
+              Company
+              <select id="company-select"></select>
+            </label>
+            <button id="delete-company" type="button" title="Delete selected company" style="padding: 8px 12px; margin-bottom: 0;">Delete</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <label style="flex: 1;">
+              Brand
+              <select id="brand-select"></select>
+            </label>
+            <button id="delete-brand" type="button" title="Delete selected brand" style="padding: 8px 12px; margin-bottom: 0;">Delete</button>
+          </div>
           <label>
             Campaign
             <select id="campaign-select"></select>
