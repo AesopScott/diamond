@@ -629,7 +629,9 @@ function wirePrototypeControls() {
   document.querySelector("#account-detail")?.addEventListener("change", handleAccountDetailChange);
   document.querySelector("#account-detail")?.addEventListener("submit", handleAccountDetailSubmit);
   document.querySelector("#company-workspace")?.addEventListener("click", handleCompanyWorkspaceClick);
+  document.querySelector("#company-workspace")?.addEventListener("change", handleCompanyWorkspaceChange);
   document.querySelector("#brand-workspace")?.addEventListener("click", handleBrandWorkspaceClick);
+  document.querySelector("#brand-workspace")?.addEventListener("change", handleBrandWorkspaceChange);
   document.querySelector("#campaign-workspace")?.addEventListener("click", handleCampaignWorkspaceClick);
   document.querySelector("#campaign-workspace")?.addEventListener("change", handleCampaignWorkspaceChange);
   document.querySelector("#templates-workspace")?.addEventListener("change", handleTemplateScopeChange);
@@ -1953,6 +1955,20 @@ function renderBrandPanel(title, items = []) {
   return renderEditableBrandPanel(title, normalizeId(title, "brandPanel"), items);
 }
 
+function handleCompanyWorkspaceChange(event) {
+  const field = event.target.closest("[data-company-field]");
+  if (!field || field.dataset.companyField !== "contextCompanyId") return;
+  const companyId = normalizeId(field.value, "companyId");
+  const firstBrand = (state.brands || []).find((brand) => brand.companyId === companyId);
+  state.context = {
+    ...state.context,
+    companyId,
+    brandId: firstBrand?.id || "",
+    campaignId: "",
+  };
+  renderCompanies();
+}
+
 async function handleCompanyWorkspaceClick(event) {
   const button = event.target.closest("[data-company-action]");
   if (!button) return;
@@ -2610,6 +2626,32 @@ function setActiveAccount(account) {
     browserProfileId: account.browserProfileId,
   };
   selectedAccountId = account.id;
+}
+
+function handleBrandWorkspaceChange(event) {
+  const field = event.target.closest("[data-brand-field]");
+  if (!field) return;
+  if (field.dataset.brandField === "contextCompanyId") {
+    const companyId = normalizeId(field.value, "companyId");
+    const firstBrand = (state.brands || []).find((brand) => brand.companyId === companyId);
+    state.context = {
+      ...state.context,
+      companyId,
+      brandId: firstBrand?.id || "",
+      campaignId: "",
+    };
+    renderBrands();
+  } else if (field.dataset.brandField === "contextBrandId") {
+    const brandId = normalizeId(field.value, "brandId");
+    const brand = (state.brands || []).find((b) => b.id === brandId);
+    state.context = {
+      ...state.context,
+      companyId: brand?.companyId || state.context?.companyId || "",
+      brandId,
+      campaignId: "",
+    };
+    renderBrands();
+  }
 }
 
 async function handleBrandWorkspaceClick(event) {
