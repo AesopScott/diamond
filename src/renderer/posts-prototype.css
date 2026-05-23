@@ -269,10 +269,22 @@ button:disabled {
 
 .prototype-logo {
   align-items: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
   display: flex;
+  font-family: inherit;
+  font-size: inherit;
   gap: 8px;
   letter-spacing: 0.12em;
   margin: 0 6px 28px;
+  padding: 0;
+  text-align: left;
+}
+
+.prototype-logo:hover span {
+  opacity: 0.8;
 }
 
 .prototype-logo span {

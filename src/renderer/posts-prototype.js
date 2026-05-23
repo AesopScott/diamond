@@ -562,6 +562,10 @@ function boardMoveStatuses(currentStatus) {
 
 function wirePrototypeControls() {
   document.querySelector("#prototype-nav").addEventListener("click", handlePrototypeNav);
+  document.querySelector(".prototype-logo")?.addEventListener("click", () => {
+    showPrototypeView("posts-view");
+    document.querySelectorAll("#prototype-nav a").forEach((item) => item.classList.toggle("active", item.dataset.view === "posts-view"));
+  });
   document.querySelector("#operator-toggle")?.addEventListener("click", toggleOperatorDrawer);
   document.querySelector("#operator-close")?.addEventListener("click", closeOperatorDrawer);
   document.querySelector("#create-post").addEventListener("click", () => openCreateDetail());
