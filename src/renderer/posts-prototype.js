@@ -259,6 +259,15 @@ const DEFAULT_GUIDANCE_MODULES = Object.freeze([
   { key: "blockedClaims", title: "Blocked claims", source: "claimLibrary", valueType: "list", placeholder: "One blocked claim per line" },
 ]);
 
+const DEFAULT_CAMPAIGN_GUIDANCE_MODULES = Object.freeze([
+  { key: "strategyCta", strategyField: "cta", title: "Primary CTA", valueType: "text", placeholder: "The main action this campaign should drive" },
+  { key: "strategyOffer", strategyField: "offer", title: "Offer", valueType: "text", placeholder: "The promise, prize, hook, or value offered" },
+  { key: "strategyGoals", strategyField: "goals", title: "Goals", valueType: "list", placeholder: "One campaign goal per line" },
+  { key: "strategyAudience", strategyField: "audience", title: "Audience", valueType: "list", placeholder: "One audience segment per line" },
+  { key: "strategyPillars", strategyField: "pillars", title: "Pillars", valueType: "list", placeholder: "One campaign content pillar per line" },
+  { key: "referenceAccounts", strategyField: "referenceAccounts", title: "Reference accounts", valueType: "list", placeholder: "One reference account per line" },
+]);
+
 const state = await loadProductionState();
 state.themeId = normalizeThemeId(state.themeId);
 state.customThemeSwatches = normalizeCustomThemeSwatches(state.customThemeSwatches, themeSwatchesFor(state.themeId));
@@ -286,6 +295,8 @@ let activeTourTarget = null;
 let activeTourAudio = null;
 let accountCreatorOpen = false;
 let accountLoginResizeObserver = null;
+let accountBrowserLoadedAccountIds = new Set();
+let accountSessionInspectionInFlight = new Set();
 let calendarFilters = { platform: "all", window: "week", campaign: "all" };
 const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "open-login": 30000,
@@ -343,6 +354,7 @@ function hydrateSavedWorkspace(saved) {
     brandLibraries: saved.brandLibraries?.length ? saved.brandLibraries : defaults.brandLibraries,
     claimLibraries: saved.claimLibraries?.length ? saved.claimLibraries : defaults.claimLibraries,
     brandGuidanceModules: saved.brandGuidanceModules?.length ? saved.brandGuidanceModules : defaults.brandGuidanceModules || [],
+    campaignGuidanceModules: saved.campaignGuidanceModules?.length ? saved.campaignGuidanceModules : defaults.campaignGuidanceModules || [],
     approvalPolicies: saved.approvalPolicies?.length ? saved.approvalPolicies : defaults.approvalPolicies,
     cadencePolicies: saved.cadencePolicies?.length ? saved.cadencePolicies : defaults.cadencePolicies,
     drafts: saved.drafts || [],
@@ -552,7 +564,7 @@ function wirePrototypeControls() {
   document.querySelector("#prototype-nav").addEventListener("click", handlePrototypeNav);
   document.querySelector("#operator-toggle")?.addEventListener("click", toggleOperatorDrawer);
   document.querySelector("#operator-close")?.addEventListener("click", closeOperatorDrawer);
-  document.querySelector("#create-post").addEventListener("click", openCreateDetail);
+  document.querySelector("#create-post").addEventListener("click", () => openCreateDetail());
   document.querySelector("#calendar-create-schedule")?.addEventListener("click", () => {
     showPrototypeView("posts-view");
     document.querySelectorAll("#prototype-nav a").forEach((item) => item.classList.toggle("active", item.dataset.view === "posts-view"));
@@ -589,6 +601,7 @@ function wirePrototypeControls() {
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
   document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
+  document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
   document.querySelector("#detail-add-platform")?.addEventListener("click", addPlatformToActivePackage);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
@@ -1038,13 +1051,13 @@ function renderAccounts(selectedAccountId) {
   if (selected) selectedAccountId = selected.id;
   if (scope) scope.innerHTML = renderAccountScope(companyId, brandId, accounts);
   target.innerHTML = `
-    ${renderAccountPlatformStatusBoard(companyId, brandId, accounts, selected?.id)}
     ${accounts.map((account) => renderAccountCard(account, selected?.id)).join("") || `<div class="empty-column">No accounts for this company and brand yet.</div>`}
   `;
   detail.innerHTML = accountCreatorOpen
     ? renderAccountCreator(selected)
     : selected ? renderAccountDetail(selected) : `<div class="empty-column">No social accounts configured.</div>`;
   if (!accountCreatorOpen && selected && activePrototypeView === "accounts-view") initializeAccountLoginWebview(selected);
+  refreshAccountsFromPersistedSessions(accounts, selected?.id);
 }
 
 function accountsForScope(companyId, brandId) {
@@ -1098,7 +1111,7 @@ function renderAccountCard(account, selectedAccountId) {
         <small>${escapeHtml(account.handle || account.id)}</small>
         <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
       </span>
-      <em class="session-pill ${escapeHtml(status)}">${escapeHtml(titleCase(status))}</em>
+      <em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>
     </button>
   `;
 }
@@ -1118,6 +1131,52 @@ function accountBrowserPartition(account) {
     postingMode: state.context?.postingMode || "stage_for_review",
   });
   return `persist:${(browserProfileId || profilePath).replace(/[^a-z0-9-]+/gi, "-")}`;
+}
+
+async function refreshAccountsFromPersistedSessions(accounts = [], selectedAccountId = "") {
+  if (!window.diamond?.inspectAccountSession) return;
+  const pending = accounts.filter((account) => account?.id && !accountSessionInspectionInFlight.has(account.id));
+  if (!pending.length) return;
+  pending.forEach((account) => accountSessionInspectionInFlight.add(account.id));
+  let changed = false;
+  try {
+    const results = await Promise.all(pending.map(async (account) => {
+      const result = await window.diamond.inspectAccountSession({
+        account: sessionProbeAccountPayload(account),
+        partition: accountBrowserPartition(account),
+      });
+      return { account, result };
+    }));
+    results.forEach(({ account, result }) => {
+      if (result?.status !== "ready" || account.sessionStatus === "ready") return;
+      account.sessionStatus = "ready";
+      account.sessionNote = result.note || "Logged-in session found in Diamond's browser profile.";
+      account.lastSessionCheckAt = new Date().toISOString();
+      account.lastLoginProofAt ||= account.lastSessionCheckAt;
+      account.lastProofAt ||= account.lastLoginProofAt;
+      updateAccountStatusDom(account);
+      changed = true;
+    });
+    if (changed) {
+      await saveProductionState();
+      renderAccounts(selectedAccountId);
+      renderOperatorDrawer();
+    }
+  } finally {
+    pending.forEach((account) => accountSessionInspectionInFlight.delete(account.id));
+  }
+}
+
+function sessionProbeAccountPayload(account) {
+  return {
+    id: account.id || "",
+    platform: account.platform || "",
+    accountUrl: account.accountUrl || "",
+    currentUrl: account.currentUrl || "",
+    loginPanelUrl: account.loginPanelUrl || "",
+    browserProfileId: account.browserProfileId || "",
+    browserPartitionId: account.browserPartitionId || "",
+  };
 }
 
 function renderAccountScope(companyId, brandId, accounts = []) {
@@ -1161,14 +1220,15 @@ function renderAccountDetail(account) {
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
           <p>${escapeHtml(account.handle || "Add the username for this account")}</p>
         </div>
-        <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</em>
+        <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</em>
       </header>
       <p class="account-login-note">Use this pane to log into the official platform page and visually confirm the account is signed in. Diamond does not save social-media passwords or bypass verification.</p>
       ${activePrototypeView === "accounts-view" ? renderAccountLoginBrowser(account, partition, loginUrl) : ""}
+      ${renderAccountDashlanePanel(account)}
       <section class="account-session-panel" aria-label="Login status">
         <div>
           <span class="eyebrow">Login status</span>
-          <strong>${escapeHtml(titleCase(account.sessionStatus || "unknown"))}</strong>
+          <strong>${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</strong>
         </div>
         <div>
           <span class="eyebrow">Last proof</span>
@@ -1210,10 +1270,46 @@ function renderAccountDetail(account) {
   `;
 }
 
+function renderAccountDashlanePanel(account) {
+  const status = account.dashlaneStatus || "Not checked";
+  const matches = Array.isArray(account.dashlaneMatches) ? account.dashlaneMatches : [];
+  const selectedId = account.dashlaneCredentialId || matches[0]?.id || "";
+  return `
+    <section class="account-dashlane-panel" aria-label="Dashlane account recovery">
+      <header>
+        <div>
+          <span class="eyebrow">Dashlane</span>
+          <h3>Account info</h3>
+        </div>
+        <span>${escapeHtml(status)}</span>
+      </header>
+      <p>Find the matching Dashlane item for this platform. Diamond copies fields only when you click and never saves the password.</p>
+      <div class="account-dashlane-actions">
+        <button type="button" data-account-action="dashlane-find" data-account-id="${escapeHtml(account.id)}">Find in Dashlane</button>
+        <button type="button" data-account-action="dashlane-copy-login" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy username</button>
+        <button type="button" data-account-action="dashlane-copy-password" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy password</button>
+        <button type="button" data-account-action="dashlane-copy-otp" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy 2FA code</button>
+      </div>
+      ${matches.length ? `
+        <label class="account-dashlane-match">
+          <span>Matched login</span>
+          <select data-account-field="dashlaneCredentialId">
+            ${matches.map((match) => `
+              <option value="${escapeHtml(match.id || "")}" ${match.id === selectedId ? "selected" : ""}>
+                ${escapeHtml([match.title, match.login, match.url].filter(Boolean).join(" / ") || "Dashlane item")}
+              </option>
+            `).join("")}
+          </select>
+        </label>
+      ` : ""}
+    </section>
+  `;
+}
+
 function initializeAccountLoginWebview(account) {
   const webview = document.querySelector("#account-login-webview");
   if (!webview) return;
-  wireAccountLoginWebviewEvents(webview);
+  wireAccountLoginWebviewEvents(webview, account);
   if (accountLoginResizeObserver) accountLoginResizeObserver.disconnect();
   const shell = document.querySelector(".account-login-webview-shell");
   if (shell && typeof ResizeObserver !== "undefined") {
@@ -1222,21 +1318,139 @@ function initializeAccountLoginWebview(account) {
   }
   window.addEventListener("resize", () => requestAnimationFrame(refreshAccountLoginWebviewBounds));
   requestAnimationFrame(sizeAccountLoginWebview);
-  updateAccountLoginBrowserStatus(account.sessionNote || "Ready to load login page.");
+  updateAccountLoginBrowserStatus(accountInitialBrowserStatus(account));
   scheduleAccountLoginResizePasses();
 }
 
-function wireAccountLoginWebviewEvents(webview) {
+function accountInitialBrowserStatus(account) {
+  if (accountAutoRestoreUrl(account)) return `Restoring ${platformLabel(account.platform)} with the saved browser session.`;
+  if (accountBrowserLoadedAccountIds.has(account?.id) && (account.loginPanelUrl || account.currentUrl)) return `Loading ${safeUrlLabel(account.loginPanelUrl || account.currentUrl)}...`;
+  return account.sessionNote || `Ready. Click Load login, Load composer, Load profile, or Go to open ${platformLabel(account.platform)}.`;
+}
+
+function wireAccountLoginWebviewEvents(webview, account) {
   if (!webview || webview.dataset.wired === "true") return;
   webview.dataset.wired = "true";
+  webview.dataset.accountId = account?.id || "";
   webview.addEventListener?.("dom-ready", () => {
     updateAccountLoginBrowserStatus("Login pane loaded.");
+    refreshAccountStatusFromBrowser(account);
+    setTimeout(() => refreshAccountStatusFromBrowser(account), 1200);
     sizeAccountLoginWebview();
   });
-  webview.addEventListener?.("did-navigate", () => updateAccountLoginBrowserStatus());
-  webview.addEventListener?.("did-navigate-in-page", () => updateAccountLoginBrowserStatus());
+  webview.addEventListener?.("did-navigate", (event) => {
+    updateAccountLoginBrowserStatus();
+    refreshAccountStatusFromBrowser(account, event?.url);
+  });
+  webview.addEventListener?.("did-navigate-in-page", (event) => {
+    updateAccountLoginBrowserStatus();
+    refreshAccountStatusFromBrowser(account, event?.url);
+  });
   webview.addEventListener?.("did-fail-load", (event) => {
     updateAccountLoginBrowserStatus(event?.errorDescription || "The platform blocked or failed to load in the pane.");
+  });
+}
+
+async function refreshAccountStatusFromBrowser(account, url = "") {
+  if (!account) return;
+  const currentUrl = url || accountLoginWebviewUrl();
+  if (!currentUrl || currentUrl === "about:blank") return;
+  const inferred = await inferAccountBrowserSessionStatus(account, currentUrl);
+  const nextStatus = accountStatusFromSessionStatus(inferred.status);
+  const changed = account.currentUrl !== currentUrl
+    || account.loginPanelUrl !== currentUrl
+    || account.sessionStatus !== nextStatus
+    || account.sessionNote !== inferred.note;
+  account.currentUrl = currentUrl;
+  account.loginPanelUrl = currentUrl;
+  account.sessionStatus = nextStatus;
+  account.sessionNote = inferred.note;
+  account.lastSessionCheckAt = new Date().toISOString();
+  if (nextStatus === "ready" && !account.lastLoginProofAt) account.lastLoginProofAt = account.lastSessionCheckAt;
+  if (!changed) return;
+  updateAccountStatusDom(account);
+  await saveProductionState();
+}
+
+async function inferAccountBrowserSessionStatus(account, currentUrl) {
+  const inferred = inferSessionStatusFromUrl(currentUrl, account);
+  const snapshot = await accountBrowserPageSnapshot();
+  const liveStatus = inferAccountStatusFromPageSnapshot(account, currentUrl, snapshot);
+  return liveStatus || inferred;
+}
+
+async function accountBrowserPageSnapshot() {
+  const webview = document.querySelector("#account-login-webview");
+  if (!webview || typeof webview.executeJavaScript !== "function") return null;
+  try {
+    return await webview.executeJavaScript(`(() => ({
+      href: location.href,
+      title: document.title || "",
+      text: (document.body?.innerText || "").slice(0, 5000)
+    }))()`);
+  } catch {
+    return null;
+  }
+}
+
+function inferAccountStatusFromPageSnapshot(account, currentUrl, snapshot) {
+  if (!snapshot) return null;
+  const text = normalizePageProofText([snapshot.title, snapshot.text].join(" "));
+  const url = String(snapshot.href || currentUrl || "");
+  if (!text) return null;
+  if (pageSnapshotShowsLogin(account, url, text)) {
+    return { status: "login_required", note: "The platform is showing a login page." };
+  }
+  if (pageSnapshotShowsLoggedInPlatform(account, text)) {
+    return { status: "ready", note: "Logged-in platform UI is visible in the account browser." };
+  }
+  return null;
+}
+
+function pageSnapshotShowsLogin(account, url, text) {
+  const platform = account?.platform || "";
+  if (platform === "linkedin") return /sign in|join linkedin|email or phone|forgot password/.test(text) && !/my network|messaging|notifications/.test(text);
+  if (platform === "facebook") return /log in to facebook|forgot password|create new account/.test(text) && !/what's on your mind|news feed|friends|messenger/.test(text);
+  return /log in|sign in|forgot password/.test(text) && /login|signin|account\/access/i.test(url);
+}
+
+function pageSnapshotShowsLoggedInPlatform(account, text) {
+  const platform = account?.platform || "";
+  if (platform === "linkedin") return /home/.test(text) && /my network/.test(text) && /messaging/.test(text) && /notifications/.test(text);
+  if (platform === "facebook") return /what's on your mind|news feed|friends|messenger|notifications/.test(text) && !/log in to facebook/.test(text);
+  if (platform === "x") return /home/.test(text) && (/post/.test(text) || /messages/.test(text) || /notifications/.test(text));
+  if (platform === "tiktok") return /for you|following|profile|upload/.test(text) && !/log in to tiktok/.test(text);
+  if (platform?.startsWith("youtube-")) return /youtube studio|create|upload|dashboard/.test(text) && !/sign in/.test(text);
+  if (platform === "instagram") return /home|search|explore|reels|messages|notifications/.test(text) && !/log in|sign up/.test(text);
+  return null;
+}
+
+function normalizePageProofText(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function accountStatusFromSessionStatus(status) {
+  if (status === "ready") return "ready";
+  if (status === "login_required") return "needs_login";
+  return status || "unknown";
+}
+
+function updateAccountStatusDom(account) {
+  const label = statusLabel(account.sessionStatus || "unknown");
+  document.querySelectorAll("[data-account-id]").forEach((node) => {
+    if (node.dataset.accountId !== account.id) return;
+    node.querySelectorAll?.(".session-pill").forEach((pill) => {
+      pill.className = `session-pill ${account.sessionStatus || "unknown"}`;
+      pill.textContent = label;
+    });
+  });
+  const detailPill = document.querySelector(".account-login-panel > header .session-pill");
+  if (detailPill) {
+    detailPill.className = `session-pill ${account.sessionStatus || "unknown"}`;
+    detailPill.textContent = label;
+  }
+  document.querySelectorAll(".account-session-panel strong").forEach((node, index) => {
+    if (index === 0) node.textContent = label;
   });
 }
 
@@ -1289,9 +1503,39 @@ function forceRefreshAccountLoginWebviewBounds() {
   updateAccountLoginBrowserStatus("Browser surface fitted without reloading the page.");
 }
 
+function accountAutoRestoreUrl(account) {
+  if (account?.sessionStatus !== "ready") return "";
+  return [
+    account.currentUrl,
+    account.accountUrl,
+    normalizeAccountUrl(account.handle, account.platform),
+  ].find(Boolean) || "";
+}
+
+function accountVisibleBrowserUrl(account) {
+  const autoRestoreUrl = accountAutoRestoreUrl(account);
+  if (autoRestoreUrl) return autoRestoreUrl;
+  if (!accountBrowserLoadedAccountIds.has(account?.id)) return "";
+  return [
+    account.loginPanelUrl,
+    account.currentUrl,
+  ].find(Boolean) || "";
+}
+
 function renderAccountLoginBrowser(account, partition, loginUrl) {
-  const previewUrl = account.loginPanelUrl || account.currentUrl || "about:blank";
+  const loadedUrl = accountVisibleBrowserUrl(account) || "about:blank";
+  const hasLoadedPage = loadedUrl !== "about:blank";
+  const suggestedUrl = hasLoadedPage ? loadedUrl : [
+    account.loginPanelUrl,
+    account.currentUrl,
+    loginUrl,
+    normalizeAccountUrl(account.handle, account.platform),
+  ].find(Boolean) || "about:blank";
   const handle = account.handle || account.id || "No handle set";
+  const readyMessage = hasLoadedPage
+    ? `Restoring ${platformLabel(account.platform)} with the saved browser session.`
+    : `Ready. Click Load login, Load composer, Load profile, or Go to open ${platformLabel(account.platform)}.`;
+  const statusMessage = hasLoadedPage ? readyMessage : account.sessionNote || readyMessage;
   return `
     <section class="account-login-browser" aria-labelledby="account-login-browser-heading">
       <header>
@@ -1301,7 +1545,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
           <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
           <p class="account-login-safety-note">For brand-new social accounts, finish first login in normal Chrome when possible. Diamond rate-limits login controls so platforms do not see rapid repeated login checks.</p>
         </div>
-        <span id="account-login-browser-status">${escapeHtml(account.sessionNote || "Ready to load login page.")}</span>
+        <span id="account-login-browser-status">${escapeHtml(statusMessage)}</span>
       </header>
       <section class="account-login-context" aria-label="Selected account context">
         <label><span>Company</span><select data-login-scope-field="companyId">${companyOptions(account.companyId)}</select></label>
@@ -1311,7 +1555,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       </section>
       <form class="account-login-address" data-account-login-address-form data-account-id="${escapeHtml(account.id)}" aria-label="Account browser address bar">
         <label for="account-login-address-input">Address</label>
-        <input id="account-login-address-input" data-account-login-address-input type="text" value="${escapeHtml(previewUrl)}" autocomplete="off" spellcheck="false">
+        <input id="account-login-address-input" data-account-login-address-input type="text" value="${escapeHtml(suggestedUrl)}" autocomplete="off" spellcheck="false">
         <button type="submit">Go</button>
       </form>
       <div class="account-login-browser-toolbar">
@@ -1325,15 +1569,43 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <button type="button" data-account-action="fit-login-panel" data-account-id="${escapeHtml(account.id)}">Fit browser</button>
         <button type="button" data-account-action="close-login-panel" data-account-id="${escapeHtml(account.id)}">Close pane</button>
       </div>
+      ${renderAccountDashlaneInline(account)}
       <div class="account-login-webview-shell">
+        ${hasLoadedPage ? "" : `<div class="account-login-placeholder"><strong>${escapeHtml(platformLabel(account.platform))} is selected.</strong><span>Use the buttons above to load the login, composer, profile, or address bar page.</span></div>`}
         <webview
           id="account-login-webview"
           title="${escapeHtml(platformLabel(account.platform))} login preview"
           partition="${escapeHtml(partition)}"
-          src="${escapeHtml(previewUrl)}"
+          src="${escapeHtml(loadedUrl)}"
           allowpopups
         ></webview>
       </div>
+    </section>
+  `;
+}
+
+function renderAccountDashlaneInline(account) {
+  const matches = Array.isArray(account.dashlaneMatches) ? account.dashlaneMatches : [];
+  const selectedId = account.dashlaneCredentialId || matches[0]?.id || "";
+  return `
+    <section class="account-dashlane-inline" aria-label="Dashlane account info">
+      <div>
+        <strong>Dashlane</strong>
+        <span>${escapeHtml(account.dashlaneStatus || "Find saved credentials for this account.")}</span>
+      </div>
+      ${matches.length ? `
+        <select data-account-field="dashlaneCredentialId" aria-label="Matched Dashlane login">
+          ${matches.map((match) => `
+            <option value="${escapeHtml(match.id || "")}" ${match.id === selectedId ? "selected" : ""}>
+              ${escapeHtml([match.title, match.login, match.url].filter(Boolean).join(" / ") || "Dashlane item")}
+            </option>
+          `).join("")}
+        </select>
+      ` : ""}
+      <button type="button" data-account-action="dashlane-find" data-account-id="${escapeHtml(account.id)}">Find in Dashlane</button>
+      <button type="button" data-account-action="dashlane-copy-login" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy username</button>
+      <button type="button" data-account-action="dashlane-copy-password" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy password</button>
+      <button type="button" data-account-action="dashlane-copy-otp" data-account-id="${escapeHtml(account.id)}" ${selectedId ? "" : "disabled"}>Copy 2FA</button>
     </section>
   `;
 }
@@ -1618,19 +1890,20 @@ function guidanceModulesForBrand(brandId, library = {}, claims = {}) {
   return existing.sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
 }
 
-function renderGuidanceModuleBar(modules = []) {
+function renderGuidanceModuleBar(modules = [], scope = "brand") {
+  const actionPrefix = scope === "campaign" ? "campaign" : "brand";
   return `
-    <nav class="guidance-module-bar" aria-label="Brand guidance modules">
+    <nav class="guidance-module-bar" aria-label="${scope === "campaign" ? "Campaign" : "Brand"} guidance modules">
       ${modules.map((module) => `
         <button
           type="button"
           class="${module.enabled === false ? "" : "active"}"
-          data-brand-action="toggle-guidance-module"
+          data-${actionPrefix}-action="toggle-guidance-module"
           data-guidance-module-id="${escapeHtml(module.id)}"
           aria-pressed="${module.enabled === false ? "false" : "true"}"
         >${escapeHtml(module.title || "Guidance module")}</button>
       `).join("")}
-      <button type="button" class="add-guidance-module" data-brand-action="add-guidance-module">+ Add guidance module</button>
+      <button type="button" class="add-guidance-module" data-${actionPrefix}-action="add-guidance-module">+ Add guidance module</button>
     </nav>
   `;
 }
@@ -1641,19 +1914,21 @@ function renderSimpleList(items = [], emptyText = "Nothing assigned yet.") {
   return `<ul>${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
-function renderGuidanceModulePanel(module) {
+function renderGuidanceModulePanel(module, scope = "brand") {
   const list = listValueFromText(module.content);
   const rows = module.valueType === "text" ? 4 : 5;
+  const actionPrefix = scope === "campaign" ? "campaign" : "brand";
+  const contentAttribute = scope === "campaign" ? "data-campaign-guidance-module-content" : "data-guidance-module-content";
   return `
-    <article id="brand-guidance-${escapeHtml(module.id)}" class="brand-panel editable-brand-panel guidance-module-panel">
+    <article id="${scope === "campaign" ? "campaign" : "brand"}-guidance-${escapeHtml(module.id)}" class="brand-panel editable-brand-panel guidance-module-panel">
       <header>
         <h3>${escapeHtml(module.title || "Guidance module")}</h3>
         <span class="count">${module.valueType === "text" ? (module.content ? 1 : 0) : list.length}</span>
       </header>
-      <textarea data-guidance-module-content="${escapeHtml(module.id)}" rows="${rows}" placeholder="${escapeHtml(module.placeholder || "One guidance item per line")}">${escapeHtml(module.content || "")}</textarea>
+      <textarea ${contentAttribute}="${escapeHtml(module.id)}" rows="${rows}" placeholder="${escapeHtml(module.placeholder || "One guidance item per line")}">${escapeHtml(module.content || "")}</textarea>
       <footer>
         <span>${escapeHtml(module.valueType === "text" ? "Text guidance" : "List guidance")}</span>
-        <button type="button" class="danger-action" data-brand-action="delete-guidance-module" data-guidance-module-id="${escapeHtml(module.id)}">Delete module</button>
+        <button type="button" class="danger-action" data-${actionPrefix}-action="delete-guidance-module" data-guidance-module-id="${escapeHtml(module.id)}">Delete module</button>
       </footer>
     </article>
   `;
@@ -1729,8 +2004,10 @@ async function deleteSelectedCompany() {
 }
 
 async function addCompanyRecord() {
-  const name = uniqueRecordName("New company", state.companies);
-  const company = createCompanyRecord({ name });
+  const name = prompt("What is the company's name?");
+  if (!name || !name.trim()) return;
+  const uniqueName = uniqueRecordName(name.trim(), state.companies);
+  const company = createCompanyRecord({ name: uniqueName });
   state.companies ||= [];
   state.companies.push(company);
   state.context = {
@@ -1750,8 +2027,10 @@ async function addCompanyRecord() {
 async function addBrandRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   if (!companyId) return;
-  const name = uniqueRecordName("New brand", state.brands?.filter((brand) => brand.companyId === companyId));
-  const brand = createBrandRecord({ name, companyId });
+  const name = prompt("What is the brand's name?");
+  if (!name || !name.trim()) return;
+  const uniqueName = uniqueRecordName(name.trim(), state.brands?.filter((brand) => brand.companyId === companyId));
+  const brand = createBrandRecord({ name: uniqueName, companyId });
   state.brands ||= [];
   state.brands.push(brand);
   state.context = {
@@ -1773,8 +2052,10 @@ async function addCampaignRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
   if (!companyId || !brandId) return;
-  const name = uniqueRecordName("New campaign", state.campaigns?.filter((campaign) => campaign.companyId === companyId && campaign.brandId === brandId));
-  const campaign = createCampaignRecord({ name, companyId, brandId });
+  const name = prompt("What is the campaign's name?");
+  if (!name || !name.trim()) return;
+  const uniqueName = uniqueRecordName(name.trim(), state.campaigns?.filter((campaign) => campaign.companyId === companyId && campaign.brandId === brandId));
+  const campaign = createCampaignRecord({ name: uniqueName, companyId, brandId });
   state.campaigns ||= [];
   state.campaigns.push(campaign);
   state.context = {
@@ -1990,8 +2271,12 @@ async function handleAccountDetailClick(event) {
   }
   if (button.dataset.accountAction === "check-login-panel") {
     if (!guardAccountLoginAction(account, "check-login-panel")) return;
-    checkAccountLoginPanel(account);
+    await checkAccountLoginPanel(account);
   }
+  if (button.dataset.accountAction === "dashlane-find") await findDashlaneAccount(account);
+  if (button.dataset.accountAction === "dashlane-copy-login") await copyDashlaneAccountField(account, "login");
+  if (button.dataset.accountAction === "dashlane-copy-password") await copyDashlaneAccountField(account, "password");
+  if (button.dataset.accountAction === "dashlane-copy-otp") await copyDashlaneAccountField(account, "otp");
   if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
   if (button.dataset.accountAction === "copy-login-password") await copyAccountLoginPassword();
   if (button.dataset.accountAction === "mark-logged-in") markAccountLoggedIn(account);
@@ -2009,6 +2294,51 @@ async function handleAccountDetailClick(event) {
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
+}
+
+async function findDashlaneAccount(account) {
+  account.dashlaneStatus = "Searching...";
+  renderAccounts(account.id);
+  const result = await window.diamond?.dashlaneSearch?.(dashlanePayloadForAccount(account));
+  if (!result?.ok) {
+    account.dashlaneStatus = result?.reason || "Dashlane search failed.";
+    account.dashlaneMatches = [];
+    account.dashlaneCredentialId = "";
+    await saveProductionState();
+    renderAccounts(account.id);
+    return;
+  }
+  account.dashlaneMatches = (result.entries || []).filter((entry) => entry.id || entry.title || entry.login || entry.url);
+  account.dashlaneCredentialId = account.dashlaneMatches[0]?.id || "";
+  account.dashlaneStatus = account.dashlaneMatches.length
+    ? `${account.dashlaneMatches.length} match${account.dashlaneMatches.length === 1 ? "" : "es"} found`
+    : "No matching Dashlane item found.";
+  await saveProductionState();
+  renderAccounts(account.id);
+}
+
+async function copyDashlaneAccountField(account, field) {
+  saveAccountForm(account);
+  const result = await window.diamond?.dashlaneCopyField?.({
+    ...dashlanePayloadForAccount(account),
+    dashlaneId: account.dashlaneCredentialId || "",
+    field,
+  });
+  account.dashlaneStatus = result?.ok
+    ? `${field === "otp" ? "2FA code" : titleCase(field)} copied from Dashlane.`
+    : result?.reason || "Dashlane copy failed.";
+  await saveProductionState();
+  renderAccounts(account.id);
+}
+
+function dashlanePayloadForAccount(account) {
+  return {
+    platform: account.platform || "",
+    handle: account.handle || "",
+    accountUrl: account.accountUrl || "",
+    loginUrl: resolveLoginUrl(account) || "",
+    expectedHost: account.expectedHost || "",
+  };
 }
 
 async function handleAccountDetailChange(event) {
@@ -2081,6 +2411,7 @@ async function handleAccountDetailSubmit(event) {
   account.currentUrl = nextUrl;
   account.loginPanelUrl = nextUrl;
   account.lastManualNavigationAt = new Date().toISOString();
+  accountBrowserLoadedAccountIds.add(account.id);
   loadAccountLoginPanelUrl(nextUrl);
   await saveProductionState();
 }
@@ -2114,6 +2445,7 @@ async function openAccountLogin(account) {
   account.loginOpenedAt = new Date().toISOString();
   const loginUrl = resolveLoginUrl(account);
   account.loginPanelUrl = loginUrl || "about:blank";
+  accountBrowserLoadedAccountIds.add(account.id);
   loadAccountLoginPanelUrl(account.loginPanelUrl);
   account.sessionNote = loginUrl ? "Loaded official login page in the pane." : "No login URL is configured.";
 }
@@ -2129,6 +2461,7 @@ function loadAccountPublicProfile(account) {
   const publicUrl = account.accountUrl || normalizeAccountUrl(account.handle, account.platform);
   if (!publicUrl) return;
   account.loginPanelUrl = publicUrl;
+  accountBrowserLoadedAccountIds.add(account.id);
   loadAccountLoginPanelUrl(publicUrl);
   account.sessionNote = "Loaded public profile page in the pane.";
 }
@@ -2140,6 +2473,7 @@ function loadAccountComposePage(account) {
     return;
   }
   account.loginPanelUrl = composeUrl;
+  accountBrowserLoadedAccountIds.add(account.id);
   loadAccountLoginPanelUrl(composeUrl);
   account.sessionNote = account.platform?.startsWith("youtube-")
     ? "Loaded YouTube Studio. Use Create > Upload videos for Shorts or long-form uploads."
@@ -2165,12 +2499,12 @@ function accountLoginWebviewUrl() {
   return webview.getAttribute("src") || webview.src || "";
 }
 
-function checkAccountLoginPanel(account) {
+async function checkAccountLoginPanel(account) {
   const currentUrl = accountLoginWebviewUrl();
-  const inferred = inferSessionStatusFromUrl(currentUrl, account);
+  const inferred = await inferAccountBrowserSessionStatus(account, currentUrl);
   account.currentUrl = currentUrl;
   account.loginPanelUrl = currentUrl || account.loginPanelUrl;
-  account.sessionStatus = inferred.status;
+  account.sessionStatus = accountStatusFromSessionStatus(inferred.status);
   account.sessionNote = inferred.note;
   account.lastSessionCheckAt = new Date().toISOString();
   if (inferred.status === "ready") markAccountLoggedIn(account);
@@ -2263,6 +2597,7 @@ function saveAccountForm(account) {
   account.composeUrl = normalizeComposeUrl(valueFor("composeUrl"), account.platform);
   account.expectedHost = normalizeHost(valueFor("expectedHost") || account.accountUrl);
   account.browserProfileId = normalizeBrowserProfileId(valueFor("browserProfileId") || `${account.companyId}-${account.brandId}-${account.platform}-${account.id}`);
+  account.dashlaneCredentialId = valueFor("dashlaneCredentialId") || account.dashlaneCredentialId || "";
 }
 
 function setActiveAccount(account) {
@@ -2466,6 +2801,38 @@ function guidanceModuleSnapshot(module) {
   };
 }
 
+function guidanceModulesForCampaign(campaignId, strategy = {}) {
+  state.campaignGuidanceModules ||= [];
+  const existing = state.campaignGuidanceModules.filter((module) => module.campaignId === campaignId);
+  if (!campaignId) return [];
+  if (!existing.length) {
+    const now = new Date().toISOString();
+    const seeded = DEFAULT_CAMPAIGN_GUIDANCE_MODULES.map((definition, index) => {
+      const value = strategy[definition.strategyField] || "";
+      return {
+        id: normalizeId(`${campaignId}-${definition.key}`, "guidanceModuleId"),
+        companyId: strategy.companyId || "",
+        brandId: strategy.brandId || "",
+        campaignId,
+        key: definition.key,
+        strategyField: definition.strategyField,
+        title: definition.title,
+        source: "contentStrategy",
+        valueType: definition.valueType,
+        enabled: true,
+        content: Array.isArray(value) ? value.join("\n") : String(value || ""),
+        placeholder: definition.placeholder,
+        sortOrder: index + 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
+    state.campaignGuidanceModules.push(...seeded);
+    return seeded;
+  }
+  return existing.sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
+}
+
 function renderCampaigns() {
   const target = document.querySelector("#campaign-workspace");
   if (!target) return;
@@ -2479,6 +2846,7 @@ function renderCampaigns() {
     || (state.campaigns || []).find((item) => item.companyId === company.id && item.brandId === brand.id)
     || {};
   const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaign.id) || {};
+  const modules = guidanceModulesForCampaign(campaign.id, strategy);
   target.innerHTML = `
     <aside class="brand-overview" aria-label="Campaign overview">
       <article class="brand-identity-card">
@@ -2497,12 +2865,8 @@ function renderCampaigns() {
       </article>
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
-      ${renderEditableCampaignTextPanel("Primary CTA", "strategyCta", strategy.cta, "The main action this campaign should drive")}
-      ${renderEditableCampaignTextPanel("Offer", "strategyOffer", strategy.offer, "The promise, prize, hook, or value offered")}
-      ${renderEditableCampaignPanel("Goals", "strategyGoals", strategy.goals, "One campaign goal per line")}
-      ${renderEditableCampaignPanel("Audience", "strategyAudience", strategy.audience, "One audience segment per line")}
-      ${renderEditableCampaignPanel("Pillars", "strategyPillars", strategy.pillars, "One campaign content pillar per line")}
-      ${renderEditableCampaignPanel("Reference accounts", "referenceAccounts", strategy.referenceAccounts, "One reference account per line")}
+      ${renderGuidanceModuleBar(modules, "campaign")}
+      ${modules.filter((module) => module.enabled !== false).map((module) => renderGuidanceModulePanel(module, "campaign")).join("") || `<div class="empty-column">No guidance modules enabled for this campaign.</div>`}
     </section>
   `;
 }
@@ -2550,16 +2914,83 @@ async function handleCampaignWorkspaceChange(event) {
 async function handleCampaignWorkspaceClick(event) {
   const button = event.target.closest("[data-campaign-action]");
   if (!button) return;
+  if (button.dataset.campaignAction === "add-guidance-module") {
+    await addCampaignGuidanceModule();
+    return;
+  }
+  if (button.dataset.campaignAction === "toggle-guidance-module") {
+    await toggleCampaignGuidanceModule(button.dataset.guidanceModuleId);
+    return;
+  }
+  if (button.dataset.campaignAction === "delete-guidance-module") {
+    await deleteCampaignGuidanceModule(button.dataset.guidanceModuleId);
+    return;
+  }
   if (button.dataset.campaignAction === "delete") {
     await deleteSelectedCampaign();
     return;
   }
+  if (button.dataset.campaignAction !== "save") return;
   const scope = saveCampaignWorkspace();
   state.context = { ...state.context, ...scope };
   await saveProductionState();
   renderCampaigns();
   renderTemplates();
   renderOperatorDrawer();
+}
+
+async function addCampaignGuidanceModule() {
+  saveCampaignWorkspace();
+  const campaignId = state.context?.campaignId || (state.campaigns || [])[0]?.id || "";
+  if (!campaignId) return;
+  const campaign = (state.campaigns || []).find((item) => item.id === campaignId) || {};
+  const title = promptForText("Guidance module name", "New campaign guidance");
+  if (!title) return;
+  const now = new Date().toISOString();
+  const modules = guidanceModulesForCampaign(campaignId);
+  const id = normalizeId(`${campaignId}-${title}-${Date.now()}`, "guidanceModuleId");
+  state.campaignGuidanceModules.push({
+    id,
+    companyId: campaign.companyId || state.context?.companyId || "",
+    brandId: campaign.brandId || state.context?.brandId || "",
+    campaignId,
+    key: normalizeId(title, "guidanceModule"),
+    title,
+    source: "custom",
+    valueType: "list",
+    enabled: true,
+    content: "",
+    placeholder: "One guidance item per line",
+    sortOrder: modules.length + 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+  syncCampaignGuidanceModulesToStrategy(campaignId);
+  await saveProductionState();
+  renderCampaigns();
+}
+
+async function toggleCampaignGuidanceModule(moduleId) {
+  saveCampaignWorkspace();
+  const module = (state.campaignGuidanceModules || []).find((item) => item.id === moduleId);
+  if (!module) return;
+  module.enabled = module.enabled === false;
+  module.updatedAt = new Date().toISOString();
+  syncCampaignGuidanceModulesToStrategy(module.campaignId);
+  await saveProductionState();
+  renderCampaigns();
+}
+
+async function deleteCampaignGuidanceModule(moduleId) {
+  saveCampaignWorkspace();
+  const module = (state.campaignGuidanceModules || []).find((item) => item.id === moduleId);
+  if (!module) return;
+  const ok = window.confirm(`Delete guidance module "${module.title || module.id}"?`);
+  if (!ok) return;
+  state.campaignGuidanceModules = (state.campaignGuidanceModules || []).filter((item) => item.id !== moduleId);
+  syncCampaignGuidanceModulesToStrategy(module.campaignId);
+  await saveProductionState();
+  renderCampaigns();
 }
 
 async function deleteSelectedCampaign() {
@@ -2591,10 +3022,6 @@ async function deleteSelectedCampaign() {
 function saveCampaignWorkspace() {
   const workspace = document.querySelector("#campaign-workspace");
   const valueFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.value || "";
-  const listValueFor = (field) => (valueFor(field) || "")
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
   const brand = (state.brands || []).find((item) => item.id === brandId) || {};
   const companyId = brand.companyId || state.context?.companyId || "";
@@ -2614,15 +3041,35 @@ function saveCampaignWorkspace() {
   if (strategy) {
     strategy.companyId = companyId;
     strategy.brandId = brandId;
-    strategy.cta = valueFor("strategyCta") || strategy.cta;
-    strategy.offer = valueFor("strategyOffer") || strategy.offer;
-    strategy.goals = listValueFor("strategyGoals");
-    strategy.audience = listValueFor("strategyAudience");
-    strategy.pillars = listValueFor("strategyPillars");
-    strategy.referenceAccounts = listValueFor("referenceAccounts");
     strategy.updatedAt = new Date().toISOString();
   }
+  (state.campaignGuidanceModules || [])
+    .filter((module) => module.campaignId === campaignId)
+    .forEach((module) => {
+      module.companyId = companyId;
+      module.brandId = brandId;
+      const field = workspace?.querySelector(`[data-campaign-guidance-module-content="${module.id}"]`);
+      if (!field) return;
+      module.content = field.value || "";
+      module.updatedAt = new Date().toISOString();
+    });
+  syncCampaignGuidanceModulesToStrategy(campaignId);
   return { companyId, brandId, campaignId };
+}
+
+function syncCampaignGuidanceModulesToStrategy(campaignId) {
+  const modules = (state.campaignGuidanceModules || []).filter((module) => module.campaignId === campaignId && module.enabled !== false);
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
+  if (!strategy) return;
+  const moduleByStrategyField = (field) => modules.find((module) => module.strategyField === field);
+  strategy.cta = moduleByStrategyField("cta")?.content || strategy.cta || "";
+  strategy.offer = moduleByStrategyField("offer")?.content || strategy.offer || "";
+  strategy.goals = listValueFromText(moduleByStrategyField("goals")?.content);
+  strategy.audience = listValueFromText(moduleByStrategyField("audience")?.content);
+  strategy.pillars = listValueFromText(moduleByStrategyField("pillars")?.content);
+  strategy.referenceAccounts = listValueFromText(moduleByStrategyField("referenceAccounts")?.content);
+  strategy.guidanceModules = modules.map(guidanceModuleSnapshot);
+  strategy.updatedAt = new Date().toISOString();
 }
 
 function listValueForBrandField(workspace, field) {
@@ -2668,6 +3115,7 @@ function removeBrandCollectionRecords(brandIds = new Set()) {
 
 function removeCampaignCollectionRecords(campaignIds = new Set()) {
   state.contentStrategies = (state.contentStrategies || []).filter((strategy) => !campaignIds.has(strategy.campaignId));
+  state.campaignGuidanceModules = (state.campaignGuidanceModules || []).filter((module) => !campaignIds.has(module.campaignId));
   state.socialTemplates = (state.socialTemplates || []).filter((template) => !campaignIds.has(template.campaignId));
   state.creativeAssets = (state.creativeAssets || []).filter((asset) => !campaignIds.has(asset.campaignId));
   state.creativeNeeds = (state.creativeNeeds || []).filter((need) => !campaignIds.has(need.context?.campaignId));
@@ -4786,38 +5234,96 @@ function formatAutomation(value) {
   return String(value || "off");
 }
 
-function openCreateDetail() {
+async function openCreateDetail() {
   const context = state.context;
   const now = new Date().toISOString();
   const guidance = guidanceForContext(context);
+  const accounts = await readyAccountsForPostContext(context);
+  const primaryAccount = accounts[0] || (state.socialAccounts || []).find((account) => account.id === context.socialAccountId) || {};
+  const packageContext = {
+    ...context,
+    platform: primaryAccount.platform || context.platform || "x",
+    socialAccountId: primaryAccount.id || context.socialAccountId || "",
+    browserProfileId: primaryAccount.browserProfileId || context.browserProfileId || "",
+  };
   const postPackage = createPostPackage({
     id: `package-${Date.now()}`,
-    context,
+    context: packageContext,
     ideaText: "Write the core post idea here, then generate platform versions.",
     brandGuidanceModules: guidance.modules,
     brandGuidanceSummary: guidance.summary,
+    campaignGuidanceModules: guidance.campaignModules,
+    campaignGuidanceSummary: guidance.campaignSummary,
     tags: ["draft"],
     source: "diamond-shell",
     createdAt: now,
     updatedAt: now,
   });
-  const platforms = ["linkedin", "x"];
-  const drafts = platforms.map((platform) => createPlatformDraft({
-    id: `${postPackage.id}-${platform}`,
-    postPackage,
-    context,
-    platform,
-    socialAccountId: socialAccountIdForPlatform(platform),
-    text: platformCopy(postPackage.ideaText, platform),
-    brandGuidanceModules: guidance.modules,
-    brandGuidanceSummary: guidance.summary,
-    status: "draft",
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const drafts = createPlatformDraftsForAccounts(postPackage, accounts, guidance, now);
   upsertPostPackage(postPackage, drafts);
-  saveProductionState();
+  await saveProductionState();
   openDetail(postPackage, drafts);
+}
+
+async function readyAccountsForPostContext(context = {}) {
+  const accounts = (state.socialAccounts || [])
+    .filter((account) => {
+      return (!context.companyId || account.companyId === context.companyId)
+        && (!context.brandId || account.brandId === context.brandId);
+    })
+    .sort((left, right) => SUPPORTED_SOCIAL_PLATFORMS.indexOf(left.platform) - SUPPORTED_SOCIAL_PLATFORMS.indexOf(right.platform));
+  await inspectAccountsForPostCreation(accounts);
+  const ready = accounts.filter((account) => account.sessionStatus === "ready");
+  return ready.length ? ready : accounts.filter((account) => account.id === context.socialAccountId);
+}
+
+async function inspectAccountsForPostCreation(accounts = []) {
+  if (!window.diamond?.inspectAccountSession) return;
+  const results = await Promise.all(accounts.map(async (account) => {
+    const result = await window.diamond.inspectAccountSession({
+      account: sessionProbeAccountPayload(account),
+      partition: accountBrowserPartition(account),
+    });
+    return { account, result };
+  }));
+  let changed = false;
+  results.forEach(({ account, result }) => {
+    if (result?.status !== "ready" || account.sessionStatus === "ready") return;
+    account.sessionStatus = "ready";
+    account.sessionNote = result.note || "Logged-in session found in Diamond's browser profile.";
+    account.lastSessionCheckAt = new Date().toISOString();
+    changed = true;
+  });
+  if (changed) await saveProductionState();
+}
+
+function createPlatformDraftsForAccounts(postPackage, accounts = [], guidance = {}, now = new Date().toISOString()) {
+  const uniqueAccounts = accounts.filter((account, index, list) => {
+    return account?.platform && index === list.findIndex((item) => item.platform === account.platform);
+  });
+  return uniqueAccounts.map((account) => {
+    const context = {
+      ...postPackage.context,
+      platform: account.platform,
+      socialAccountId: account.id,
+      browserProfileId: account.browserProfileId || postPackage.context.browserProfileId || "",
+    };
+    return createPlatformDraft({
+      id: `${postPackage.id}-${account.platform}`,
+      postPackage,
+      context,
+      platform: account.platform,
+      socialAccountId: account.id,
+      text: platformCopy(postPackage.ideaText, account.platform),
+      brandGuidanceModules: guidance.modules,
+      brandGuidanceSummary: guidance.summary,
+      campaignGuidanceModules: guidance.campaignModules,
+      campaignGuidanceSummary: guidance.campaignSummary,
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
 }
 
 function openPackageDetail(packageId) {
@@ -5448,11 +5954,31 @@ async function addPlatformToActivePackage() {
     text: platformCopy(postPackage.ideaText || "", platform),
     brandGuidanceModules: guidance.modules,
     brandGuidanceSummary: guidance.summary,
+    campaignGuidanceModules: guidance.campaignModules,
+    campaignGuidanceSummary: guidance.campaignSummary,
     status: "draft",
     createdAt: now,
     updatedAt: now,
   });
   prototypeModel.platformDrafts.push(draft);
+  updatePostPackageFromDrafts(postPackage.id);
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+async function addAllReadyPlatformsToActivePackage() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const existingPlatforms = new Set(prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId)
+    .map((draft) => draft.platform));
+  const accounts = (await readyAccountsForPostContext(postPackage.context))
+    .filter((account) => !existingPlatforms.has(account.platform));
+  if (!accounts.length) return;
+  const guidance = guidanceForContext(postPackage.context);
+  const drafts = createPlatformDraftsForAccounts(postPackage, accounts, guidance);
+  prototypeModel.platformDrafts.push(...drafts);
   updatePostPackageFromDrafts(postPackage.id);
   await saveProductionState();
   reopenActiveDetail();
@@ -5993,13 +6519,22 @@ function claimLibraryFor(draft) {
 
 function guidanceForContext(context = {}) {
   const brandId = context.brandId || state.context?.brandId || "";
+  const campaignId = context.campaignId || state.context?.campaignId || "";
+  const strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId) || {};
+  guidanceModulesForCampaign(campaignId, strategy);
   const modules = (state.brandGuidanceModules || [])
     .filter((module) => module.brandId === brandId && module.enabled !== false)
+    .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
+    .map(guidanceModuleSnapshot);
+  const campaignModules = (state.campaignGuidanceModules || [])
+    .filter((module) => module.campaignId === campaignId && module.enabled !== false)
     .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
     .map(guidanceModuleSnapshot);
   return {
     modules,
     summary: modules.map((module) => `${module.title}: ${module.content}`).filter(Boolean).join("\n\n"),
+    campaignModules,
+    campaignSummary: campaignModules.map((module) => `${module.title}: ${module.content}`).filter(Boolean).join("\n\n"),
   };
 }
 
