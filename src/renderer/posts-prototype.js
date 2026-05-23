@@ -2069,9 +2069,19 @@ async function addBrandRecord() {
 }
 
 async function addCampaignRecord() {
-  const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
-  const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
-  if (!companyId || !brandId) return;
+  const workspace = document.querySelector("#campaign-workspace");
+  const workspaceBrandId = normalizeId(workspace?.querySelector('[data-campaign-field="contextBrandId"]')?.value, "brandId");
+  const brandId = workspaceBrandId || state.context?.brandId || (state.brands || [])[0]?.id;
+  const brand = (state.brands || []).find((b) => b.id === brandId);
+  const companyId = brand?.companyId || state.context?.companyId || (state.companies || [])[0]?.id;
+  if (!companyId) {
+    setOperatorMessage("Add campaign refused: create a company first.");
+    return;
+  }
+  if (!brandId) {
+    setOperatorMessage("Add campaign refused: create a brand first.");
+    return;
+  }
   const name = await showInputModal("Campaign name");
   if (!name) return;
   const uniqueName = uniqueRecordName(name.trim(), state.campaigns?.filter((campaign) => campaign.companyId === companyId && campaign.brandId === brandId));
