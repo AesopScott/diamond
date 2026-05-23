@@ -810,8 +810,8 @@ async function movePostPackageToStatus(packageId, nextStatus) {
 }
 
 async function deletePostPackage(packageId) {
-  const confirmed = window.confirm?.("Delete this post package from Diamond? This removes its drafts, schedules, and run records from the local board.");
-  if (confirmed === false) return;
+  const confirmed = await showConfirmModal("Delete this post package from Diamond? This removes its drafts, schedules, and run records from the local board.");
+  if (!confirmed) return;
   const packageRecord = (state.postPackages || []).find((item) => item.id === packageId)
     || prototypeModel.postPackages.find((item) => item.id === packageId);
   const sourceDraftIds = packageRecord?.sourceDraftIds || [];
@@ -2005,7 +2005,7 @@ async function deleteSelectedCompany() {
   const companyId = normalizeId(workspace?.querySelector('[data-company-field="contextCompanyId"]')?.value || state.context?.companyId, "companyId");
   if (!companyId || !(state.companies || []).some((company) => company.id === companyId)) return;
   const company = (state.companies || []).find((item) => item.id === companyId);
-  const ok = window.confirm(`Delete ${company?.name || companyId}? This also removes its brands, campaigns, accounts, templates, and campaign strategy.`);
+  const ok = await showConfirmModal(`Delete ${company?.name || companyId}? This also removes its brands, campaigns, accounts, templates, and campaign strategy.`);
   if (!ok) return;
   const brandIds = new Set((state.brands || []).filter((brand) => brand.companyId === companyId).map((brand) => brand.id));
   const campaignIds = new Set((state.campaigns || []).filter((campaign) => campaign.companyId === companyId || brandIds.has(campaign.brandId)).map((campaign) => campaign.id));
@@ -2024,8 +2024,8 @@ async function deleteSelectedCompany() {
 }
 
 async function addCompanyRecord() {
-  const name = prompt("What is the company's name?");
-  if (!name || !name.trim()) return;
+  const name = await showInputModal("Company name");
+  if (!name) return;
   const uniqueName = uniqueRecordName(name.trim(), state.companies);
   const company = createCompanyRecord({ name: uniqueName });
   state.companies ||= [];
@@ -2047,8 +2047,8 @@ async function addCompanyRecord() {
 async function addBrandRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   if (!companyId) return;
-  const name = prompt("What is the brand's name?");
-  if (!name || !name.trim()) return;
+  const name = await showInputModal("Brand name");
+  if (!name) return;
   const uniqueName = uniqueRecordName(name.trim(), state.brands?.filter((brand) => brand.companyId === companyId));
   const brand = createBrandRecord({ name: uniqueName, companyId });
   state.brands ||= [];
@@ -2072,8 +2072,8 @@ async function addCampaignRecord() {
   const companyId = state.context?.companyId || (state.companies || [])[0]?.id;
   const brandId = state.context?.brandId || (state.brands || []).find((brand) => brand.companyId === companyId)?.id;
   if (!companyId || !brandId) return;
-  const name = prompt("What is the campaign's name?");
-  if (!name || !name.trim()) return;
+  const name = await showInputModal("Campaign name");
+  if (!name) return;
   const uniqueName = uniqueRecordName(name.trim(), state.campaigns?.filter((campaign) => campaign.companyId === companyId && campaign.brandId === brandId));
   const campaign = createCampaignRecord({ name: uniqueName, companyId, brandId });
   state.campaigns ||= [];
@@ -2692,7 +2692,7 @@ async function addGuidanceModule() {
   saveBrandWorkspace();
   const brandId = state.context?.brandId || (state.brands || [])[0]?.id || "";
   if (!brandId) return;
-  const title = promptForText("Guidance module name", "New guidance module");
+  const title = await promptForText("Guidance module name", "New guidance module");
   if (!title) return;
   const now = new Date().toISOString();
   const modules = guidanceModulesForBrand(brandId);
@@ -2731,7 +2731,7 @@ async function deleteGuidanceModule(moduleId) {
   saveBrandWorkspace();
   const module = (state.brandGuidanceModules || []).find((item) => item.id === moduleId);
   if (!module) return;
-  const ok = window.confirm(`Delete guidance module "${module.title || module.id}"?`);
+  const ok = await showConfirmModal(`Delete guidance module "${module.title || module.id}"?`);
   if (!ok) return;
   state.brandGuidanceModules = (state.brandGuidanceModules || []).filter((item) => item.id !== moduleId);
   syncGuidanceModulesToLegacyLibraries(module.brandId);
@@ -2745,7 +2745,7 @@ async function deleteSelectedBrand() {
   const brandId = normalizeId(workspace?.querySelector('[data-brand-field="contextBrandId"]')?.value || state.context?.brandId, "brandId");
   if (!brandId || !(state.brands || []).some((brand) => brand.id === brandId)) return;
   const brand = (state.brands || []).find((item) => item.id === brandId);
-  const ok = window.confirm(`Delete ${brand?.name || brandId}? This also removes its campaigns, accounts, templates, and brand rules.`);
+  const ok = await showConfirmModal(`Delete ${brand?.name || brandId}? This also removes its campaigns, accounts, templates, and brand rules.`);
   if (!ok) return;
   const campaignIds = new Set((state.campaigns || []).filter((campaign) => campaign.brandId === brandId).map((campaign) => campaign.id));
   removeBrandScopedRecords(companyId, brandId, campaignIds);
@@ -2990,7 +2990,7 @@ async function addCampaignGuidanceModule() {
   const campaignId = state.context?.campaignId || (state.campaigns || [])[0]?.id || "";
   if (!campaignId) return;
   const campaign = (state.campaigns || []).find((item) => item.id === campaignId) || {};
-  const title = promptForText("Guidance module name", "New campaign guidance");
+  const title = await promptForText("Guidance module name", "New campaign guidance");
   if (!title) return;
   const now = new Date().toISOString();
   const modules = guidanceModulesForCampaign(campaignId);
@@ -3031,7 +3031,7 @@ async function deleteCampaignGuidanceModule(moduleId) {
   saveCampaignWorkspace();
   const module = (state.campaignGuidanceModules || []).find((item) => item.id === moduleId);
   if (!module) return;
-  const ok = window.confirm(`Delete guidance module "${module.title || module.id}"?`);
+  const ok = await showConfirmModal(`Delete guidance module "${module.title || module.id}"?`);
   if (!ok) return;
   state.campaignGuidanceModules = (state.campaignGuidanceModules || []).filter((item) => item.id !== moduleId);
   syncCampaignGuidanceModulesToStrategy(module.campaignId);
@@ -3047,7 +3047,7 @@ async function deleteSelectedCampaign() {
   const campaignId = normalizeId(workspace?.querySelector('[data-campaign-field="contextCampaignId"]')?.value || state.context?.campaignId, "campaignId");
   if (!campaignId || !(state.campaigns || []).some((campaign) => campaign.id === campaignId)) return;
   const campaign = (state.campaigns || []).find((item) => item.id === campaignId);
-  const ok = window.confirm(`Delete ${campaign?.name || campaignId}? This removes its strategy and campaign-specific drafts/templates.`);
+  const ok = await showConfirmModal(`Delete ${campaign?.name || campaignId}? This removes its strategy and campaign-specific drafts/templates.`);
   if (!ok) return;
   removeCampaignScopedRecords(campaignId);
   state.campaigns = (state.campaigns || []).filter((item) => item.id !== campaignId);
@@ -4881,7 +4881,7 @@ async function stageOperatorDraft(account, draft) {
 async function captureOperatorProof(account, draft) {
   if (!account) return setOperatorMessage("Proof capture blocked: no active account.");
   if (!draft) return setOperatorMessage("Proof capture blocked: no active draft.");
-  capturePlatformDraftProof(draft, "staged_composer");
+  await capturePlatformDraftProof(draft, "staged_composer");
   await saveProductionState();
   await refreshProductionViews();
   return setOperatorMessage(`${platformLabel(account.platform)} proof recorded. Total proofs: ${account.proofCount}.`);
@@ -4890,8 +4890,10 @@ async function captureOperatorProof(account, draft) {
 async function captureRedditFromOperator(account) {
   if (!account) return setOperatorMessage("Reddit capture blocked: no active account.");
   if (account.platform !== "reddit") return setOperatorMessage("Reddit capture blocked: active account is not Reddit.");
-  const sourceUrl = promptForText("Reddit thread/comment URL", account.accountUrl || "https://www.reddit.com/r/");
-  const text = promptForText("Reddit text to classify", "");
+  const sourceUrl = await promptForText("Reddit thread/comment URL", account.accountUrl || "https://www.reddit.com/r/");
+  const text = await promptForText("Reddit text to classify", "");
+  const author = await promptForText("Reddit author", "Reddit user");
+  const threadTitle = await promptForText("Reddit thread title", "");
   const result = captureRedditMonitoringItem({
     context: {
       ...(state.context || {}),
@@ -4901,9 +4903,9 @@ async function captureRedditFromOperator(account) {
     socialAccountId: account.id,
     sourceUrl,
     text,
-    author: promptForText("Reddit author", "Reddit user"),
+    author,
     subreddit: sourceUrl,
-    threadTitle: promptForText("Reddit thread title", ""),
+    threadTitle,
   });
   if (!result.ok) return setOperatorMessage(result.reason);
   state.socialReplies ||= [];
@@ -5920,7 +5922,7 @@ async function handlePlatformDraftAction(event) {
     await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
   }
-  if (action === "proof") capturePlatformDraftProof(draft);
+  if (action === "proof") await capturePlatformDraftProof(draft);
   if (action === "copy-proof") await copyDraftProofSummary(draft);
   if (action === "copy-url") await copyDraftStageUrl(draft);
   if (action === "copy-screenshot") await copyDraftScreenshotPath(draft);
@@ -5981,7 +5983,7 @@ async function addPlatformToActivePackage() {
   if (!activePostPackageId) return;
   const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
   if (!postPackage) return;
-  const platform = normalizeId(promptForText("Platform", "linkedin"));
+  const platform = normalizeId(await promptForText("Platform", "linkedin"));
   if (!platform) return;
   if (prototypeModel.platformDrafts.some((draft) => draft.postPackageId === activePostPackageId && draft.platform === platform)) return;
   const now = new Date().toISOString();
@@ -6187,10 +6189,10 @@ function markPlatformDraftPosted(draft) {
   }
 }
 
-function capturePlatformDraftProof(draft, proofKind = "") {
+async function capturePlatformDraftProof(draft, proofKind = "") {
   const account = accountForDraft(draft);
   const capturedAt = new Date().toISOString();
-  const kind = normalizeProofKind(proofKind || promptForText("Proof kind", defaultProofKind(draft)));
+  const kind = normalizeProofKind(proofKind || await promptForText("Proof kind", defaultProofKind(draft)));
   if (account) {
     account.proofCount = Number(account.proofCount || 0) + 1;
     account.lastProofAt = capturedAt;
@@ -6632,8 +6634,54 @@ function latestValue(values = []) {
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] || "";
 }
 
-function promptForText(label, fallback = "") {
-  return String(window.prompt(label, fallback) || "").trim();
+function showInputModal(label, fallback = "") {
+  return new Promise((resolve) => {
+    const dialog = document.querySelector("#input-modal");
+    const labelEl = document.querySelector("#input-modal-label");
+    const field = document.querySelector("#input-modal-field");
+    const cancelBtn = document.querySelector("#input-modal-cancel");
+    labelEl.textContent = label;
+    field.value = fallback;
+    const onClose = () => {
+      cancelBtn.removeEventListener("click", onCancel);
+      resolve(dialog.returnValue === "ok" ? field.value.trim() || null : null);
+    };
+    const onCancel = () => {
+      dialog.removeEventListener("close", onClose);
+      dialog.close("");
+      resolve(null);
+    };
+    dialog.addEventListener("close", onClose, { once: true });
+    cancelBtn.addEventListener("click", onCancel, { once: true });
+    dialog.showModal();
+    field.focus();
+    field.select();
+  });
+}
+
+function showConfirmModal(message) {
+  return new Promise((resolve) => {
+    const dialog = document.querySelector("#confirm-modal");
+    const messageEl = document.querySelector("#confirm-modal-message");
+    const cancelBtn = document.querySelector("#confirm-modal-cancel");
+    messageEl.textContent = message;
+    const onClose = () => {
+      cancelBtn.removeEventListener("click", onCancel);
+      resolve(dialog.returnValue === "ok");
+    };
+    const onCancel = () => {
+      dialog.removeEventListener("close", onClose);
+      dialog.close("");
+      resolve(false);
+    };
+    dialog.addEventListener("close", onClose, { once: true });
+    cancelBtn.addEventListener("click", onCancel, { once: true });
+    dialog.showModal();
+  });
+}
+
+async function promptForText(label, fallback = "") {
+  return (await showInputModal(label, fallback)) || "";
 }
 
 function startGuideTour() {

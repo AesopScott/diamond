@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Diamond Posts Prototype</title>
+    <title>Diamond Posts Prototype v2</title>
     <link rel="stylesheet" href="./posts-prototype.css">
   </head>
   <body>
@@ -265,6 +265,29 @@
         </div>
       </div>
     </div>
+
+    <!-- Input modal (replaces window.prompt) -->
+    <dialog id="input-modal" class="app-modal">
+      <form method="dialog" class="app-modal-form">
+        <label id="input-modal-label" class="app-modal-label"></label>
+        <input id="input-modal-field" type="text" class="app-modal-input" autocomplete="off">
+        <div class="app-modal-actions">
+          <button type="button" id="input-modal-cancel">Cancel</button>
+          <button type="submit" value="ok" id="input-modal-ok">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Confirm modal (replaces window.confirm) -->
+    <dialog id="confirm-modal" class="app-modal">
+      <form method="dialog" class="app-modal-form">
+        <p id="confirm-modal-message" class="app-modal-message"></p>
+        <div class="app-modal-actions">
+          <button type="button" id="confirm-modal-cancel">Cancel</button>
+          <button type="submit" value="ok" id="confirm-modal-ok" class="danger-action">Confirm</button>
+        </div>
+      </form>
+    </dialog>
 
     <script type="module" src="./posts-prototype.js"></script>
   </body>
