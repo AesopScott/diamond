@@ -2,7 +2,7 @@
 
 Branch: `task/posts-page-redesign`
 Author: Claude (build session)
-Status: **Revised after Codex plan-review #1 — re-review pending** (model/API decided: §5d/§8)
+Status: **Revised after Codex plan-review round 2 — re-review pending** (model/API decided: §5d/§8)
 
 ## 1. Why this plan exists
 
@@ -71,7 +71,7 @@ Three dependent selects, bound to the **post package's own** `companyId` / `bran
 
 **Context sync algorithm (resolves Codex blocker 2):**
 1. **On `openDetail(package)`** (`:5492`): seed the selects from the package fields; mirror them into `state.context` (`state.context = { ...state.context, companyId, brandId, campaignId }`) so the Accounts scope strip (`:1051`), calendar filters (`:878`, `:945`), and operator drawer (`:4657`) stay consistent with the post being edited. Resolve ready accounts from `package.context`.
-2. **On a scope select change**: update `package.companyId/brandId/campaignId` + `package.context`; mirror into `state.context`; re-resolve ready accounts; refresh platform chips (§4b). Changing **Company** clears Brand+Campaign; changing **Brand** clears Campaign if it no longer belongs to that brand. This **does not regenerate or wipe** draft text (§6) — affected drafts are only marked stale with a Regenerate affordance.
+2. **On a scope select change**: update `package.companyId/brandId/campaignId` + `package.context`; mirror into `state.context`; re-resolve ready accounts; refresh platform chips (§4b). **Propagate to child drafts (resolves re-review Blocker 2):** for every existing `platformDraft` of this package, update `draft.companyId/brandId/campaignId` and `draft.context.{companyId,brandId,campaignId}` (stored at `:6202`, read at `:6659`/`:6721`) to the new scope, and re-point `draft.socialAccountId` / `draft.context.platform` to the matching ready account under the new scope. A draft whose platform has **no ready account** in the new scope is marked stale (`generationStatus`, needs-attention) and **excluded from staging** — never silently staged to a wrong-tenant account (BUILD_PLAN fail-closed guardrail). Also realign `state.context.socialAccountId` / `state.context.platform` (read by `activeSocialAccount()` at `:5172`) to a ready account in the new scope, or clear them when ambiguous. Changing **Company** clears Brand+Campaign; changing **Brand** clears Campaign if it no longer belongs to that brand. This **does not regenerate or wipe** draft text (§6) — affected drafts are only marked stale with a Regenerate affordance.
 3. **On navigation away**: `persistActiveDetail` (§6) has already saved the package; no extra sync. `state.context` retains the last post's scope — the same behavior the Accounts scope strip already produces when it mutates global context (`:2783`).
 
 ### 4b. Platform target zone — "Where it goes"
@@ -99,13 +99,20 @@ the API from main), **the model call lives in the Electron main process** and is
 renderer over IPC (e.g., `window.diamond.generatePostDrafts(payload)`), mirroring
 `inspectAccountSession`. The renderer never sees the API key.
 
-A new module — `src/content-generation-llm.js` (main-side) — owns:
+A new module — **`src/content-generation-llm.cjs`** (main-side, **CommonJS**: `package.json` sets
+`"type":"module"` but Electron main is CommonJS `main.cjs`, so the new module is `.cjs` and
+`require()`d — resolves re-review new-issue 2) — owns:
 - prompt assembly from the structured inputs below,
 - the two-stage writer→reviewer pipeline (§5d),
 - response parsing into `{ platform, text, changeNote }[]`,
 - error normalization.
 
-The renderer keeps a thin `requestPlatformGeneration()` that calls IPC and writes results into `platformDrafts`. Existing `platformCopy()` / `buildSlotDraftText()` become the **offline/no-key fallback**, not the primary path.
+It performs **only** the LLM calls. The **template fallback stays renderer-side**
+(`platformCopy` / `buildSlotDraftText`): on a no-writer-key degrade the main module returns
+`{ ok:true, degraded:"no-writer-key", drafts:null }` and the renderer fills text from its existing
+template generator — so the `.cjs` main module never has to import the ESM fallback.
+
+The renderer keeps a thin `requestPlatformGeneration()` that calls IPC and writes results into `platformDrafts`. Existing `platformCopy()` / `buildSlotDraftText()` are the **offline/no-key fallback**, not the primary path.
 
 ### 5b. Generation inputs (all already in `state`)
 Assembled by a pure function `buildGenerationContext({ package, brand, campaign })`:
@@ -150,22 +157,23 @@ code changes. Model-id defaults are intentionally easy to change ("slight modifi
 Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`; `preload.cjs:8`):
 
 - **preload.cjs**: `generatePostDrafts: (payload) => ipcRenderer.invoke("diamond:generate-post-drafts", payload)`.
-- **main.cjs**: `ipcMain.handle("diamond:generate-post-drafts", async (_e, payload) => generatePostDrafts(payload))`, delegating to `src/content-generation-llm.js`.
+- **main.cjs**: `ipcMain.handle("diamond:generate-post-drafts", async (_e, payload) => generatePostDrafts(payload))`, delegating to `src/content-generation-llm.cjs`.
 - **payload** (renderer → main): `{ idea, style, language, platforms: [{ platform, charLimit }], brand: { voice, approvedPhrases, bannedPhrases }, campaign: { goals, audience, pillars, offer, cta, guidanceSummary }, claims: {…} }`. Char limit comes from each draft's `charLimit` (`post-package.js:87`, X=280) — the single limit source; `platformCopy`'s hard-coded 220 (`:6545`) is aligned to it (nit 1).
-- **response** (main → renderer): `{ ok: boolean, drafts: [{ platform, text, changeNote }], degraded: "no-writer-key" | "no-reviewer-key" | null, error?: string }`. The handler **never throws to the renderer**; failures resolve `{ ok:false, error }`.
+- **response** (main → renderer): `{ ok: boolean, drafts: [{ platform, text, changeNote }] | null, degraded: "no-writer-key" | "no-reviewer-key" | null, error?: string }`. `drafts` is `null` on `no-writer-key` (renderer applies template fallback). The handler **never throws to the renderer**; failures resolve `{ ok:false, error }`.
 - **per-stage timeout** ~60s. **Degradation:** missing `ANTHROPIC_API_KEY` → skip Stage 1, fall back to the template generator (`platformCopy` / `buildSlotDraftText`), `degraded:"no-writer-key"`. Missing `OPENAI_API_KEY` → keep Stage-1 Claude text unreviewed, `degraded:"no-reviewer-key"`, `changeNote:"reviewer unavailable"`. Each path sets the draft's `textSource` / `generationStatus` (§6) so the UI flags it.
 
 ## 6. State / data changes
 - **`postPackage`** (`createPostPackage`, `post-package.js:25`): `companyId`/`brandId`/`campaignId` already exist (`:36-38`) and become editable from the detail (§4a). Add optional **`generationStyle`** (default `"Default"`) and **`targetPlatforms: string[]`** (§4b). Backfill at runtime for legacy packages (style → `Default`; targets ← existing drafts' platforms).
 - **`createPlatformDraft`** (`post-package.js:56`) gains optional fields (Codex should-fix 5): **`textSource`** `"auto" | "manual" | "llm" | "template-fallback"` (default `"auto"`), **`generationStatus`** `"idle" | "generating" | "ok" | "error" | "fallback"`, **`generationError`** (string|null), **`changeNote`** (reviewer note, string|null). Existing drafts default to `textSource:"auto"`.
 - **`persistActiveDetail` fix** (`posts-prototype.js:6505`, Codex should-fix 4): today it overwrites **every** draft's `text` with `platformCopy(idea)` on each save (`:6519`), which would erase generated/edited copy. Change it to update idea/title/tags only and refresh `draft.text` from `platformCopy(idea)` **only when `draft.textSource === "auto"`**. Generated (`llm` / `template-fallback`) and manually edited (`manual`) drafts keep their text. `handlePlatformDraftTextInput` (`:6141`) sets `textSource:"manual"` when the operator edits.
+- **Legacy `textSource` backfill (resolves re-review Should-fix 4):** drafts created before this change have no `textSource`, so a blind default of `"auto"` would still let `:6519` clobber them. On load, backfill with a precise heuristic — a draft is `"auto"` **iff** its current `text` equals `platformCopy(ideaText, platform)` (never diverged from the auto value); otherwise `"manual"`. A missing/unknown `textSource` is treated as **non-auto (preserved)**, so legacy text is never clobbered.
 - No persisted-schema migration; all new fields are optional with safe defaults. `state.context` mirroring per §4a.
 
 ## 7. Files to change
 - `src/renderer/posts-prototype.html` — restructure `.detail-tools`; add scope selects, real platform zone, Generate button; remove cadence pill; relabel "All ready".
 - `src/renderer/posts-prototype.js` — `openDetail` (+ scope sync), `renderPlatformButtons` (→ real toggles over `targetPlatforms`), scope-change handlers, `persistActiveDetail` gating on `textSource`, `handlePlatformDraftTextInput` sets `manual`, `requestPlatformGeneration` (IPC call + Stage-3 enforcement), wire generation-style; keep `platformCopy` as fallback.
 - `src/renderer/posts-prototype.css` — platform target vs. action styling; scope row layout.
-- `src/content-generation-llm.js` *(new, main-side)* — Anthropic writer + OpenAI reviewer adapters and prompt assembly.
+- `src/content-generation-llm.cjs` *(new, main-side, CommonJS)* — Anthropic writer + OpenAI reviewer adapters and prompt assembly.
 - `src/electron/main.cjs` + `src/electron/preload.cjs` — IPC `diamond:generate-post-drafts` / `generatePostDrafts` (mirror `inspect-account-session` at `main.cjs:189` / `preload.cjs:8`).
 - `src/post-package.js` — add `generationStyle` + `targetPlatforms` to `createPostPackage`; add `textSource` / `generationStatus` / `generationError` / `changeNote` to `createPlatformDraft`.
 - `src/content-generation.js` — keep as fallback; optionally export `buildGenerationContext` (pure).
@@ -176,7 +184,7 @@ Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`;
 - **Writer:** Anthropic Claude — `ANTHROPIC_API_KEY`, default `claude-sonnet-4-6` (`DIAMOND_WRITER_MODEL` to override).
 - **Reviewer / adjuster:** OpenAI — `OPENAI_API_KEY`, model via `DIAMOND_REVIEWER_MODEL` (sensible GPT default; Scott can set the exact id).
 - **Key location:** `.env.local`, consistent with `ELEVENLABS_API_KEY`. Never read in the renderer.
-- **Degradation:** missing either key → fall back to the template generator (§5a) and flag drafts; the UI stays usable offline.
+- **Degradation (single source of truth = §5e; resolves re-review new-issue 1):** missing **`ANTHROPIC_API_KEY` (writer)** → renderer-side template fallback (`platformCopy` / `buildSlotDraftText`), `degraded:"no-writer-key"`. Missing **`OPENAI_API_KEY` (reviewer)** → keep Claude's Stage-1 text **unreviewed** (no template fallback), `degraded:"no-reviewer-key"`. Both flag the draft; the UI stays usable offline.
 
 ## 9. Verification / proof
 - RED→GREEN unit tests per §7 list.
@@ -200,3 +208,11 @@ Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`;
 | Nit 1 — X char-limit mismatch (220 vs 280) | §5e — single source = draft `charLimit`. |
 | Nit 2 — `generationStyle` persistence | §6 — runtime default `Default`, persisted on next save. |
 | Nit 3 — implicit platform list | §4b — explicit writable list, Reddit excluded. |
+
+## 12. Codex re-review (round 2) resolutions
+| Finding | Where addressed |
+|---|---|
+| Re-review Blocker 2 — child-draft context not propagated on scope change | §4a step 2 — propagate scope to `draft.{companyId,brandId,campaignId}`/`context`, re-point account, stale-flag unmatched platforms, realign `state.context` account. |
+| Re-review Should-fix 4 — legacy drafts default `auto` (still clobbered) | §6 — backfill `textSource` via `text === platformCopy(...)` heuristic; missing = non-auto (preserved). |
+| New issue 1 — §5e/§8 reviewer-key conflict | §8 — only missing **writer** key triggers template fallback; reviewer-key keeps unreviewed Claude text. |
+| New issue 2 — ESM (`"type":"module"`) vs CommonJS main | §5a/§5e/§7 — new module is `.cjs` CommonJS; template fallback stays renderer-side. |
