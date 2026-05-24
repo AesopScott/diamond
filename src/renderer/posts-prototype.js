@@ -607,6 +607,8 @@ function wirePrototypeControls() {
   document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
   document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
   document.querySelector("#detail-add-platform")?.addEventListener("click", addPlatformToActivePackage);
+  document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
+  document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
@@ -5506,6 +5508,8 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
   document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
+  const styleSelect = document.querySelector("#generation-style");
+  if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
   // Backfill textSource for legacy drafts: a draft is "auto" only if its text still
   // matches the template value, otherwise it is operator-owned ("manual") and preserved.
   drafts.forEach((draft) => {
@@ -6147,6 +6151,110 @@ async function addAllReadyPlatformsToActivePackage() {
   updatePostPackageFromDrafts(postPackage.id);
   await saveProductionState();
   reopenActiveDetail();
+}
+
+async function requestPlatformGeneration() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  if (!drafts.length) return;
+  const generateButton = document.querySelector("#detail-generate");
+  if (generateButton) {
+    generateButton.disabled = true;
+    generateButton.textContent = "Generating…";
+  }
+  drafts.forEach((draft) => { draft.generationStatus = "generating"; });
+  const payload = buildGenerationPayload(postPackage, drafts);
+  let result;
+  try {
+    result = await window.diamond?.generatePostDrafts(payload);
+  } catch (error) {
+    result = { ok: false, error: error && error.message ? error.message : String(error) };
+  }
+  applyGenerationResult(drafts, result, postPackage);
+  updatePostPackageFromDrafts(activePostPackageId);
+  await saveProductionState();
+  if (generateButton) {
+    generateButton.disabled = false;
+    generateButton.textContent = "Generate platform versions";
+  }
+  reopenActiveDetail();
+}
+
+function applyGenerationResult(drafts, result, postPackage) {
+  const now = new Date().toISOString();
+  // Missing writer key (drafts === null) or an error → renderer template fallback so the page stays usable.
+  if (!result || result.ok === false || result.drafts === null) {
+    drafts.forEach((draft) => {
+      if (draft.textSource !== "manual") {
+        draft.text = platformCopy(postPackage.ideaText, draft.platform);
+        draft.textSource = "template-fallback";
+      }
+      draft.generationStatus = result && result.ok === false ? "error" : "fallback";
+      draft.generationError = result && result.error ? result.error : null;
+      draft.changeNote = null;
+      draft.updatedAt = now;
+      evaluatePlatformDraft(draft);
+    });
+    return;
+  }
+  const byPlatform = new Map((result.drafts || []).map((item) => [item.platform, item]));
+  drafts.forEach((draft) => {
+    const generated = byPlatform.get(draft.platform);
+    if (!generated) return;
+    draft.text = generated.text || draft.text;
+    draft.textSource = "llm";
+    draft.changeNote = generated.changeNote || null;
+    draft.generationStatus = "ok";
+    draft.generationError = null;
+    draft.updatedAt = now;
+    evaluatePlatformDraft(draft); // Stage 3: deterministic claim/banned-phrase enforcement.
+  });
+}
+
+function buildGenerationPayload(postPackage, drafts) {
+  const sample = drafts[0] || {
+    brandId: postPackage.brandId,
+    campaignId: postPackage.campaignId,
+    context: postPackage.context,
+  };
+  const brand = brandLibraryFor(sample);
+  const claims = claimLibraryFor(sample);
+  const strategy = strategyFor(sample);
+  const guidance = guidanceForContext(postPackage.context || {});
+  return {
+    idea: postPackage.ideaText || "",
+    style: postPackage.generationStyle || "Default",
+    language: postPackage.context?.language || "en",
+    platforms: drafts.map((draft) => ({ platform: draft.platform, charLimit: draft.charLimit || null })),
+    brand: {
+      voice: brand.brandVoice || "",
+      approvedPhrases: brand.approvedPhrases || [],
+      bannedPhrases: brand.bannedPhrases || [],
+    },
+    campaign: {
+      goals: strategy.goals || [],
+      audience: strategy.audience || [],
+      pillars: strategy.pillars || [],
+      offer: strategy.offer || "",
+      cta: strategy.cta || "",
+      guidanceSummary: [guidance.summary, guidance.campaignSummary].filter(Boolean).join("\n\n"),
+    },
+    claims: {
+      blockedClaims: claims.blockedClaims || [],
+      requiresReviewClaims: claims.requiresReviewClaims || [],
+    },
+  };
+}
+
+function handleGenerationStyleChange(event) {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  postPackage.generationStyle = event.target.value || "Default";
+  postPackage.updatedAt = new Date().toISOString();
+  saveProductionState();
 }
 
 function handlePlatformDraftTextInput(event) {
