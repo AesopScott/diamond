@@ -5499,6 +5499,15 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
   document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
+  // Backfill textSource for legacy drafts: a draft is "auto" only if its text still
+  // matches the template value, otherwise it is operator-owned ("manual") and preserved.
+  drafts.forEach((draft) => {
+    if (!draft.textSource) {
+      draft.textSource = String(draft.text || "").trim() === platformCopy(postPackage.ideaText, draft.platform).trim()
+        ? "auto"
+        : "manual";
+    }
+  });
   renderPlatformButtons(drafts);
   renderPlatformPreviews(drafts);
 }
@@ -6139,6 +6148,7 @@ function handlePlatformDraftTextInput(event) {
   const draft = prototypeModel.platformDrafts.find((item) => item.id === textarea.dataset.draftText);
   if (!draft) return;
   draft.text = textarea.value;
+  draft.textSource = "manual";
   draft.updatedAt = new Date().toISOString();
   const preview = textarea.closest("[data-platform-draft-id]");
   const counter = preview?.querySelector("header > span");
@@ -6516,7 +6526,9 @@ function persistActiveDetail() {
   prototypeModel.platformDrafts
     .filter((draft) => draft.postPackageId === activePostPackageId)
     .forEach((draft) => {
-      draft.text = platformCopy(idea, draft.platform);
+      // Only auto-sourced drafts mirror the idea text. Generated ("llm"),
+      // template-fallback, and manually edited drafts keep their own copy.
+      if (draft.textSource === "auto") draft.text = platformCopy(idea, draft.platform);
       draft.updatedAt = updatedAt;
     });
   saveProductionState();
