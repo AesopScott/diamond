@@ -2,7 +2,7 @@
 
 Branch: `task/posts-page-redesign`
 Author: Claude (build session)
-Status: **Draft — pending Codex plan review and one model/API decision from Scott**
+Status: **Draft — pending Codex plan review** (model/API decided: §5d/§8)
 
 ## 1. Why this plan exists
 
@@ -96,8 +96,8 @@ renderer over IPC (e.g., `window.diamond.generatePostDrafts(payload)`), mirrorin
 
 A new module — `src/content-generation-llm.js` (main-side) — owns:
 - prompt assembly from the structured inputs below,
-- a single provider adapter (chosen in §5d),
-- response parsing into `{ platform, text }[]`,
+- the two-stage writer→reviewer pipeline (§5d),
+- response parsing into `{ platform, text, changeNote }[]`,
 - error normalization.
 
 The renderer keeps a thin `requestPlatformGeneration()` that calls IPC and writes results into `platformDrafts`. Existing `platformCopy()` / `buildSlotDraftText()` become the **offline/no-key fallback**, not the primary path.
@@ -113,16 +113,30 @@ Assembled by a pure function `buildGenerationContext({ package, brand, campaign 
 - **Language**: existing EN/ES path preserved.
 
 ### 5c. Output handling + safety
-- The model returns one tailored draft per targeted platform; written to `platformDrafts[].text`.
-- **Post-generation enforcement (not trust the model):** run each draft through the existing
-  evaluation/claim/banned-phrase checks (`quality.js`, claim library, `draftEvaluations`). Banned
-  phrases or unapproved risky claims force the draft to `needs_review` and surface the reason —
-  consistent with the fail-closed rule. No generated text is auto-approved.
+- **Stage 1 (write — Claude):** returns one tailored draft per targeted platform.
+- **Stage 2 (review + adjust — OpenAI):** revises each Stage-1 draft against brand voice, claim
+  rules, and platform limits, returning the adjusted final text plus a short change note. The
+  adjusted text is what gets written to `platformDrafts[].text`; the change note is retained for
+  operator visibility.
+- **Stage 3 — deterministic enforcement (never trust either model):** run each adjusted draft
+  through the existing evaluation/claim/banned-phrase checks (`quality.js`, claim library,
+  `draftEvaluations`). Banned phrases or unapproved risky claims force the draft to `needs_review`
+  and surface the reason — consistent with the fail-closed rule. No generated text is auto-approved.
 - Idempotent + immutable: generation returns new draft objects; no in-place mutation of inputs.
 
-### 5d. Provider — **DECISION NEEDED FROM SCOTT** (§8)
-The adapter is provider-agnostic; exactly one provider is wired first. Key is read from
-`.env.local` (same convention as `ELEVENLABS_API_KEY`). Candidates in §8.
+### 5d. Providers — two-stage pipeline (decided)
+Dynamic generation is a **two-model pipeline**, both called from the Electron main process:
+
+1. **Writer — Anthropic (Claude).** Drafts the platform-specific copy from the generation context
+   (§5b). Default model `claude-sonnet-4-6`, overridable via `DIAMOND_WRITER_MODEL`. Key:
+   `ANTHROPIC_API_KEY` in `.env.local`.
+2. **Reviewer / adjuster — OpenAI.** Receives each Claude draft plus the same brand-voice / claim /
+   platform constraints, then **reviews and adjusts** it — tightening voice, fixing claim or
+   character-limit violations — and returns the final text plus a brief note of what it changed.
+   Default model overridable via `DIAMOND_REVIEWER_MODEL`. Key: `OPENAI_API_KEY` in `.env.local`.
+
+Both adapters sit behind one common interface so a provider/model can be swapped via env without
+code changes. Model-id defaults are intentionally easy to change ("slight modifications as we go").
 
 ## 6. State / data changes
 - `postPackage`: ensure `companyId`, `brandId`, `campaignId`, `generationStyle` are read/written from the detail view (fields already exist in the model; `generationStyle` is new and optional).
@@ -133,18 +147,16 @@ The adapter is provider-agnostic; exactly one provider is wired first. Key is re
 - `src/renderer/posts-prototype.html` — restructure `.detail-tools`; add scope selects, real platform zone, Generate button; remove cadence pill; relabel "All ready".
 - `src/renderer/posts-prototype.js` — `openDetail`, `renderPlatformButtons` (→ real toggles), new scope-change handlers, `requestPlatformGeneration`, wire generation-style; keep `platformCopy` as fallback.
 - `src/renderer/posts-prototype.css` — platform target vs. action styling; scope row layout.
-- `src/content-generation-llm.js` *(new, main-side)* — provider adapter + prompt assembly.
+- `src/content-generation-llm.js` *(new, main-side)* — Anthropic writer + OpenAI reviewer adapters and prompt assembly.
 - `src/electron/main.cjs` + preload — IPC `generatePostDrafts` (mirror ElevenLabs/`inspectAccountSession`).
 - `src/content-generation.js` — keep as fallback; optionally export `buildGenerationContext` (pure).
-- Tests under `tests/` for: scope filtering, platform toggle state, prompt-context assembly, claim/banned enforcement on generated text, fallback when no key.
+- Tests under `tests/` for: scope filtering, platform toggle state, prompt-context assembly, the writer→reviewer pipeline (mocked providers), claim/banned enforcement on adjusted text, fallback when either key is missing.
 
-## 8. Open decisions for Scott (model/API only)
-1. **Provider + model** for generation. Candidates:
-   - **Anthropic direct (Claude)** — strongest copy quality; `ANTHROPIC_API_KEY`.
-   - **OpenRouter** — one key, swap models freely (matches Polaris agent path).
-   - **OpenAI** / **DeepSeek** (cheapest; matches Polaris routine path).
-2. **Key location** — confirm `.env.local` (consistent with ElevenLabs) is correct.
-3. **Default model string** for the chosen provider.
+## 8. Model/API configuration (decided)
+- **Writer:** Anthropic Claude — `ANTHROPIC_API_KEY`, default `claude-sonnet-4-6` (`DIAMOND_WRITER_MODEL` to override).
+- **Reviewer / adjuster:** OpenAI — `OPENAI_API_KEY`, model via `DIAMOND_REVIEWER_MODEL` (sensible GPT default; Scott can set the exact id).
+- **Key location:** `.env.local`, consistent with `ELEVENLABS_API_KEY`. Never read in the renderer.
+- **Degradation:** missing either key → fall back to the template generator (§5a) and flag drafts; the UI stays usable offline.
 
 ## 9. Verification / proof
 - RED→GREEN unit tests per §7 list.
