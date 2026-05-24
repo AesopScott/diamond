@@ -2,7 +2,7 @@
 
 Branch: `task/posts-page-redesign`
 Author: Claude (build session)
-Status: **Revised after Codex plan-review round 2 — re-review pending** (model/API decided: §5d/§8)
+Status: **Revised after Codex plan-review round 3 — re-review pending** (model/API decided: §5d/§8)
 
 ## 1. Why this plan exists
 
@@ -73,6 +73,10 @@ Three dependent selects, bound to the **post package's own** `companyId` / `bran
 1. **On `openDetail(package)`** (`:5492`): seed the selects from the package fields; mirror them into `state.context` (`state.context = { ...state.context, companyId, brandId, campaignId }`) so the Accounts scope strip (`:1051`), calendar filters (`:878`, `:945`), and operator drawer (`:4657`) stay consistent with the post being edited. Resolve ready accounts from `package.context`.
 2. **On a scope select change**: update `package.companyId/brandId/campaignId` + `package.context`; mirror into `state.context`; re-resolve ready accounts; refresh platform chips (§4b). **Propagate to child drafts (resolves re-review Blocker 2):** for every existing `platformDraft` of this package, update `draft.companyId/brandId/campaignId` and `draft.context.{companyId,brandId,campaignId}` (stored at `:6202`, read at `:6659`/`:6721`) to the new scope, and re-point `draft.socialAccountId` / `draft.context.platform` to the matching ready account under the new scope. A draft whose platform has **no ready account** in the new scope is marked stale (`generationStatus`, needs-attention) and **excluded from staging** — never silently staged to a wrong-tenant account (BUILD_PLAN fail-closed guardrail). Also realign `state.context.socialAccountId` / `state.context.platform` (read by `activeSocialAccount()` at `:5172`) to a ready account in the new scope, or clear them when ambiguous. Changing **Company** clears Brand+Campaign; changing **Brand** clears Campaign if it no longer belongs to that brand. This **does not regenerate or wipe** draft text (§6) — affected drafts are only marked stale with a Regenerate affordance.
 3. **On navigation away**: `persistActiveDetail` (§6) has already saved the package; no extra sync. `state.context` retains the last post's scope — the same behavior the Accounts scope strip already produces when it mutates global context (`:2783`).
+
+**Fail-closed staging (resolves round-3 Blocker 2 tail):** "excluded from staging" is only real with two supporting changes, both in scope for this build:
+- Change `activeSocialAccount()` (`:5172`) so that when `state.context` has no/ambiguous `socialAccountId` it returns **no account** instead of falling back to the first account — eliminates silent wrong-account selection.
+- Extend the existing staging gate `platformDraftPreflight` (`:6566`) to **fail (not OK to stage)** when a draft is stale: `generationStatus === "needs-attention"`, or its platform has no matching ready account under the current scope. `generationStatus` is not a staging blocker today; this wires it into the real preflight so the BUILD_PLAN fail-closed tenant-isolation guarantee actually holds.
 
 ### 4b. Platform target zone — "Where it goes"
 - **New field `postPackage.targetPlatforms: string[]`** is the source of truth for selection, decoupled from which `platformDrafts` exist (today selection is *implied* by existing drafts and `platformDraftIds` is derived in `upsertPostPackage` at `:6540`). This closes the silent-data-loss gap (Codex should-fix 3). Legacy packages initialize `targetPlatforms` from their existing drafts' platforms.
@@ -171,7 +175,7 @@ Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`;
 
 ## 7. Files to change
 - `src/renderer/posts-prototype.html` — restructure `.detail-tools`; add scope selects, real platform zone, Generate button; remove cadence pill; relabel "All ready".
-- `src/renderer/posts-prototype.js` — `openDetail` (+ scope sync), `renderPlatformButtons` (→ real toggles over `targetPlatforms`), scope-change handlers, `persistActiveDetail` gating on `textSource`, `handlePlatformDraftTextInput` sets `manual`, `requestPlatformGeneration` (IPC call + Stage-3 enforcement), wire generation-style; keep `platformCopy` as fallback.
+- `src/renderer/posts-prototype.js` — `openDetail` (+ scope sync), `renderPlatformButtons` (→ real toggles over `targetPlatforms`), scope-change handlers (+ child-draft propagation), `activeSocialAccount` fail-closed (no first-account fallback when ambiguous), `platformDraftPreflight` stale-draft staging guard, `persistActiveDetail` gating on `textSource`, `handlePlatformDraftTextInput` sets `manual`, `requestPlatformGeneration` (IPC call + Stage-3 enforcement), wire generation-style; keep `platformCopy` as fallback.
 - `src/renderer/posts-prototype.css` — platform target vs. action styling; scope row layout.
 - `src/content-generation-llm.cjs` *(new, main-side, CommonJS)* — Anthropic writer + OpenAI reviewer adapters and prompt assembly.
 - `src/electron/main.cjs` + `src/electron/preload.cjs` — IPC `diamond:generate-post-drafts` / `generatePostDrafts` (mirror `inspect-account-session` at `main.cjs:189` / `preload.cjs:8`).
@@ -216,3 +220,9 @@ Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`;
 | Re-review Should-fix 4 — legacy drafts default `auto` (still clobbered) | §6 — backfill `textSource` via `text === platformCopy(...)` heuristic; missing = non-auto (preserved). |
 | New issue 1 — §5e/§8 reviewer-key conflict | §8 — only missing **writer** key triggers template fallback; reviewer-key keeps unreviewed Claude text. |
 | New issue 2 — ESM (`"type":"module"`) vs CommonJS main | §5a/§5e/§7 — new module is `.cjs` CommonJS; template fallback stays renderer-side. |
+
+## 13. Codex re-review (round 3) resolutions
+| Finding | Where addressed |
+|---|---|
+| Round-3 Blocker 2 tail — `activeSocialAccount()` first-account fallback not fail-closed | §4a — change `:5172` to return no account when `state.context` is ambiguous/cleared. |
+| Round-3 Blocker 2 tail — stale drafts not actually blocked from staging | §4a — extend `platformDraftPreflight` (`:6566`) to fail on stale / no-ready-account drafts. |
