@@ -101,4 +101,46 @@ assert.equal(stagedColumn.count, 1);
 assert.deepEqual(stagedColumn.posts[0].platforms, ["facebook"]);
 assert.deepEqual(stagedColumn.posts[0].platformStatuses, [{ platform: "facebook", status: "staged" }]);
 
+// Generation fields (posts page redesign)
+assert.equal(postPackage.generationStyle, "Default");
+assert.deepEqual(postPackage.targetPlatforms, []);
+assert.equal(xDraft.textSource, "auto");
+assert.equal(xDraft.generationStatus, "idle");
+assert.equal(xDraft.generationError, null);
+assert.equal(xDraft.changeNote, null);
+
+const styledPackage = createPostPackage({
+  id: "styled-idea",
+  context,
+  ideaText: "Styled idea.",
+  generationStyle: "Brand voice",
+  targetPlatforms: ["x", "linkedin", "x"],
+});
+assert.equal(styledPackage.generationStyle, "Brand voice");
+assert.deepEqual(styledPackage.targetPlatforms, ["x", "linkedin"]);
+
+const llmDraft = createPlatformDraft({
+  id: "styled-idea-x",
+  postPackage: styledPackage,
+  text: "Generated text.",
+  platform: "x",
+  socialAccountId: context.socialAccountId,
+  textSource: "llm",
+  generationStatus: "ok",
+  changeNote: "tightened voice",
+});
+assert.equal(llmDraft.textSource, "llm");
+assert.equal(llmDraft.generationStatus, "ok");
+assert.equal(llmDraft.changeNote, "tightened voice");
+
+const unknownSource = createPlatformDraft({
+  id: "styled-idea-li",
+  postPackage: styledPackage,
+  text: "More text.",
+  platform: "linkedin",
+  socialAccountId: context.socialAccountId,
+  textSource: "bogus",
+});
+assert.equal(unknownSource.textSource, "auto");
+
 console.log("All Diamond post package tests passed.");

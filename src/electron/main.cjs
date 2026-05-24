@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
+const { generatePostDrafts } = require("../content-generation-llm.cjs");
 
 const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
@@ -188,6 +189,13 @@ ipcMain.handle("diamond:get-paths", () => ({
 }));
 ipcMain.handle("diamond:inspect-account-session", async (_event, input = {}) => inspectAccountSession(input));
 ipcMain.handle("diamond:clear-account-session", async (_event, input = {}) => clearAccountSession(input));
+ipcMain.handle("diamond:generate-post-drafts", async (_event, payload = {}) => {
+  try {
+    return await generatePostDrafts(payload);
+  } catch (error) {
+    return { ok: false, drafts: null, error: error && error.message ? error.message : String(error) };
+  }
+});
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));
