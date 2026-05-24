@@ -476,7 +476,7 @@ function buildSampleWorkspace() {
     sessionStatus: {
       x: "ready",
       facebook: "ready",
-      tiktok: "ready",
+      tiktok: "needs_login",
       instagram: "needs_login",
       linkedin: "unknown",
       "youtube-shorts": "blocked",
