@@ -5171,9 +5171,16 @@ function renderOperatorAction(label, note, action, disabled = false) {
 
 function activeSocialAccount() {
   const context = state.context || {};
-  return (state.socialAccounts || []).find((account) => account.id === context.socialAccountId)
-    || (state.socialAccounts || []).find((account) => account.platform === context.platform)
-    || (state.socialAccounts || [])[0];
+  if (context.socialAccountId) {
+    const byId = (state.socialAccounts || []).find((account) => account.id === context.socialAccountId);
+    if (byId) return byId;
+  }
+  if (context.platform) {
+    return (state.socialAccounts || []).find((account) => account.platform === context.platform);
+  }
+  // Fail-closed: no first-account fallback. An ambiguous/cleared context must not
+  // silently select a wrong-tenant account.
+  return undefined;
 }
 
 function activeOperatorDraft(account) {
@@ -6592,6 +6599,12 @@ function platformDraftPreflight(draft) {
   if (draft.charLimit && text.length > draft.charLimit) issues.push(`Text exceeds ${draft.charLimit} characters.`);
   if (!["approved", "scheduled", "staged", "published"].includes(draft.status)) issues.push("Draft must be approved before staging.");
   if (!account) issues.push("No social account is assigned.");
+  if (account && ((draft.companyId && account.companyId !== draft.companyId) || (draft.brandId && account.brandId !== draft.brandId))) {
+    issues.push("Assigned account does not match this post's company/brand.");
+  }
+  if (draft.generationStatus === "needs-attention") {
+    issues.push("Draft needs attention after a scope change — regenerate before staging.");
+  }
   if (account && account.sessionStatus !== "ready") issues.push(`${platformLabel(account.platform)} session is ${titleCase(account.sessionStatus || "unknown")}.`);
   if (account && !resolveComposeUrl(account)) issues.push("Compose URL is missing.");
   if (!licenseCheck.ok) issues.push(licenseCheck.reason || "License does not allow this brand/platform.");
