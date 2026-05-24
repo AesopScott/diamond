@@ -133,8 +133,9 @@ function parseReviewerContent(content, fallbackDraft) {
       changeNote: json.changes ? String(json.changes).trim() : "reviewed",
     };
   } catch (_error) {
-    // Reviewer did not return JSON; treat its whole output as the revised text.
-    return { text: raw || fallbackDraft, changeNote: "reviewer adjusted (note unavailable)" };
+    // Reviewer did not return JSON; return the original draft unchanged so reviewer
+    // failure messages never become published post text.
+    return { text: fallbackDraft, changeNote: "reviewer parse error" };
   }
 }
 

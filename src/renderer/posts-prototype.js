@@ -5178,7 +5178,12 @@ function activeSocialAccount() {
     if (byId) return byId;
   }
   if (context.platform) {
-    return (state.socialAccounts || []).find((account) => account.platform === context.platform);
+    // Require companyId/brandId match to prevent cross-tenant selection.
+    return (state.socialAccounts || []).find((account) =>
+      account.platform === context.platform &&
+      (!context.companyId || account.companyId === context.companyId) &&
+      (!context.brandId || account.brandId === context.brandId)
+    );
   }
   // Fail-closed: no first-account fallback. An ambiguous/cleared context must not
   // silently select a wrong-tenant account.
@@ -6172,14 +6177,17 @@ async function requestPlatformGeneration() {
   } catch (error) {
     result = { ok: false, error: error && error.message ? error.message : String(error) };
   }
-  applyGenerationResult(drafts, result, postPackage);
-  updatePostPackageFromDrafts(activePostPackageId);
-  await saveProductionState();
-  if (generateButton) {
-    generateButton.disabled = false;
-    generateButton.textContent = "Generate platform versions";
+  try {
+    applyGenerationResult(drafts, result, postPackage);
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    reopenActiveDetail();
+  } finally {
+    if (generateButton) {
+      generateButton.disabled = false;
+      generateButton.textContent = "Generate platform versions";
+    }
   }
-  reopenActiveDetail();
 }
 
 function applyGenerationResult(drafts, result, postPackage) {
@@ -6248,12 +6256,21 @@ function buildGenerationPayload(postPackage, drafts) {
   };
 }
 
+function markGeneratedDraftsStale() {
+  if (!activePostPackageId) return;
+  prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId && draft.textSource === "llm")
+    .forEach((draft) => { draft.generationStatus = "needs-attention"; });
+}
+
 function handleGenerationStyleChange(event) {
   if (!activePostPackageId) return;
   const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
   if (!postPackage) return;
   postPackage.generationStyle = event.target.value || "Default";
   postPackage.updatedAt = new Date().toISOString();
+  // Previously generated drafts are stale — they were produced with the old style.
+  markGeneratedDraftsStale();
   saveProductionState();
 }
 
@@ -6601,6 +6618,7 @@ function reopenActiveDetail() {
 
 function handleIdeaInput() {
   updatePreviewCopy();
+  markGeneratedDraftsStale();
   persistActiveDetail();
 }
 
@@ -6613,6 +6631,11 @@ function updatePreviewCopy() {
   const idea = document.querySelector("#idea-text").value;
   document.querySelectorAll("[data-preview-platform]").forEach((preview) => {
     const platform = preview.dataset.previewPlatform;
+    // Only overwrite auto-sourced drafts; preserve generated/manual copy.
+    const draft = activePostPackageId
+      ? prototypeModel.platformDrafts.find((d) => d.postPackageId === activePostPackageId && d.platform === platform)
+      : null;
+    if (draft && draft.textSource !== "auto") return;
     const text = platformCopy(idea, platform);
     const textarea = preview.querySelector("textarea");
     textarea.value = text;
@@ -6675,12 +6698,24 @@ function platformCopy(idea, platform) {
 }
 
 function socialAccountIdForPlatform(platform) {
-  return (state.socialAccounts || []).find((account) => account.platform === platform)?.id || state.context.socialAccountId;
+  const context = state.context || {};
+  // Require companyId/brandId match to prevent cross-tenant selection.
+  const account = (state.socialAccounts || []).find((acct) =>
+    acct.platform === platform &&
+    (!context.companyId || acct.companyId === context.companyId) &&
+    (!context.brandId || acct.brandId === context.brandId)
+  );
+  return account?.id || context.socialAccountId;
 }
 
 function accountForDraft(draft) {
   return (state.socialAccounts || []).find((account) => account.id === draft.socialAccountId)
-    || (state.socialAccounts || []).find((account) => account.platform === draft.platform)
+    // Require companyId/brandId match in the platform fallback to prevent cross-tenant selection.
+    || (state.socialAccounts || []).find((account) =>
+        account.platform === draft.platform &&
+        (!draft.companyId || account.companyId === draft.companyId) &&
+        (!draft.brandId || account.brandId === draft.brandId)
+      )
     || null;
 }
 

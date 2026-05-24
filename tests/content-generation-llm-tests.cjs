@@ -90,9 +90,16 @@ const payload = {
     parseReviewerContent('{"text":"hi","changes":"trimmed"}', "orig"),
     { text: "hi", changeNote: "trimmed" },
   );
+  // Non-JSON response must return the fallback draft, not the raw reviewer output.
+  // This prevents reviewer failure messages from becoming published post text.
   const loose = parseReviewerContent("just text", "orig");
-  assert.equal(loose.text, "just text");
-  assert.equal(loose.changeNote, "reviewer adjusted (note unavailable)");
+  assert.equal(loose.text, "orig");
+  assert.equal(loose.changeNote, "reviewer parse error");
+
+  // 8. Reviewer error message (e.g. compliance refusal) must not become post text.
+  const refusal = parseReviewerContent("I cannot comply with this request.", "safe original");
+  assert.equal(refusal.text, "safe original");
+  assert.equal(refusal.changeNote, "reviewer parse error");
 
   console.log("All Diamond content-generation-llm tests passed.");
 })().catch((error) => {
