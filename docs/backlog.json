@@ -10,6 +10,83 @@
       "created_at": "2026-05-19",
       "completed_at": null,
       "dependencies": []
+    },
+    {
+      "number": 2,
+      "title": "Complete repeated X staging proof across three separate app sessions",
+      "description": "Record three real X staging proof sessions from separate Diamond app launches. Each session must capture: session ID, timestamp, account, draft text, screenshot, URL, and result. This is a required gate before platform expansion.",
+      "category": "test",
+      "priority": 95,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [1]
+    },
+    {
+      "number": 3,
+      "title": "Complete Instagram, TikTok, and LinkedIn routine automation",
+      "description": "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+      "category": "feature",
+      "priority": 85,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [1]
+    },
+    {
+      "number": 4,
+      "title": "Complete YouTube Shorts and Facebook routine automation",
+      "description": "Wire assisted composer and media upload proofs for YouTube Shorts and Facebook. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+      "category": "feature",
+      "priority": 85,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [1]
+    },
+    {
+      "number": 5,
+      "title": "Complete repeated staging proof for each writable platform",
+      "description": "Run and record staging proofs for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook. Each platform must have successful staging records from separate app sessions before expanding automation further.",
+      "category": "test",
+      "priority": 85,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [3, 4]
+    },
+    {
+      "number": 6,
+      "title": "Complete user guide review after first full operator session",
+      "description": "In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. Conduct a full operator session with Diamond and review guide completeness, accuracy, and clarity.",
+      "category": "docs",
+      "priority": 80,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [1, 2]
+    },
+    {
+      "number": 7,
+      "title": "Scott workflow signoff on Diamond posting flow",
+      "description": "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
+      "category": "feature",
+      "priority": 95,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [2, 5, 6]
+    },
+    {
+      "number": 8,
+      "title": "Finalize auto_publish policy and make go/no-go decision",
+      "description": "After repeated staging proof, expert checklist, and Scott workflow signoff are complete, make an explicit product decision on whether auto_publish should ever become enabled. Document the decision and any conditions that must be met before enablement.",
+      "category": "feature",
+      "priority": 80,
+      "status": "backlog",
+      "created_at": "2026-05-23",
+      "completed_at": null,
+      "dependencies": [7]
     }
   ]
 }
