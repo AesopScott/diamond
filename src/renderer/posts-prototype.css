@@ -2171,6 +2171,11 @@ textarea {
   width: 100%;
 }
 
+.account-login-webview-shell.mobile-browser-shell {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
 .account-login-placeholder {
   align-items: center;
   background: linear-gradient(180deg, #10151d 0%, #07090d 100%);

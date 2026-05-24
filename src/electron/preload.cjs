@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("diamond", {
   saveState: (state) => ipcRenderer.invoke("diamond:save-state", state),
   getPaths: () => ipcRenderer.invoke("diamond:get-paths"),
   inspectAccountSession: (input) => ipcRenderer.invoke("diamond:inspect-account-session", input),
+  clearAccountSession: (input) => ipcRenderer.invoke("diamond:clear-account-session", input),
   getFirebaseAdminStatus: () => ipcRenderer.invoke("diamond:get-firebase-admin-status"),
   getFirebaseLicense: (input) => ipcRenderer.invoke("diamond:get-firebase-license", input),
   getVoiceoverStatus: () => ipcRenderer.invoke("diamond:get-voiceover-status"),

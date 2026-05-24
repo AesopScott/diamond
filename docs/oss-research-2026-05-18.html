@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diamond — OSS Repo Research, 2026-05-18</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent-2: #f59e0b;
+    --green: #22c55e;
+    --red: #f87171;
+    --code-bg: #1a1f27;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+  nav.toc {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  nav.toc h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    font-weight: 700;
+  }
+  nav.toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: section;
+  }
+  nav.toc ol li {
+    counter-increment: section;
+    margin: 4px 0;
+  }
+  nav.toc ol li::before {
+    content: counter(section) ". ";
+    color: var(--text-dim);
+  }
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  main {
+    padding: 40px 60px 80px;
+    max-width: 1080px;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 4px;
+    color: var(--text);
+  }
+  h1 + .sub {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 36px;
+  }
+  h2 {
+    font-size: 20px;
+    margin: 40px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  h3 {
+    font-size: 16px;
+    margin: 24px 0 8px;
+    color: var(--accent);
+  }
+  p { margin: 8px 0 12px; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-size: 13px;
+  }
+  th {
+    background: rgba(255,255,255,0.03);
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+  }
+  tr:last-child td { border-bottom: none; }
+  blockquote {
+    margin: 14px 0;
+    padding: 12px 18px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    color: var(--text);
+    font-style: italic;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .pill-green { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .pill-amber { background: rgba(245,158,11,0.15); color: var(--accent-2); border: 1px solid rgba(245,158,11,0.3); }
+  .pill-red   { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .pill-blue  { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
+  .callout {
+    margin: 18px 0;
+    padding: 14px 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+  }
+  .callout.warn { border-left-color: var(--accent-2); }
+  .callout.danger { border-left-color: var(--red); }
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+  a { color: var(--accent); }
+  .footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Bottom line</a></li>
+    <li><a href="#landscape">Candidate landscape</a></li>
+    <li><a href="#insight-ai">Insight: AI flips the copy/reimplement tradeoff</a></li>
+    <li><a href="#insight-model">Insight: the model is the moat, not the wrapper</a></li>
+    <li><a href="#gap-analysis">Gap analysis vs Diamond</a></li>
+    <li><a href="#survey-comfyui">Survey 1 — ComfyUI</a></li>
+    <li><a href="#survey-tiktoka">Survey 2 — tiktoka-studio-uploader</a></li>
+    <li><a href="#survey-postiz">Survey 3 — Postiz</a></li>
+    <li><a href="#next-moves">Recommended next moves</a></li>
+    <li><a href="#license-discipline">License discipline</a></li>
+    <li><a href="#obsidian-export">What's in Obsidian now</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h1>Diamond — OSS Repo Research</h1>
+<div class="sub">Session date: 2026-05-18 &middot; Companion to <code>diamond_Build/3-Build-Plan.md</code> &rarr; <em>OSS Repo Research</em> section</div>
+
+<h2 id="summary">1. Bottom line</h2>
+
+<p><strong>No single open-source repo does all three jobs</strong> (image generation, video generation, scheduling) at the level of polish that commercial tools or Diamond's specialized direction warrant. The mature OSS leaders each pick one job and do it well.</p>
+
+<p>The realistic move for Diamond is <strong>not to adopt any of these wholesale</strong> — Diamond is already mature and architecturally different from Postiz (Diamond uses visible-browser automation; Postiz uses official OAuth APIs). Instead, <strong>mine specific features</strong> from each source with full awareness of license constraints.</p>
+
+<h2 id="landscape">2. Candidate landscape</h2>
+
+<table>
+<thead><tr>
+  <th>Job</th>
+  <th>OSS leader</th>
+  <th>Stars</th>
+  <th>License</th>
+  <th>Diamond use</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td>Scheduling / cross-posting</td>
+  <td><code>gitroomhq/postiz-app</code></td>
+  <td>30,265</td>
+  <td><span class="pill pill-red">AGPL-3.0</span></td>
+  <td>Concept mining only — read for UX patterns, don't copy code</td>
+</tr>
+<tr>
+  <td>Image / video generation</td>
+  <td><code>comfyanonymous/ComfyUI</code></td>
+  <td>113,302</td>
+  <td><span class="pill pill-amber">GPL-3.0</span></td>
+  <td>Run as a separate worker over HTTP — aggregation, not derivative</td>
+</tr>
+<tr>
+  <td>TikTok-specific automation</td>
+  <td><code>wanghaisheng/tiktoka-studio-uploader</code></td>
+  <td>361</td>
+  <td><span class="pill pill-green">MIT</span></td>
+  <td>Lift selectors + session strategy directly with attribution</td>
+</tr>
+<tr>
+  <td>Claude skill bundle for posting</td>
+  <td><code>publora/skills</code></td>
+  <td>24</td>
+  <td><span class="pill pill-green">MIT</span></td>
+  <td>Reference; format inspiration if Diamond ever publishes its own skills</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="insight-ai">3. Insight: AI flips the copy/reimplement tradeoff</h2>
+
+<p>Copyright protects <strong>code expression</strong>, not the underlying concept or algorithm. With AI, the cost of <em>"read it, understand it, write it in your own stack"</em> has collapsed from weeks to hours. This changes the calculus on which features are worth adopting:</p>
+
+<blockquote>
+What used to be a "build from scratch vs. fork an existing repo" decision is now a "spend an afternoon reimplementing the idea you saw" decision.
+</blockquote>
+
+<p>For GPL/AGPL sources (Postiz, ComfyUI), this is the unlock: read the public source for concepts and write your own implementation in Diamond's JavaScript/Electron stack. Clean-room reimplementation has been legally fine since the 1980s — AI just made it cheap.</p>
+
+<p>For MIT/Apache/BSD sources (tiktoka-uploader, publora/skills), you can lift code directly with attribution, but reimplementation in Diamond's stack is usually faster than porting Python.</p>
+
+<h2 id="insight-model">4. Insight: the model is the moat, not the wrapper</h2>
+
+<p>Initial framing was "embed ComfyUI." Better framing:</p>
+
+<blockquote>
+The model is the moat, not the wrapper. Pick the API that gives you the quality/cost ratio you want and have Diamond be the orchestration layer.
+</blockquote>
+
+<p>Diamond should be the layer that knows:</p>
+<ul>
+  <li><strong>Which prompts to send</strong> (with brand voice, campaign context, claim library applied)</li>
+  <li><strong>Which provider to call</strong> (Replicate, Runway, Luma, Pika, fal.ai, Modal, or self-hosted ComfyUI)</li>
+  <li><strong>What to do with the result</strong> (asset library, approval queue, scheduling)</li>
+</ul>
+
+<p>This keeps Diamond <strong>modular</strong>: swap generation backends without rewriting Diamond. <strong>License-clean</strong>: calling a separate service is "aggregation," not derivative work. <strong>Cost-aligned</strong>: pay-per-generation economics scale with usage.</p>
+
+<h2 id="gap-analysis">5. Gap analysis vs Diamond</h2>
+
+<table>
+<thead><tr>
+  <th>Capability gap</th>
+  <th>Best source</th>
+  <th>Effort estimate</th>
+  <th>License safety</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td><strong>AI image generation pipeline</strong> (Diamond has <em>templates</em>, not generative AI per BUILD_PLAN)</td>
+  <td>ComfyUI as separate service, or commercial API (Replicate, Runway, fal.ai)</td>
+  <td>1–2 weeks for the worker module + asset-library schema additions</td>
+  <td>None if run as a separate service; clean-room only if reading ComfyUI source</td>
+</tr>
+<tr>
+  <td><strong>AI video generation</strong> (Reels / Shorts / TikToks)</td>
+  <td>ComfyUI + AnimateDiff / SVD nodes, or Runway / Luma / Pika APIs</td>
+  <td>1–2 weeks alongside image gen</td>
+  <td>Same as above</td>
+</tr>
+<tr>
+  <td><strong>TikTok automation</strong> (Diamond explicitly has TikTok in "manual staging mode for non-X writable platforms")</td>
+  <td><code>tiktoka-studio-uploader</code> — selectors, captcha handling, scheduled-post flow, sessionId strategy</td>
+  <td>2–3 days to port to Playwright</td>
+  <td>MIT — safe to lift code with attribution</td>
+</tr>
+<tr>
+  <td><strong>AI text generation in draft flow</strong> (Diamond has brand voice + claim library but no "generate a draft from this campaign slot using these constraints" UI affordance)</td>
+  <td>Postiz concept</td>
+  <td>3–5 days</td>
+  <td>AGPL — concept only, write fresh</td>
+</tr>
+<tr>
+  <td><strong>Analytics visualization dashboards</strong> (Diamond logs metrics, doesn't visualize)</td>
+  <td>Postiz layout patterns + Chart.js or Recharts (both MIT) for the actual library</td>
+  <td>~1 week</td>
+  <td>None for chart lib; concept-only for Postiz layout</td>
+</tr>
+<tr>
+  <td><strong>Webhook-out for external automation</strong> (Diamond has Polaris bridge but no generic webhook system)</td>
+  <td>Postiz N8N / Make / Zapier integration pattern</td>
+  <td>1–2 days</td>
+  <td>Concept-only</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="survey-comfyui">6. Survey 1 — ComfyUI</h2>
+
+<table>
+<tr><th>Stat</th><th>Value</th></tr>
+<tr><td>Stars / Forks</td><td>113,302 / 13,270</td></tr>
+<tr><td>License</td><td>GPL-3.0</td></tr>
+<tr><td>Activity</td><td>Active development</td></tr>
+<tr><td>Capabilities</td><td>Images, video, 3D, and audio via custom nodes</td></tr>
+</table>
+
+<h3>Architecture</h3>
+<p>Ships with a proper HTTP server (<code>server.py</code>, 55KB) and an <code>api_server/</code> module containing routes, services, utils. Designed to run as a service, not embedded.</p>
+
+<h3>Integration pattern (recommended)</h3>
+<ol>
+  <li><strong>Run ComfyUI as a separate backend</strong> — local (with a GPU) or hosted (RunPod serverless ComfyUI ~$0.0004/sec, Replicate, Banana, Modal).</li>
+  <li><strong>Diamond stays in JavaScript/Electron</strong> — adds a <code>generative-worker.js</code> alongside the existing Playwright <code>browser-worker</code> that POSTs workflows to the ComfyUI HTTP endpoint and polls for results.</li>
+  <li><strong>Workflow JSONs become assets</strong> — store ComfyUI workflow JSON files in Diamond's asset library, parameterize the text prompts, run them on demand. This is how everyone integrates ComfyUI: the workflow is a graph saved as JSON, POSTed with parameter overrides.</li>
+</ol>
+
+<div class="callout">
+<div class="callout-title">License safety</div>
+GPL-3.0 means if you embed ComfyUI's code, your tool becomes GPL. But calling a separately-running ComfyUI over HTTP is fine — that's "aggregation," not derivative work. Same model as calling Postgres or Redis. Diamond stays MIT/private.
+</div>
+
+<h3>Commercial alternatives (no GPL concern, pay-per-generation)</h3>
+<ul>
+  <li><strong>Runway</strong> — best for video, $$$</li>
+  <li><strong>Luma Dream Machine</strong> — video, more affordable</li>
+  <li><strong>Replicate</strong> — runs ComfyUI workflows on demand, pay-per-run, ~$0.001–$0.05 per image</li>
+  <li><strong>Modal</strong> — host your own ComfyUI workflow as a function</li>
+  <li><strong>fal.ai</strong>, <strong>Pika</strong>, <strong>Banana</strong>, others</li>
+</ul>
+
+<h3>Diamond impact estimate</h3>
+<p>New <code>generative-worker</code> module + asset-library schema additions for "workflow templates" and "generated outputs" + a UI affordance in the draft flow. <strong>~1–2 weeks of focused work.</strong></p>
+
+<h2 id="survey-tiktoka">7. Survey 2 — tiktoka-studio-uploader</h2>
+
+<table>
+<tr><th>Stat</th><th>Value</th></tr>
+<tr><td>Stars</td><td>361</td></tr>
+<tr><td>License</td><td>MIT</td></tr>
+<tr><td>Language</td><td>Python</td></tr>
+<tr><td>Author</td><td><code>wanghaisheng</code></td></tr>
+</table>
+
+<h3>Approach</h3>
+<p>Uses Selenium with two authentication modes:</p>
+<ul>
+  <li><strong>Manual selenium</strong> — opens a real browser, you log in manually</li>
+  <li><strong>SessionId-based</strong> — pass an existing TikTok session cookie</li>
+</ul>
+
+<h3>File structure</h3>
+<pre><code>src/           # main upload logic (probably the meat)
+tests/
+examples/      # likely shell scripts showing the API
+test-tiktok-manual-selenium-{windows,macos}.sh
+test-tiktok-manual-sessionId.sh
+test-tiktok-manual-sessionId-proxy.sh
+test-youtube-{windows,macos}.sh</code></pre>
+
+<h3>What's mineable for Diamond</h3>
+<ul>
+  <li><strong>TikTok upload selectors and DOM dance</strong> — the specific CSS / XPath selectors for TikTok's upload form, captcha handling, scheduled-post flow. This is the brittle stuff that takes hours to figure out from scratch.</li>
+  <li><strong>Session cookie strategy</strong> — Diamond currently uses Playwright browser profile isolation; this repo's <code>sessionId</code> mode is an alternative for cases where the profile is unreliable.</li>
+  <li><strong>YouTube upload flow</strong> — they also have a YouTube uploader; might inform Diamond's YouTube Shorts work.</li>
+</ul>
+
+<div class="callout">
+<div class="callout-title">License safety</div>
+MIT — you can lift specific functions and selectors directly into Diamond's <code>tiktok-adapter.js</code>, as long as you preserve the original copyright notice somewhere (typically a NOTICES file or a top-of-file comment block).
+</div>
+
+<h3>Diamond impact estimate</h3>
+<p>Probably <strong>2–3 days</strong> to port the upload flow and adapt to Playwright's API (Diamond uses Playwright, not Selenium). The win is mostly in the selectors and edge-case handling that took the original author months to figure out.</p>
+
+<h2 id="survey-postiz">8. Survey 3 — Postiz</h2>
+
+<table>
+<tr><th>Stat</th><th>Value</th></tr>
+<tr><td>Stars</td><td>30,265</td></tr>
+<tr><td>License</td><td>AGPL-3.0</td></tr>
+<tr><td>Tech stack</td><td>NextJS + NestJS + Prisma + Temporal + PostgreSQL</td></tr>
+</table>
+
+<div class="callout warn">
+<div class="callout-title">Critical architectural difference</div>
+Postiz uses each platform's <strong>official OAuth API</strong> (X API, IG Graph API, LinkedIn API, etc.). Diamond explicitly went the opposite direction — avoid platform APIs, use visible browser sessions. <strong>Postiz's integration code is not directly transferable</strong> to Diamond's approach.
+</div>
+
+<p>So Postiz can only inform Diamond on <strong>surface features and UX patterns</strong>, not under-the-hood integration.</p>
+
+<h3>Postiz feature → Diamond gap mapping</h3>
+
+<table>
+<thead><tr>
+  <th>Postiz feature</th>
+  <th>Diamond has it?</th>
+  <th>Mineable as concept?</th>
+</tr></thead>
+<tbody>
+<tr><td>Multi-platform scheduling</td><td><span class="pill pill-green">Yes</span></td><td>n/a</td></tr>
+<tr><td>AI text generation (prompts integrated into draft flow)</td><td><span class="pill pill-amber">Partial</span> — Diamond has brand voice + claim library, no explicit "AI assistant in draft view" feature</td><td><span class="pill pill-green">Yes, UX-level only</span></td></tr>
+<tr><td>Analytics dashboards</td><td><span class="pill pill-amber">Partial</span> — Diamond logs metrics but BUILD_PLAN doesn't show visualization charts</td><td><span class="pill pill-green">Yes, layout/charts</span></td></tr>
+<tr><td>Team collaboration (comments, post exchange)</td><td><span class="pill pill-red">No</span></td><td><span class="pill pill-green">Yes</span></td></tr>
+<tr><td>Marketplace (buy/sell posts)</td><td><span class="pill pill-red">No</span>, probably not desired</td><td>n/a — commercial mechanic</td></tr>
+<tr><td>External automation API (N8N, Make, Zapier)</td><td><span class="pill pill-amber">Partial</span> — Diamond has Polaris bridge but not generic webhook system</td><td><span class="pill pill-green">Yes, webhook patterns</span></td></tr>
+<tr><td>Email notifications (via Resend)</td><td><span class="pill pill-red">No</span></td><td><span class="pill pill-green">Yes</span></td></tr>
+<tr><td>OAuth-based platform connection</td><td><span class="pill pill-red">No</span> — Diamond deliberately doesn't</td><td><span class="pill pill-red">Architectural mismatch — skip</span></td></tr>
+<tr><td>Self-hosted deployment story</td><td>n/a — Diamond is Electron, not web-served</td><td><span class="pill pill-red">Different distribution model</span></td></tr>
+</tbody>
+</table>
+
+<h3>Top concept-level steals</h3>
+<ol>
+  <li><strong>AI prompt-templates in the draft flow.</strong> Postiz bakes "AI write me a tweet about X" into the draft view. Diamond has the building blocks (brand voice, claim library, content pillars) but no UI affordance that says "generate a draft from this campaign slot using these constraints." Worth adding.</li>
+  <li><strong>Analytics visualization.</strong> Diamond logs the data; chart it. Use Chart.js or Recharts (both MIT) — no need to look at Postiz code at all for this; just steal the <em>idea</em> that metrics should be visualizable, then implement with off-the-shelf chart libs.</li>
+  <li><strong>Webhook-out for external automation.</strong> Diamond has the Polaris bridge but no generic "POST to a user-configured webhook on event X" mechanism. Useful for connecting Diamond into Zapier/Make if you ever want that.</li>
+</ol>
+
+<div class="callout danger">
+<div class="callout-title">License safety</div>
+AGPL-3.0 is aggressive. Even running Postiz over a network triggers the share-alike requirement (that's the "Affero" part — it closes the SaaS loophole that vanilla GPL leaves open). So <strong>don't look at Postiz's source code while writing Diamond features.</strong> Read the public docs, screenshots, and UX patterns only. Implement from concept, not from code. Keep your reading documented (a <code>docs/research/postiz-features-observed.md</code> is fine; copying any code into Diamond is not).
+</div>
+
+<h3>Diamond impact estimate per concept</h3>
+<ul>
+  <li>AI-in-draft UX = ~3–5 days</li>
+  <li>Analytics dashboards = ~1 week (mostly chart UI + data shaping)</li>
+  <li>Webhook-out = ~1–2 days</li>
+</ul>
+
+<h2 id="next-moves">9. Recommended next moves (priority order)</h2>
+
+<table>
+<thead><tr>
+  <th>#</th>
+  <th>Move</th>
+  <th>Effort</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>Generative image/video as a separate worker.</strong> Pick a commercial API provider (or shortlist 2–3 — Replicate is the safest bet for ComfyUI workflow compatibility). Draft the Diamond ↔ provider interface: request shape, async polling, asset storage. Asset library schema additions: <code>provider</code>, <code>provider_request_id</code>, <code>prompt</code>, <code>seed</code> (so generations are reproducible and auditable). Add <code>generative-worker.js</code> as a sibling to <code>browser-worker.js</code>.</td>
+  <td>1–2 weeks</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>TikTok upload automation</strong> (lift from <code>tiktoka-studio-uploader</code> under MIT). Read the repo's <code>src/</code> and <code>examples/</code>, port the selectors and scheduled-post flow to Diamond's Playwright stack. Closes Diamond's gap on TikTok being in "manual staging mode for non-X writable platforms."</td>
+  <td>2–3 days</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>AI-in-draft UX affordance.</strong> Add a "Generate from campaign slot" button in the draft view that pulls campaign brief + brand voice + claim library and produces a draft. Concept inspired by Postiz, implementation fresh.</td>
+  <td>3–5 days</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><strong>Analytics visualization dashboards.</strong> Diamond logs the data already. Add Chart.js or Recharts (both MIT, direct dependency, no license concerns) and chart impressions, clicks, signups, league joins, hook performance over time.</td>
+  <td>~1 week</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>Webhook-out for external automation.</strong> Generic "POST to a user-configured webhook on event X" mechanism. Lets Diamond connect to Zapier/Make if/when wanted.</td>
+  <td>1–2 days</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout">
+<div class="callout-title">If picking just one</div>
+The single biggest capability gap is <strong>AI image and AI video generation</strong>. Diamond renders structured templates (leaderboard cards, prize cards, etc.) but doesn't appear to do generative AI for hero images, lifestyle shots, or short-form video. That's where social-content quality gates have moved. The integration is architecturally clean — it's another worker, like Playwright is for browser staging.
+</div>
+
+<h2 id="license-discipline">10. License discipline going forward</h2>
+
+<ul>
+  <li>When mining a GPL or AGPL repo for ideas, <strong>document the concept in a <code>docs/research/&lt;source&gt;-features-observed.md</code> file</strong> rather than letting the source code itself sit in Diamond's working tree. The research file becomes the input to fresh implementation.</li>
+  <li>For MIT/Apache/BSD sources where code is lifted directly, <strong>preserve attribution</strong> — either in a top-of-file comment block on the adapted file, or in a project-level <code>NOTICES</code> file.</li>
+  <li>Diamond's own license stays clean as long as: GPL/AGPL code never lands in the working tree, only concepts do; MIT code that lands carries its required attribution.</li>
+</ul>
+
+<h2 id="obsidian-export">11. What's in Obsidian now</h2>
+
+<p>This research is also captured in the Diamond build plan at:</p>
+<pre><code>diamond_Build/3-Build-Plan.md → "OSS Repo Research — 2026-05-18" section</code></pre>
+
+<p>The Obsidian copy is the working source of truth; this HTML is a standalone reading view of the same content.</p>
+
+<div class="footer">
+  Generated 2026-05-18 · Companion to Diamond's BUILD_PLAN.md · No code from any surveyed repo lives in Diamond's tree.
+</div>
+
+</main>
+</div>
+</body>
+</html>

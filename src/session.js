@@ -80,6 +80,9 @@ export function inferSessionStatusFromUrl(url, account = {}) {
   if (/challenge|checkpoint|captcha|verification/i.test(value)) {
     return { status: "challenge", note: "The platform appears to be asking for verification." };
   }
+  if (/\/404(?:\?|\/|$)|not[-_]?found/i.test(value)) {
+    return { status: "error", note: "The platform returned a missing or not-found page." };
+  }
   const expectedHost = account.expectedHost || hostFromUrl(account.accountUrl);
   if (expectedHost && hostFromUrl(value) !== expectedHost) {
     return { status: "unknown", note: `Loaded host does not match expected host ${expectedHost}.` };
@@ -89,7 +92,7 @@ export function inferSessionStatusFromUrl(url, account = {}) {
 
 function hostFromUrl(url) {
   try {
-    return new URL(url).host.replace(/^www\./, "");
+    return new URL(url).host.replace(/^(www|m)\./, "");
   } catch {
     return null;
   }

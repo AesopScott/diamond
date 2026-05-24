@@ -104,11 +104,16 @@ assert.equal(canStageDraft(stagedReviewDraft, { sessionCheck: validateSessionFor
 
 assert.equal(inferSessionStatusFromUrl("https://x.com/login", workspace.socialAccounts[0]).status, "login_required");
 assert.equal(inferSessionStatusFromUrl("https://x.com/home", workspace.socialAccounts[0]).status, "ready");
+assert.equal(inferSessionStatusFromUrl("https://www.tiktok.com/404?fromUrl=/bad", { expectedHost: "tiktok.com" }).status, "error");
 assert.equal(normalizeAccountUrl("@TheCard", "x"), "https://x.com/TheCard");
 assert.equal(normalizeAccountUrl("thecard", "x"), "https://x.com/thecard");
 assert.equal(defaultLoginUrlForPlatform("x"), "https://x.com/i/flow/login");
 assert.equal(normalizeLoginUrl("", "x"), "https://x.com/i/flow/login");
 assert.equal(resolveLoginUrl(workspace.socialAccounts[0]), "https://x.com/i/flow/login");
+assert.equal(normalizeLoginUrl("https://www.tiktok.com/login", "tiktok"), "https://www.tiktok.com/login");
+assert.equal(normalizeLoginUrl("https://m.tiktok.com/login", "tiktok"), "https://www.tiktok.com/login");
+assert.equal(normalizeLoginUrl("https://www.tiktok.com/login/phone-or-email/email", "tiktok"), "https://www.tiktok.com/login");
+assert.equal(inferSessionStatusFromUrl("https://m.tiktok.com/foryou", { expectedHost: "tiktok.com" }).status, "ready");
 assert.equal(defaultComposeUrlForPlatform("x"), "https://x.com/compose/post");
 assert.equal(normalizeComposeUrl("", "x"), "https://x.com/compose/post");
 assert.equal(resolveComposeUrl(workspace.socialAccounts[0]), "https://x.com/compose/post");

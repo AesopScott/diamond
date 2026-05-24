@@ -23,6 +23,7 @@ assert.equal(platformLabel("pinterest"), "Pinterest");
 
 assert.equal(defaultLoginUrlForPlatform("instagram"), "https://www.instagram.com/accounts/login/");
 assert.equal(defaultComposeUrlForPlatform("tiktok"), "https://www.tiktok.com/upload");
+assert.equal(defaultLoginUrlForPlatform("tiktok"), "https://www.tiktok.com/login");
 assert.equal(defaultExpectedHostForPlatform("linkedin"), "linkedin.com");
 assert.equal(defaultComposeUrlForPlatform("youtube-longform"), "https://studio.youtube.com/");
 assert.equal(defaultExpectedHostForPlatform("pinterest"), "pinterest.com");
@@ -51,6 +52,10 @@ expectedPlatforms.forEach((platform) => {
   assert.equal(resolveLoginUrl(account), defaultLoginUrlForPlatform(platform));
   assert.equal(resolveComposeUrl(account), defaultComposeUrlForPlatform(platform));
 });
+
+assert.equal(resolveLoginUrl({ platform: "tiktok", loginUrl: "https://www.tiktok.com/login" }), "https://www.tiktok.com/login");
+assert.equal(resolveLoginUrl({ platform: "tiktok", loginUrl: "https://m.tiktok.com/login" }), "https://www.tiktok.com/login");
+assert.equal(resolveLoginUrl({ platform: "tiktok", loginUrl: "https://www.tiktok.com/login/phone-or-email/email" }), "https://www.tiktok.com/login");
 
 const templatePlatforms = new Set(workspace.socialTemplates.map((template) => template.platform));
 assert.deepEqual([...templatePlatforms], expectedPlatforms);

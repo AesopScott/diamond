@@ -1315,6 +1315,7 @@ function renderAccountDashlanePanel(account) {
 function initializeAccountLoginWebview(account) {
   const webview = document.querySelector("#account-login-webview");
   if (!webview) return;
+  applyAccountBrowserUserAgent(webview, account);
   wireAccountLoginWebviewEvents(webview, account);
   if (accountLoginResizeObserver) accountLoginResizeObserver.disconnect();
   const shell = document.querySelector(".account-login-webview-shell");
@@ -1468,8 +1469,11 @@ function sizeAccountLoginWebview() {
   const browser = document.querySelector(".account-login-browser");
   const browserRect = browser?.getBoundingClientRect();
   const fallbackHeight = browserRect ? browserRect.height - shell.offsetTop : window.innerHeight - shell.getBoundingClientRect().top;
-  const width = Math.max(360, Math.floor(rect.width || browserRect?.width || window.innerWidth - 240));
+  const account = accountForBrowserWebview(webview);
+  const mobileMode = accountPrefersMobileBrowser(account);
+  const width = mobileMode ? Math.min(430, Math.max(360, Math.floor(rect.width || 430))) : Math.max(360, Math.floor(rect.width || browserRect?.width || window.innerWidth - 240));
   const height = Math.max(560, Math.floor(rect.height || fallbackHeight || window.innerHeight - 170));
+  shell.classList.toggle("mobile-browser-shell", mobileMode);
   webview.style.width = `${width}px`;
   webview.style.height = `${height}px`;
   webview.style.minWidth = `${width}px`;
@@ -1515,7 +1519,14 @@ function accountAutoRestoreUrl(account) {
     account.currentUrl,
     account.accountUrl,
     normalizeAccountUrl(account.handle, account.platform),
-  ].find(Boolean) || "";
+  ].find((url) => accountUrlCanAutoRestore(account, url)) || "";
+}
+
+function accountUrlCanAutoRestore(account, url) {
+  if (!url || url === "about:blank") return false;
+  if (/\/404(?:\?|\/|$)|not[-_]?found/i.test(String(url))) return false;
+  if (account?.platform === "tiktok" && /\/live(?:\?|\/|$)/i.test(String(url))) return false;
+  return true;
 }
 
 function accountVisibleBrowserUrl(account) {
@@ -1531,6 +1542,7 @@ function accountVisibleBrowserUrl(account) {
 function renderAccountLoginBrowser(account, partition, loginUrl) {
   const loadedUrl = accountVisibleBrowserUrl(account) || "about:blank";
   const hasLoadedPage = loadedUrl !== "about:blank";
+  const userAgent = accountBrowserUserAgent(account);
   const suggestedUrl = hasLoadedPage ? loadedUrl : [
     account.loginPanelUrl,
     account.currentUrl,
@@ -1566,11 +1578,13 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       </form>
       <div class="account-login-browser-toolbar">
         <button type="button" data-account-action="open-login" data-account-id="${escapeHtml(account.id)}">Load login</button>
+        ${account.platform === "tiktok" ? `<button type="button" data-account-action="open-qr-login" data-account-id="${escapeHtml(account.id)}">QR login</button>` : ""}
         <button type="button" data-account-action="reload-login-panel" data-account-id="${escapeHtml(account.id)}">Reload pane</button>
         <button type="button" data-account-action="load-compose-page" data-account-id="${escapeHtml(account.id)}">Load composer</button>
         <button type="button" data-account-action="load-public-profile" data-account-id="${escapeHtml(account.id)}">Load profile</button>
         <button type="button" data-account-action="check-login-panel" data-account-id="${escapeHtml(account.id)}">Check login</button>
         <button type="button" data-account-action="mark-logged-in" data-account-id="${escapeHtml(account.id)}">Mark logged in</button>
+        <button type="button" data-account-action="clear-session" data-account-id="${escapeHtml(account.id)}">Log out session</button>
         <button type="button" data-account-action="needs-login" data-account-id="${escapeHtml(account.id)}">Needs login</button>
         <button type="button" data-account-action="fit-login-panel" data-account-id="${escapeHtml(account.id)}">Fit browser</button>
         <button type="button" data-account-action="close-login-panel" data-account-id="${escapeHtml(account.id)}">Close pane</button>
@@ -1582,13 +1596,36 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
           id="account-login-webview"
           title="${escapeHtml(platformLabel(account.platform))} login preview"
           partition="${escapeHtml(partition)}"
+          data-account-id="${escapeHtml(account.id || "")}"
+          data-platform="${escapeHtml(account.platform || "")}"
+          ${userAgent ? `useragent="${escapeHtml(userAgent)}"` : ""}
           src="${escapeHtml(loadedUrl)}"
-          useragent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
           allowpopups
         ></webview>
       </div>
     </section>
   `;
+}
+
+function accountBrowserUserAgent(account) {
+  if (!accountPrefersMobileBrowser(account)) return "";
+  return "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
+}
+
+function accountPrefersMobileBrowser(account) {
+  return account?.platform === "tiktok" && account?.tiktokLoginMode === "mobile-web";
+}
+
+function accountForBrowserWebview(webview) {
+  const accountId = webview?.dataset?.accountId || "";
+  return (state.socialAccounts || []).find((account) => account.id === accountId) || null;
+}
+
+function applyAccountBrowserUserAgent(webview, account) {
+  const userAgent = accountBrowserUserAgent(account);
+  if (!webview) return;
+  if (userAgent) webview.setAttribute("useragent", userAgent);
+  else webview.removeAttribute("useragent");
 }
 
 function renderAccountDashlaneInline(account) {
@@ -2277,6 +2314,17 @@ async function handleAccountDetailClick(event) {
   if (button.dataset.accountAction === "save-login") saveAccountForm(account);
   if (button.dataset.accountAction === "open-login") {
     if (!guardAccountLoginAction(account, "open-login")) return;
+    if (account.platform === "tiktok") account.tiktokLoginMode = "desktop";
+    await openAccountLogin(account);
+  }
+  if (button.dataset.accountAction === "open-qr-login") {
+    if (!guardAccountLoginAction(account, "open-login")) return;
+    account.tiktokLoginMode = "qr";
+    await openAccountLogin(account);
+  }
+  if (button.dataset.accountAction === "open-web-login") {
+    if (!guardAccountLoginAction(account, "open-login")) return;
+    account.tiktokLoginMode = "desktop";
     await openAccountLogin(account);
   }
   if (button.dataset.accountAction === "reload-login-panel") {
@@ -2311,6 +2359,7 @@ async function handleAccountDetailClick(event) {
   if (button.dataset.accountAction === "copy-login-username") await copyAccountLoginUsername(account);
   if (button.dataset.accountAction === "copy-login-password") await copyAccountLoginPassword();
   if (button.dataset.accountAction === "mark-logged-in") markAccountLoggedIn(account);
+  if (button.dataset.accountAction === "clear-session") await clearAccountBrowserSession(account);
   if (button.dataset.accountAction === "save") saveAccountForm(account);
   if (button.dataset.accountAction === "set-active") setActiveAccount(account);
   if (button.dataset.accountAction === "ready") account.sessionStatus = "ready";
@@ -2325,6 +2374,28 @@ async function handleAccountDetailClick(event) {
   await saveProductionState();
   renderAccounts(account.id);
   renderOperatorDrawer();
+}
+
+async function clearAccountBrowserSession(account) {
+  saveAccountForm(account);
+  updateAccountLoginBrowserStatus(`Logging out ${platformLabel(account.platform)} in Diamond...`);
+  const result = await window.diamond?.clearAccountSession?.({
+    account: sessionProbeAccountPayload(account),
+    partition: accountBrowserPartition(account),
+  });
+  account.sessionStatus = "needs_login";
+  account.sessionNote = result?.ok
+    ? result.note || "Browser session cleared. Load login to sign in again."
+    : result?.note || "Could not clear browser session.";
+  account.lastSessionCheckAt = new Date().toISOString();
+  account.currentUrl = "";
+  account.loginPanelUrl = normalizeLoginUrl("", account.platform) || "about:blank";
+  account.lastLoginProofAt = "";
+  account.lastProofAt = "";
+  account.proofCount = 0;
+  accountBrowserLoadedAccountIds.add(account.id);
+  loadAccountLoginPanelUrl(account.loginPanelUrl, account);
+  updateAccountStatusDom(account);
 }
 
 async function findDashlaneAccount(account) {
@@ -2443,7 +2514,7 @@ async function handleAccountDetailSubmit(event) {
   account.loginPanelUrl = nextUrl;
   account.lastManualNavigationAt = new Date().toISOString();
   accountBrowserLoadedAccountIds.add(account.id);
-  loadAccountLoginPanelUrl(nextUrl);
+  loadAccountLoginPanelUrl(nextUrl, account);
   await saveProductionState();
 }
 
@@ -2453,7 +2524,7 @@ function closeAccountLoginPanel() {
 }
 
 function guardAccountLoginAction(account, action) {
-  const cooldownMs = ACCOUNT_LOGIN_ACTION_COOLDOWNS[action] || 0;
+  const cooldownMs = accountLoginActionCooldownMs(account, action);
   if (!cooldownMs) return true;
   const lastAt = account.loginActionCooldowns?.[action] || "";
   const elapsedMs = lastAt ? Date.now() - new Date(lastAt).getTime() : cooldownMs;
@@ -2469,16 +2540,30 @@ function guardAccountLoginAction(account, action) {
   return true;
 }
 
+function accountLoginActionCooldownMs(account, action) {
+  if (account?.platform === "tiktok" && action === "open-login") return 1000;
+  return ACCOUNT_LOGIN_ACTION_COOLDOWNS[action] || 0;
+}
+
 async function openAccountLogin(account) {
   saveAccountForm(account);
   setActiveAccount(account);
-  account.sessionStatus = account.sessionStatus === "ready" ? "ready" : "needs_login";
+  account.sessionStatus = "needs_login";
   account.loginOpenedAt = new Date().toISOString();
-  const loginUrl = resolveLoginUrl(account);
+  const loginUrl = accountLoginUrlForBrowser(account);
+  account.currentUrl = "";
   account.loginPanelUrl = loginUrl || "about:blank";
   accountBrowserLoadedAccountIds.add(account.id);
-  loadAccountLoginPanelUrl(account.loginPanelUrl);
+  loadAccountLoginPanelUrl(account.loginPanelUrl, account);
   account.sessionNote = loginUrl ? "Loaded official login page in the pane." : "No login URL is configured.";
+}
+
+function accountLoginUrlForBrowser(account) {
+  if (account?.platform === "tiktok") {
+    if (account.tiktokLoginMode === "qr") return "https://www.tiktok.com/login/qrcode";
+    return "https://www.tiktok.com/login";
+  }
+  return resolveLoginUrl(account);
 }
 
 function reloadAccountLoginPanel(account) {
@@ -2493,7 +2578,7 @@ function loadAccountPublicProfile(account) {
   if (!publicUrl) return;
   account.loginPanelUrl = publicUrl;
   accountBrowserLoadedAccountIds.add(account.id);
-  loadAccountLoginPanelUrl(publicUrl);
+  loadAccountLoginPanelUrl(publicUrl, account);
   account.sessionNote = "Loaded public profile page in the pane.";
 }
 
@@ -2505,15 +2590,20 @@ function loadAccountComposePage(account) {
   }
   account.loginPanelUrl = composeUrl;
   accountBrowserLoadedAccountIds.add(account.id);
-  loadAccountLoginPanelUrl(composeUrl);
+  loadAccountLoginPanelUrl(composeUrl, account);
   account.sessionNote = account.platform?.startsWith("youtube-")
     ? "Loaded YouTube Studio. Use Create > Upload videos for Shorts or long-form uploads."
     : "Loaded platform composer page in the pane.";
 }
 
-function loadAccountLoginPanelUrl(url) {
+function loadAccountLoginPanelUrl(url, account = null) {
   const webview = document.querySelector("#account-login-webview");
   if (!webview || !url) return;
+  if (account) {
+    webview.dataset.accountId = account.id || "";
+    webview.dataset.platform = account.platform || "";
+    applyAccountBrowserUserAgent(webview, account);
+  }
   const input = document.querySelector("[data-account-login-address-input]");
   if (input) input.value = url;
   webview.setAttribute("src", url);

@@ -8,6 +8,7 @@ const { fetchFirebaseLicense } = require("../firebase-license.cjs");
 
 const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
+const STATE_BACKUP_LIMIT = 25;
 const SYNC_DIR = path.join(APP_DIR, "sync");
 const TOUR_AUDIO_DIR = path.join(APP_DIR, "tour-audio");
 const CHROMIUM_CACHE_DIR = path.join(APP_DIR, "chromium-cache");
@@ -40,8 +41,55 @@ function readState() {
 function writeState(state) {
   ensureAppDir();
   const next = attachBrowserPartitions(state);
+  backupStateBeforeRiskyWrite(next);
   fs.writeFileSync(STATE_PATH, JSON.stringify(next, null, 2), "utf8");
   return next;
+}
+
+function backupStateBeforeRiskyWrite(nextState) {
+  const current = readRawState();
+  if (!current) return;
+  const currentCounts = stateEntityCounts(current);
+  const nextCounts = stateEntityCounts(nextState);
+  const dropped = Object.keys(currentCounts).filter((key) => nextCounts[key] < currentCounts[key]);
+  if (!dropped.length) return;
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const label = dropped.map((key) => `${key}-${currentCounts[key]}to${nextCounts[key]}`).join("_");
+  const backupPath = path.join(APP_DIR, `state.backup-before-entity-count-drop-${stamp}-${label}.json`);
+  fs.copyFileSync(STATE_PATH, backupPath);
+  pruneStateBackups();
+}
+
+function readRawState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function stateEntityCounts(state = {}) {
+  return {
+    companies: Array.isArray(state.companies) ? state.companies.length : 0,
+    brands: Array.isArray(state.brands) ? state.brands.length : 0,
+    campaigns: Array.isArray(state.campaigns) ? state.campaigns.length : 0,
+    socialAccounts: Array.isArray(state.socialAccounts) ? state.socialAccounts.length : 0,
+  };
+}
+
+function pruneStateBackups() {
+  try {
+    const backups = fs.readdirSync(APP_DIR)
+      .filter((name) => /^state\.backup-.*\.json$/i.test(name))
+      .map((name) => {
+        const fullPath = path.join(APP_DIR, name);
+        return { name, fullPath, mtimeMs: fs.statSync(fullPath).mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    backups.slice(STATE_BACKUP_LIMIT).forEach((backup) => fs.rmSync(backup.fullPath, { force: true }));
+  } catch {
+    // Backups are protective only; a prune failure must not block saving state.
+  }
 }
 
 function attachBrowserPartitions(state) {
@@ -139,6 +187,7 @@ ipcMain.handle("diamond:get-paths", () => ({
   chromiumCacheDir: CHROMIUM_CACHE_DIR,
 }));
 ipcMain.handle("diamond:inspect-account-session", async (_event, input = {}) => inspectAccountSession(input));
+ipcMain.handle("diamond:clear-account-session", async (_event, input = {}) => clearAccountSession(input));
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));
@@ -151,6 +200,42 @@ ipcMain.handle("diamond:get-firebase-admin-status", () => {
     reason: configuredPath ? exists ? "Firebase admin JSON path is configured and exists." : "Firebase admin JSON path is configured but the file was not found." : "No Firebase admin JSON path configured.",
   };
 });
+
+async function clearAccountSession(input = {}) {
+  const account = input.account || {};
+  const partition = String(input.partition || "").startsWith("persist:")
+    ? String(input.partition)
+    : `persist:${sanitizePartitionPart(input.partition || account.browserPartitionId || account.browserProfileId)}`;
+  try {
+    const store = session.fromPartition(partition);
+    await store.clearStorageData({
+      storages: [
+        "cookies",
+        "filesystem",
+        "indexdb",
+        "localstorage",
+        "shadercache",
+        "websql",
+        "serviceworkers",
+        "cachestorage",
+      ],
+    });
+    await store.clearCache();
+    return {
+      ok: true,
+      status: "cleared",
+      note: `${platformLabel(account.platform)} browser session was cleared for this Diamond account.`,
+      partition,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "error",
+      note: error?.message || "Could not clear the Diamond browser session.",
+      partition,
+    };
+  }
+}
 
 async function inspectAccountSession(input = {}) {
   const account = input.account || {};

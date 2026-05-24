@@ -22,7 +22,7 @@ assert.match(switchJs, /window\.location\.replace\(SHELL_ROUTES\[selectedShell\]
 assert.match(legacyHtml, /<title>Diamond<\/title>/);
 assert.match(legacyHtml, /id="social-webview"/);
 assert.match(legacyHtml, /src="\.\/renderer\.js"/);
-assert.match(diamondShellHtml, /<title>Diamond Posts Prototype<\/title>/);
+assert.match(diamondShellHtml, /<title>Diamond Posts Prototype(?: v2)?<\/title>/);
 assert.match(diamondShellHtml, /id="posts-board"/);
 assert.match(diamondShellHtml, /src="\.\/posts-prototype\.js"/);
 

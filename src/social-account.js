@@ -19,9 +19,9 @@ export const SOCIAL_PLATFORM_CONFIG = Object.freeze({
   },
   tiktok: {
     label: "TikTok",
-    accountBaseUrl: "https://m.tiktok.com/",
-    loginUrl: "https://m.tiktok.com/login",
-    composeUrl: "https://m.tiktok.com/upload",
+    accountBaseUrl: "https://www.tiktok.com/",
+    loginUrl: "https://www.tiktok.com/login",
+    composeUrl: "https://www.tiktok.com/upload",
     expectedHost: "tiktok.com",
     monitoringOnly: false,
   },
@@ -119,6 +119,9 @@ export function sharedAccountGroupForPlatform(platform) {
 export function normalizeLoginUrl(value, platform) {
   const raw = String(value || "").trim();
   if (!raw) return defaultLoginUrlForPlatform(platform);
+  if (normalizeId(platform, "platform") === "tiktok" && /^https?:\/\/((www|m)\.)?tiktok\.com\/login(?:\/phone-or-email\/email)?\/?$/i.test(raw)) {
+    return defaultLoginUrlForPlatform(platform);
+  }
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw}`;
 }
