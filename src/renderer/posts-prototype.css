@@ -4364,7 +4364,7 @@ textarea {
 
 /* App modals (replace native prompt/confirm) */
 .app-modal {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
   color: var(--text);
