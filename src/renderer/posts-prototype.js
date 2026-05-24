@@ -1068,8 +1068,7 @@ function renderAccounts(selectedAccountId) {
 
 function accountsForScope(companyId, brandId) {
   return (state.socialAccounts || []).filter((account) => {
-    return (!companyId || account.companyId === companyId)
-      && (!brandId || account.brandId === brandId);
+    return !companyId || account.companyId === companyId;
   });
 }
 
@@ -1191,17 +1190,13 @@ function renderAccountScope(companyId, brandId, accounts = []) {
       <span class="eyebrow">Company</span>
       <select data-account-scope-field="companyId">${companyOptions(companyId)}</select>
     </label>
-    <label>
-      <span class="eyebrow">Brand</span>
-      <select data-account-scope-field="brandId">${brandOptions(companyId, brandId)}</select>
-    </label>
     <article>
       <span class="eyebrow">Connected accounts</span>
       <strong>${accounts.length}</strong>
     </article>
     <article>
       <span class="eyebrow">Rule</span>
-      <strong>Accounts are brand-scoped</strong>
+      <strong>Accounts are company-scoped</strong>
     </article>
   `;
 }
