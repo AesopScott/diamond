@@ -2,7 +2,7 @@
 
 Branch: `task/posts-page-redesign`
 Author: Claude (build session)
-Status: **Draft — pending Codex plan review** (model/API decided: §5d/§8)
+Status: **Revised after Codex plan-review #1 — re-review pending** (model/API decided: §5d/§8)
 
 ## 1. Why this plan exists
 
@@ -60,24 +60,29 @@ spec calls for explicitly.
 Restructure the `.detail-tools` row (`posts-prototype.html:71-89`) into three labeled, ordered zones so intent is unambiguous:
 
 ### 4a. Scope zone (new) — "Who is this for"
-A labeled row of three dependent selects bound to the **post package's own** `companyId` / `brandId` / `campaignId` (the package already stores these — `post-package.js` / data model in `diamond-shell-redesign-plan.md:104-113`):
+Three dependent selects, bound to the **post package's own** `companyId` / `brandId` / `campaignId`
+(these fields already exist on the package — `post-package.js:36-38`). The detail view treats the
+**package as the single source of truth** for scope and no longer silently reads `state.context`.
 
-- **Company** → `companyOptions(selected)` (existing helper).
-- **Brand** → `brandOptions(companyId, selected)` (existing helper); filtered by company.
-- **Campaign** → campaign options filtered by company+brand (reuse the pattern in `calendarCampaignOptions`, generalized).
-- A read-only line: *"N ready accounts: X, LinkedIn, …"* derived from `readyAccountsForPostContext`, so the operator sees which platforms scope resolves to.
+- **Company** → `companyOptions(selectedCompanyId)` (`posts-prototype.js:1803`).
+- **Brand** → `brandOptions(companyId, selectedBrandId)` (`:1809`), filtered by company.
+- **Campaign** → `campaignOptions(companyId, brandId, selectedCampaignId)` (`:1818`) — reuse this directly; do **not** generalize `calendarCampaignOptions` (Codex should-fix 1).
+- Read-only line: *"N ready accounts: X, LinkedIn, …"* from `readyAccountsForPostContext(package.context)` (`:5417`), which filters by **company + brand only**. Campaign does not gate account eligibility — it only feeds generation strategy/guidance (§5b) (Codex should-fix 2).
 
-Changing any select updates the package context, re-resolves ready accounts, refreshes the platform chips, and (per the no-surprise rule) does **not** silently regenerate text — it marks existing drafts stale and prompts regeneration.
-
-`state.context` stays in sync so other views remain consistent, but the **package is the source of truth** for the detail view (fixes the "silent inherit" problem).
+**Context sync algorithm (resolves Codex blocker 2):**
+1. **On `openDetail(package)`** (`:5492`): seed the selects from the package fields; mirror them into `state.context` (`state.context = { ...state.context, companyId, brandId, campaignId }`) so the Accounts scope strip (`:1051`), calendar filters (`:878`, `:945`), and operator drawer (`:4657`) stay consistent with the post being edited. Resolve ready accounts from `package.context`.
+2. **On a scope select change**: update `package.companyId/brandId/campaignId` + `package.context`; mirror into `state.context`; re-resolve ready accounts; refresh platform chips (§4b). Changing **Company** clears Brand+Campaign; changing **Brand** clears Campaign if it no longer belongs to that brand. This **does not regenerate or wipe** draft text (§6) — affected drafts are only marked stale with a Regenerate affordance.
+3. **On navigation away**: `persistActiveDetail` (§6) has already saved the package; no extra sync. `state.context` retains the last post's scope — the same behavior the Accounts scope strip already produces when it mutates global context (`:2783`).
 
 ### 4b. Platform target zone — "Where it goes"
-- Render **one toggle chip per supported platform** (not just per existing draft). Targeted = `active` (blue glow); untargeted = muted/outlined. Chips are buttons with a click handler that toggles target state and aria-pressed.
-- Only targeted platforms get a `platformDraft` + preview. Untargeting removes that platform's draft (with confirm if it has edited text).
-- Demote **"All ready platforms"** to a clearly secondary text action labeled **"Select all ready"** (and add **"Clear"**). Restyle so it is visibly not a platform chip (`posts-prototype.css` — different shape/weight, e.g., text button).
-- Keep the `+` add-platform affordance, grouped with the actions, not the chips.
+- **New field `postPackage.targetPlatforms: string[]`** is the source of truth for selection, decoupled from which `platformDrafts` exist (today selection is *implied* by existing drafts and `platformDraftIds` is derived in `upsertPostPackage` at `:6540`). This closes the silent-data-loss gap (Codex should-fix 3). Legacy packages initialize `targetPlatforms` from their existing drafts' platforms.
+- **Explicit target list**: the writable platforms from `SUPPORTED_SOCIAL_PLATFORMS` (`:309`) **minus `reddit`** (monitoring-only per `BUILD_PLAN.md`): `x, instagram, tiktok, linkedin, youtube-shorts, youtube-longform, facebook, pinterest`. No new platforms are added.
+- Render **one toggle chip per writable platform**. Active iff platform ∈ `targetPlatforms` (blue glow); untargeted = muted/outlined. Each chip is a button toggling membership and `aria-pressed`.
+- Toggling **on** adds the platform to `targetPlatforms` and creates its `platformDraft` if absent. Toggling **off** removes it; if that draft has generated/edited text (`textSource !== "auto"`, §6) it **confirms first** via the existing `confirm-modal` before deleting — no silent loss.
+- Only platforms in `targetPlatforms` get a preview rendered.
+- Demote **"All ready platforms"** to a secondary text action **"Select all ready"** (adds every ready-account platform to `targetPlatforms`) plus **"Clear"**; restyle so it is visibly not a platform chip (`posts-prototype.css:789-791` currently makes it identical). Keep `+` grouped with these actions, not the chips.
 
-Resolves shell-redesign Open Product Question *"create all platform drafts automatically, or only selected?"* → **only selected/targeted**.
+Resolves shell-redesign Open Product Question *"create all platform drafts automatically, or only selected?"* → **only targeted**.
 
 ### 4c. Generate zone — "Make it"
 - **Generation style** select: replace `Rob's Style` / `Claude Prompt`. Default approach: **derive from the selected brand's voice** plus a `Default` fallback (e.g., `Default`, `<Brand> voice`, optionally `Punchy` / `Professional`). Persist `generationStyle` on the package. The value is passed to the generator (§5). If Scott prefers, the alternative is a small fixed set; this is a labeling choice, not an architectural one.
@@ -118,10 +123,13 @@ Assembled by a pure function `buildGenerationContext({ package, brand, campaign 
   rules, and platform limits, returning the adjusted final text plus a short change note. The
   adjusted text is what gets written to `platformDrafts[].text`; the change note is retained for
   operator visibility.
-- **Stage 3 — deterministic enforcement (never trust either model):** run each adjusted draft
-  through the existing evaluation/claim/banned-phrase checks (`quality.js`, claim library,
-  `draftEvaluations`). Banned phrases or unapproved risky claims force the draft to `needs_review`
-  and surface the reason — consistent with the fail-closed rule. No generated text is auto-approved.
+- **Stage 3 — deterministic enforcement (never trust either model):** write the adjusted text into
+  the draft, then run the **existing** `evaluatePlatformDraft(draft)` (`posts-prototype.js:6151`) —
+  the same path manual edits already use. It calls `evaluateDraftRisk` (`risk.js:31`; banned phrases
+  `:36`, blocked claims `:41`, review claims `:46`) plus quality scoring, and already sets
+  `draft.status` to `blocked` / `needs_review` / `draft` and populates `riskFlags` / `riskDetails`.
+  There is **no `draftEvaluations` symbol** (corrects Codex blocker 1). No generated text is
+  auto-approved; a blocked/needs_review draft surfaces its reason.
 - Idempotent + immutable: generation returns new draft objects; no in-place mutation of inputs.
 
 ### 5d. Providers — two-stage pipeline (decided)
@@ -138,18 +146,30 @@ Dynamic generation is a **two-model pipeline**, both called from the Electron ma
 Both adapters sit behind one common interface so a provider/model can be swapped via env without
 code changes. Model-id defaults are intentionally easy to change ("slight modifications as we go").
 
+### 5e. IPC contract + degradation (resolves Codex blocker 3)
+Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`; `preload.cjs:8`):
+
+- **preload.cjs**: `generatePostDrafts: (payload) => ipcRenderer.invoke("diamond:generate-post-drafts", payload)`.
+- **main.cjs**: `ipcMain.handle("diamond:generate-post-drafts", async (_e, payload) => generatePostDrafts(payload))`, delegating to `src/content-generation-llm.js`.
+- **payload** (renderer → main): `{ idea, style, language, platforms: [{ platform, charLimit }], brand: { voice, approvedPhrases, bannedPhrases }, campaign: { goals, audience, pillars, offer, cta, guidanceSummary }, claims: {…} }`. Char limit comes from each draft's `charLimit` (`post-package.js:87`, X=280) — the single limit source; `platformCopy`'s hard-coded 220 (`:6545`) is aligned to it (nit 1).
+- **response** (main → renderer): `{ ok: boolean, drafts: [{ platform, text, changeNote }], degraded: "no-writer-key" | "no-reviewer-key" | null, error?: string }`. The handler **never throws to the renderer**; failures resolve `{ ok:false, error }`.
+- **per-stage timeout** ~60s. **Degradation:** missing `ANTHROPIC_API_KEY` → skip Stage 1, fall back to the template generator (`platformCopy` / `buildSlotDraftText`), `degraded:"no-writer-key"`. Missing `OPENAI_API_KEY` → keep Stage-1 Claude text unreviewed, `degraded:"no-reviewer-key"`, `changeNote:"reviewer unavailable"`. Each path sets the draft's `textSource` / `generationStatus` (§6) so the UI flags it.
+
 ## 6. State / data changes
-- `postPackage`: ensure `companyId`, `brandId`, `campaignId`, `generationStyle` are read/written from the detail view (fields already exist in the model; `generationStyle` is new and optional).
-- No migration required; missing `generationStyle` defaults to `Default`.
-- `state.context` updated on scope change to keep cross-view consistency.
+- **`postPackage`** (`createPostPackage`, `post-package.js:25`): `companyId`/`brandId`/`campaignId` already exist (`:36-38`) and become editable from the detail (§4a). Add optional **`generationStyle`** (default `"Default"`) and **`targetPlatforms: string[]`** (§4b). Backfill at runtime for legacy packages (style → `Default`; targets ← existing drafts' platforms).
+- **`createPlatformDraft`** (`post-package.js:56`) gains optional fields (Codex should-fix 5): **`textSource`** `"auto" | "manual" | "llm" | "template-fallback"` (default `"auto"`), **`generationStatus`** `"idle" | "generating" | "ok" | "error" | "fallback"`, **`generationError`** (string|null), **`changeNote`** (reviewer note, string|null). Existing drafts default to `textSource:"auto"`.
+- **`persistActiveDetail` fix** (`posts-prototype.js:6505`, Codex should-fix 4): today it overwrites **every** draft's `text` with `platformCopy(idea)` on each save (`:6519`), which would erase generated/edited copy. Change it to update idea/title/tags only and refresh `draft.text` from `platformCopy(idea)` **only when `draft.textSource === "auto"`**. Generated (`llm` / `template-fallback`) and manually edited (`manual`) drafts keep their text. `handlePlatformDraftTextInput` (`:6141`) sets `textSource:"manual"` when the operator edits.
+- No persisted-schema migration; all new fields are optional with safe defaults. `state.context` mirroring per §4a.
 
 ## 7. Files to change
 - `src/renderer/posts-prototype.html` — restructure `.detail-tools`; add scope selects, real platform zone, Generate button; remove cadence pill; relabel "All ready".
-- `src/renderer/posts-prototype.js` — `openDetail`, `renderPlatformButtons` (→ real toggles), new scope-change handlers, `requestPlatformGeneration`, wire generation-style; keep `platformCopy` as fallback.
+- `src/renderer/posts-prototype.js` — `openDetail` (+ scope sync), `renderPlatformButtons` (→ real toggles over `targetPlatforms`), scope-change handlers, `persistActiveDetail` gating on `textSource`, `handlePlatformDraftTextInput` sets `manual`, `requestPlatformGeneration` (IPC call + Stage-3 enforcement), wire generation-style; keep `platformCopy` as fallback.
 - `src/renderer/posts-prototype.css` — platform target vs. action styling; scope row layout.
 - `src/content-generation-llm.js` *(new, main-side)* — Anthropic writer + OpenAI reviewer adapters and prompt assembly.
-- `src/electron/main.cjs` + preload — IPC `generatePostDrafts` (mirror ElevenLabs/`inspectAccountSession`).
+- `src/electron/main.cjs` + `src/electron/preload.cjs` — IPC `diamond:generate-post-drafts` / `generatePostDrafts` (mirror `inspect-account-session` at `main.cjs:189` / `preload.cjs:8`).
+- `src/post-package.js` — add `generationStyle` + `targetPlatforms` to `createPostPackage`; add `textSource` / `generationStatus` / `generationError` / `changeNote` to `createPlatformDraft`.
 - `src/content-generation.js` — keep as fallback; optionally export `buildGenerationContext` (pure).
+- `src/risk.js` — no change; `evaluateDraftRisk` reused as-is for Stage-3 enforcement.
 - Tests under `tests/` for: scope filtering, platform toggle state, prompt-context assembly, the writer→reviewer pipeline (mocked providers), claim/banned enforcement on adjusted text, fallback when either key is missing.
 
 ## 8. Model/API configuration (decided)
@@ -165,3 +185,18 @@ code changes. Model-id defaults are intentionally easy to change ("slight modifi
 ## 10. Rollback safety
 - Additive where possible; `platformCopy`/`buildSlotDraftText` retained as fallback so removing the key or the IPC handler degrades gracefully to current behavior.
 - No board/data-model migration; legacy shell route untouched.
+
+## 11. Codex plan-review #1 resolutions
+| Codex finding | Where addressed |
+|---|---|
+| Blocker 1 — enforcement cited non-existent `draftEvaluations` | §5c — uses real `evaluatePlatformDraft` / `evaluateDraftRisk` (`risk.js:31`). |
+| Blocker 2 — context sync undefined | §4a — explicit open / change / navigate-away algorithm. |
+| Blocker 3 — IPC contract too thin | §5e — channel, preload method, payload/response shape, timeout, degradation. |
+| Should-fix 1 — `calendarCampaignOptions` stale | §4a — uses `campaignOptions` (`:1818`) directly. |
+| Should-fix 2 — campaign vs account eligibility | §4a — campaign feeds strategy only, not the account filter. |
+| Should-fix 3 — platform-toggle data loss | §4b / §6 — `targetPlatforms` field + confirm-on-destructive-untoggle. |
+| Should-fix 4 — `persistActiveDetail` clobbers text | §6 — gate text refresh on `textSource === "auto"`. |
+| Should-fix 5 — no fallback/status fields | §6 — `textSource` / `generationStatus` / `generationError` / `changeNote`. |
+| Nit 1 — X char-limit mismatch (220 vs 280) | §5e — single source = draft `charLimit`. |
+| Nit 2 — `generationStyle` persistence | §6 — runtime default `Default`, persisted on next save. |
+| Nit 3 — implicit platform list | §4b — explicit writable list, Reddit excluded. |
