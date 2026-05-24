@@ -2,7 +2,7 @@
 
 Branch: `task/posts-page-redesign`
 Author: Claude (build session)
-Status: **Revised after Codex plan-review round 3 — re-review pending** (model/API decided: §5d/§8)
+Status: **APPROVED to build** — design converged across 4 Codex plan-review rounds (no open design issues; final NO-GO was "code not written yet"). Models locked: Haiku 4.5 writer + `gpt-5.4` reviewer (§5d/§8).
 
 ## 1. Why this plan exists
 
@@ -147,12 +147,13 @@ Assembled by a pure function `buildGenerationContext({ package, brand, campaign 
 Dynamic generation is a **two-model pipeline**, both called from the Electron main process:
 
 1. **Writer — Anthropic (Claude).** Drafts the platform-specific copy from the generation context
-   (§5b). Default model `claude-sonnet-4-6`, overridable via `DIAMOND_WRITER_MODEL`. Key:
-   `ANTHROPIC_API_KEY` in `.env.local`.
+   (§5b). Default model **`claude-haiku-4-5-20251001`** (Haiku 4.5 — cheapest modern Claude),
+   overridable via `DIAMOND_WRITER_MODEL`. Key: `ANTHROPIC_API_KEY` in `.env.local`.
 2. **Reviewer / adjuster — OpenAI.** Receives each Claude draft plus the same brand-voice / claim /
    platform constraints, then **reviews and adjusts** it — tightening voice, fixing claim or
    character-limit violations — and returns the final text plus a brief note of what it changed.
-   Default model overridable via `DIAMOND_REVIEWER_MODEL`. Key: `OPENAI_API_KEY` in `.env.local`.
+   Default model **`gpt-5.4`**, overridable via `DIAMOND_REVIEWER_MODEL`. Key: `OPENAI_API_KEY` in
+   `.env.local`.
 
 Both adapters sit behind one common interface so a provider/model can be swapped via env without
 code changes. Model-id defaults are intentionally easy to change ("slight modifications as we go").
@@ -185,10 +186,10 @@ Mirror the existing IPC style (`main.cjs:189` `diamond:inspect-account-session`;
 - Tests under `tests/` for: scope filtering, platform toggle state, prompt-context assembly, the writer→reviewer pipeline (mocked providers), claim/banned enforcement on adjusted text, fallback when either key is missing.
 
 ## 8. Model/API configuration (decided)
-- **Writer:** Anthropic Claude — `ANTHROPIC_API_KEY`, default `claude-sonnet-4-6` (`DIAMOND_WRITER_MODEL` to override).
-- **Reviewer / adjuster:** OpenAI — `OPENAI_API_KEY`, model via `DIAMOND_REVIEWER_MODEL` (sensible GPT default; Scott can set the exact id).
+- **Writer:** Anthropic Claude — `ANTHROPIC_API_KEY`, default `claude-haiku-4-5-20251001` (Haiku 4.5, cheapest modern; `DIAMOND_WRITER_MODEL` to override).
+- **Reviewer / adjuster:** OpenAI — `OPENAI_API_KEY`, default `gpt-5.4` (`DIAMOND_REVIEWER_MODEL` to override, e.g. a cheaper `-mini` tier). Reviewer errors soft-degrade (§5e).
 - **Key location:** `.env.local`, consistent with `ELEVENLABS_API_KEY`. Never read in the renderer.
-- **Degradation (single source of truth = §5e; resolves re-review new-issue 1):** missing **`ANTHROPIC_API_KEY` (writer)** → renderer-side template fallback (`platformCopy` / `buildSlotDraftText`), `degraded:"no-writer-key"`. Missing **`OPENAI_API_KEY` (reviewer)** → keep Claude's Stage-1 text **unreviewed** (no template fallback), `degraded:"no-reviewer-key"`. Both flag the draft; the UI stays usable offline.
+- **Degradation (single source of truth = §5e; resolves re-review new-issue 1):** missing **`ANTHROPIC_API_KEY` (writer)** → renderer-side template fallback (`platformCopy` / `buildSlotDraftText`), `degraded:"no-writer-key"`. Missing **`OPENAI_API_KEY` (reviewer)** → keep Claude's Stage-1 text **unreviewed** (no template fallback), `degraded:"no-reviewer-key"`. A **reviewer API error** (timeout, or an unknown/unauthorized model id such as a mistyped `DIAMOND_REVIEWER_MODEL`) is treated the same as a missing reviewer key — keep the Stage-1 Haiku text, `degraded:"no-reviewer-key"`, `changeNote:"reviewer unavailable"` — so the default model id can never hard-break generation. Both flag the draft; the UI stays usable offline.
 
 ## 9. Verification / proof
 - RED→GREEN unit tests per §7 list.
