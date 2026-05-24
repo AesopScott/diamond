@@ -19,9 +19,9 @@ export const SOCIAL_PLATFORM_CONFIG = Object.freeze({
   },
   tiktok: {
     label: "TikTok",
-    accountBaseUrl: "https://www.tiktok.com/",
-    loginUrl: "https://www.tiktok.com/login",
-    composeUrl: "https://www.tiktok.com/upload",
+    accountBaseUrl: "https://m.tiktok.com/",
+    loginUrl: "https://m.tiktok.com/login",
+    composeUrl: "https://m.tiktok.com/upload",
     expectedHost: "tiktok.com",
     monitoringOnly: false,
   },
