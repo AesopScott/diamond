@@ -39,6 +39,8 @@ export function createPostPackage(input = {}) {
     ideaText,
     title: cleanText(input.title) || excerpt(ideaText, 64),
     tags: normalizeTags(input.tags),
+    generationStyle: cleanText(input.generationStyle) || "Default",
+    targetPlatforms: normalizeIds(input.targetPlatforms),
     brandGuidanceModules: Array.isArray(input.brandGuidanceModules) ? input.brandGuidanceModules : [],
     brandGuidanceSummary: cleanText(input.brandGuidanceSummary),
     campaignGuidanceModules: Array.isArray(input.campaignGuidanceModules) ? input.campaignGuidanceModules : [],
@@ -85,6 +87,10 @@ export function createPlatformDraft(input = {}) {
     campaignGuidanceSummary: cleanText(input.campaignGuidanceSummary || postPackage.campaignGuidanceSummary),
     status: normalizePackageStatus(input.status || "draft"),
     charLimit: Number.isFinite(Number(input.charLimit)) ? Number(input.charLimit) : defaultCharLimit(platform),
+    textSource: normalizeTextSource(input.textSource),
+    generationStatus: input.generationStatus || "idle",
+    generationError: input.generationError || null,
+    changeNote: cleanText(input.changeNote) || null,
     scheduledAt: input.scheduledAt || null,
     publishedAt: input.publishedAt || null,
     runId: input.runId || null,
@@ -93,6 +99,12 @@ export function createPlatformDraft(input = {}) {
     createdAt: input.createdAt || now,
     updatedAt: input.updatedAt || now,
   };
+}
+
+function normalizeTextSource(value) {
+  const allowed = ["auto", "manual", "llm", "template-fallback"];
+  const clean = cleanText(value);
+  return allowed.includes(clean) ? clean : "auto";
 }
 
 export function derivePostPackagesFromWorkspace(workspace = {}) {

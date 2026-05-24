@@ -69,15 +69,17 @@
             </section>
 
             <section class="detail-tools" aria-label="Media, platforms, and tags">
-              <span class="cadence-pill">4 / 20 this week</span>
               <label class="style-select">
                 Generation style
                 <select id="generation-style">
-                  <option>Default (Default)</option>
-                  <option>Rob's Style</option>
-                  <option>Claude Prompt</option>
+                  <option value="Default">Default</option>
+                  <option value="Brand voice">Brand voice</option>
+                  <option value="Punchy">Punchy</option>
+                  <option value="Professional">Professional</option>
+                  <option value="Storytelling">Storytelling</option>
                 </select>
               </label>
+              <button id="detail-generate" class="generate-button" type="button">Generate platform versions</button>
               <button id="detail-add-media" class="media-button" type="button">+ Media</button>
               <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>
               <button id="detail-add-all-platforms" class="media-button" type="button">All ready platforms</button>

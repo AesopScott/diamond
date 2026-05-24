@@ -5,6 +5,43 @@ const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
+const { generatePostDrafts } = require("../content-generation-llm.cjs");
+
+// Allowed writable platforms — must match SUPPORTED_SOCIAL_PLATFORMS in renderer.
+const GENERATION_ALLOWED_PLATFORMS = new Set([
+  "x", "instagram", "tiktok", "linkedin",
+  "youtube-shorts", "youtube-longform", "facebook", "pinterest",
+]);
+const GENERATION_MAX_PLATFORMS = 8;
+const GENERATION_MAX_STRING_LENGTH = 5000;
+
+function validateGenerationPayload(payload) {
+  if (!payload || typeof payload !== "object") return "Payload must be an object.";
+  const platforms = payload.platforms;
+  if (!Array.isArray(platforms)) return "platforms must be an array.";
+  if (platforms.length > GENERATION_MAX_PLATFORMS) {
+    return `platforms count ${platforms.length} exceeds maximum ${GENERATION_MAX_PLATFORMS}.`;
+  }
+  for (const entry of platforms) {
+    if (!entry || typeof entry.platform !== "string") return "Each platforms entry must have a platform string.";
+    if (!GENERATION_ALLOWED_PLATFORMS.has(entry.platform)) return `Unknown platform: ${entry.platform}.`;
+  }
+  return null;
+}
+
+function truncateGenerationStrings(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map((item) => truncateGenerationStrings(item));
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string") {
+      result[key] = value.length > GENERATION_MAX_STRING_LENGTH ? value.slice(0, GENERATION_MAX_STRING_LENGTH) : value;
+    } else {
+      result[key] = truncateGenerationStrings(value);
+    }
+  }
+  return result;
+}
 
 const APP_DIR = path.join(process.env.APPDATA || os.homedir(), "Diamond");
 const STATE_PATH = path.join(APP_DIR, "state.json");
@@ -188,6 +225,23 @@ ipcMain.handle("diamond:get-paths", () => ({
 }));
 ipcMain.handle("diamond:inspect-account-session", async (_event, input = {}) => inspectAccountSession(input));
 ipcMain.handle("diamond:clear-account-session", async (_event, input = {}) => clearAccountSession(input));
+ipcMain.handle("diamond:generate-post-drafts", async (_event, payload = {}) => {
+  const validationError = validateGenerationPayload(payload);
+  if (validationError) return { ok: false, drafts: null, error: validationError };
+  const safePayload = truncateGenerationStrings(payload);
+  try {
+    const result = await generatePostDrafts(safePayload);
+    // Sanitize provider error details before surfacing to renderer; log full detail in main.
+    if (result && !result.ok && result.error) {
+      console.error("[diamond:generate-post-drafts] writer error:", result.error);
+      return { ok: false, drafts: null, error: "Generation failed. Try again or check your API keys." };
+    }
+    return result;
+  } catch (error) {
+    console.error("[diamond:generate-post-drafts] unexpected error:", error);
+    return { ok: false, drafts: null, error: "Generation failed. Check application logs." };
+  }
+});
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));

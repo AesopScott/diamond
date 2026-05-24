@@ -607,6 +607,8 @@ function wirePrototypeControls() {
   document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
   document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
   document.querySelector("#detail-add-platform")?.addEventListener("click", addPlatformToActivePackage);
+  document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
+  document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
@@ -5171,9 +5173,21 @@ function renderOperatorAction(label, note, action, disabled = false) {
 
 function activeSocialAccount() {
   const context = state.context || {};
-  return (state.socialAccounts || []).find((account) => account.id === context.socialAccountId)
-    || (state.socialAccounts || []).find((account) => account.platform === context.platform)
-    || (state.socialAccounts || [])[0];
+  if (context.socialAccountId) {
+    const byId = (state.socialAccounts || []).find((account) => account.id === context.socialAccountId);
+    if (byId) return byId;
+  }
+  if (context.platform) {
+    // Require companyId/brandId match to prevent cross-tenant selection.
+    return (state.socialAccounts || []).find((account) =>
+      account.platform === context.platform &&
+      (!context.companyId || account.companyId === context.companyId) &&
+      (!context.brandId || account.brandId === context.brandId)
+    );
+  }
+  // Fail-closed: no first-account fallback. An ambiguous/cleared context must not
+  // silently select a wrong-tenant account.
+  return undefined;
 }
 
 function activeOperatorDraft(account) {
@@ -5499,6 +5513,17 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
   document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
+  const styleSelect = document.querySelector("#generation-style");
+  if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
+  // Backfill textSource for legacy drafts: a draft is "auto" only if its text still
+  // matches the template value, otherwise it is operator-owned ("manual") and preserved.
+  drafts.forEach((draft) => {
+    if (!draft.textSource) {
+      draft.textSource = String(draft.text || "").trim() === platformCopy(postPackage.ideaText, draft.platform).trim()
+        ? "auto"
+        : "manual";
+    }
+  });
   renderPlatformButtons(drafts);
   renderPlatformPreviews(drafts);
 }
@@ -6133,12 +6158,129 @@ async function addAllReadyPlatformsToActivePackage() {
   reopenActiveDetail();
 }
 
+async function requestPlatformGeneration() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  if (!drafts.length) return;
+  const generateButton = document.querySelector("#detail-generate");
+  if (generateButton) {
+    generateButton.disabled = true;
+    generateButton.textContent = "Generating…";
+  }
+  drafts.forEach((draft) => { draft.generationStatus = "generating"; });
+  const payload = buildGenerationPayload(postPackage, drafts);
+  let result;
+  try {
+    result = await window.diamond?.generatePostDrafts(payload);
+  } catch (error) {
+    result = { ok: false, error: error && error.message ? error.message : String(error) };
+  }
+  try {
+    applyGenerationResult(drafts, result, postPackage);
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    reopenActiveDetail();
+  } finally {
+    if (generateButton) {
+      generateButton.disabled = false;
+      generateButton.textContent = "Generate platform versions";
+    }
+  }
+}
+
+function applyGenerationResult(drafts, result, postPackage) {
+  const now = new Date().toISOString();
+  // Missing writer key (drafts === null) or an error → renderer template fallback so the page stays usable.
+  if (!result || result.ok === false || result.drafts === null) {
+    drafts.forEach((draft) => {
+      if (draft.textSource !== "manual") {
+        draft.text = platformCopy(postPackage.ideaText, draft.platform);
+        draft.textSource = "template-fallback";
+      }
+      draft.generationStatus = result && result.ok === false ? "error" : "fallback";
+      draft.generationError = result && result.error ? result.error : null;
+      draft.changeNote = null;
+      draft.updatedAt = now;
+      evaluatePlatformDraft(draft);
+    });
+    return;
+  }
+  const byPlatform = new Map((result.drafts || []).map((item) => [item.platform, item]));
+  drafts.forEach((draft) => {
+    const generated = byPlatform.get(draft.platform);
+    if (!generated) return;
+    draft.text = generated.text || draft.text;
+    draft.textSource = "llm";
+    draft.changeNote = generated.changeNote || null;
+    draft.generationStatus = "ok";
+    draft.generationError = null;
+    draft.updatedAt = now;
+    evaluatePlatformDraft(draft); // Stage 3: deterministic claim/banned-phrase enforcement.
+  });
+}
+
+function buildGenerationPayload(postPackage, drafts) {
+  const sample = drafts[0] || {
+    brandId: postPackage.brandId,
+    campaignId: postPackage.campaignId,
+    context: postPackage.context,
+  };
+  const brand = brandLibraryFor(sample);
+  const claims = claimLibraryFor(sample);
+  const strategy = strategyFor(sample);
+  const guidance = guidanceForContext(postPackage.context || {});
+  return {
+    idea: postPackage.ideaText || "",
+    style: postPackage.generationStyle || "Default",
+    language: postPackage.context?.language || "en",
+    platforms: drafts.map((draft) => ({ platform: draft.platform, charLimit: draft.charLimit || null })),
+    brand: {
+      voice: brand.brandVoice || "",
+      approvedPhrases: brand.approvedPhrases || [],
+      bannedPhrases: brand.bannedPhrases || [],
+    },
+    campaign: {
+      goals: strategy.goals || [],
+      audience: strategy.audience || [],
+      pillars: strategy.pillars || [],
+      offer: strategy.offer || "",
+      cta: strategy.cta || "",
+      guidanceSummary: [guidance.summary, guidance.campaignSummary].filter(Boolean).join("\n\n"),
+    },
+    claims: {
+      blockedClaims: claims.blockedClaims || [],
+      requiresReviewClaims: claims.requiresReviewClaims || [],
+    },
+  };
+}
+
+function markGeneratedDraftsStale() {
+  if (!activePostPackageId) return;
+  prototypeModel.platformDrafts
+    .filter((draft) => draft.postPackageId === activePostPackageId && draft.textSource === "llm")
+    .forEach((draft) => { draft.generationStatus = "needs-attention"; });
+}
+
+function handleGenerationStyleChange(event) {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  postPackage.generationStyle = event.target.value || "Default";
+  postPackage.updatedAt = new Date().toISOString();
+  // Previously generated drafts are stale — they were produced with the old style.
+  markGeneratedDraftsStale();
+  saveProductionState();
+}
+
 function handlePlatformDraftTextInput(event) {
   const textarea = event.target.closest("[data-draft-text]");
   if (!textarea) return;
   const draft = prototypeModel.platformDrafts.find((item) => item.id === textarea.dataset.draftText);
   if (!draft) return;
   draft.text = textarea.value;
+  draft.textSource = "manual";
   draft.updatedAt = new Date().toISOString();
   const preview = textarea.closest("[data-platform-draft-id]");
   const counter = preview?.querySelector("header > span");
@@ -6476,6 +6618,7 @@ function reopenActiveDetail() {
 
 function handleIdeaInput() {
   updatePreviewCopy();
+  markGeneratedDraftsStale();
   persistActiveDetail();
 }
 
@@ -6488,6 +6631,11 @@ function updatePreviewCopy() {
   const idea = document.querySelector("#idea-text").value;
   document.querySelectorAll("[data-preview-platform]").forEach((preview) => {
     const platform = preview.dataset.previewPlatform;
+    // Only overwrite auto-sourced drafts; preserve generated/manual copy.
+    const draft = activePostPackageId
+      ? prototypeModel.platformDrafts.find((d) => d.postPackageId === activePostPackageId && d.platform === platform)
+      : null;
+    if (draft && draft.textSource !== "auto") return;
     const text = platformCopy(idea, platform);
     const textarea = preview.querySelector("textarea");
     textarea.value = text;
@@ -6516,7 +6664,9 @@ function persistActiveDetail() {
   prototypeModel.platformDrafts
     .filter((draft) => draft.postPackageId === activePostPackageId)
     .forEach((draft) => {
-      draft.text = platformCopy(idea, draft.platform);
+      // Only auto-sourced drafts mirror the idea text. Generated ("llm"),
+      // template-fallback, and manually edited drafts keep their own copy.
+      if (draft.textSource === "auto") draft.text = platformCopy(idea, draft.platform);
       draft.updatedAt = updatedAt;
     });
   saveProductionState();
@@ -6548,12 +6698,24 @@ function platformCopy(idea, platform) {
 }
 
 function socialAccountIdForPlatform(platform) {
-  return (state.socialAccounts || []).find((account) => account.platform === platform)?.id || state.context.socialAccountId;
+  const context = state.context || {};
+  // Require companyId/brandId match to prevent cross-tenant selection.
+  const account = (state.socialAccounts || []).find((acct) =>
+    acct.platform === platform &&
+    (!context.companyId || acct.companyId === context.companyId) &&
+    (!context.brandId || acct.brandId === context.brandId)
+  );
+  return account?.id || context.socialAccountId;
 }
 
 function accountForDraft(draft) {
   return (state.socialAccounts || []).find((account) => account.id === draft.socialAccountId)
-    || (state.socialAccounts || []).find((account) => account.platform === draft.platform)
+    // Require companyId/brandId match in the platform fallback to prevent cross-tenant selection.
+    || (state.socialAccounts || []).find((account) =>
+        account.platform === draft.platform &&
+        (!draft.companyId || account.companyId === draft.companyId) &&
+        (!draft.brandId || account.brandId === draft.brandId)
+      )
     || null;
 }
 
@@ -6580,6 +6742,12 @@ function platformDraftPreflight(draft) {
   if (draft.charLimit && text.length > draft.charLimit) issues.push(`Text exceeds ${draft.charLimit} characters.`);
   if (!["approved", "scheduled", "staged", "published"].includes(draft.status)) issues.push("Draft must be approved before staging.");
   if (!account) issues.push("No social account is assigned.");
+  if (account && ((draft.companyId && account.companyId !== draft.companyId) || (draft.brandId && account.brandId !== draft.brandId))) {
+    issues.push("Assigned account does not match this post's company/brand.");
+  }
+  if (draft.generationStatus === "needs-attention") {
+    issues.push("Draft needs attention after a scope change — regenerate before staging.");
+  }
   if (account && account.sessionStatus !== "ready") issues.push(`${platformLabel(account.platform)} session is ${titleCase(account.sessionStatus || "unknown")}.`);
   if (account && !resolveComposeUrl(account)) issues.push("Compose URL is missing.");
   if (!licenseCheck.ok) issues.push(licenseCheck.reason || "License does not allow this brand/platform.");
