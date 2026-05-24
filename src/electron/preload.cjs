@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("diamond", {
+  getVersion: () => ipcRenderer.invoke("diamond:get-version"),
   getState: () => ipcRenderer.invoke("diamond:get-state"),
   saveState: (state) => ipcRenderer.invoke("diamond:save-state", state),
   getPaths: () => ipcRenderer.invoke("diamond:get-paths"),

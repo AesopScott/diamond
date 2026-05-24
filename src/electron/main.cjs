@@ -119,6 +119,14 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
+ipcMain.handle("diamond:get-version", () => {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, "package.json"), "utf8"));
+    return packageJson.version || "unknown";
+  } catch {
+    return "unknown";
+  }
+});
 ipcMain.handle("diamond:get-state", () => readState());
 ipcMain.handle("diamond:save-state", (_event, state) => writeState(state));
 ipcMain.handle("diamond:get-paths", () => ({

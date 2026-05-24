@@ -1043,7 +1043,7 @@ function openScheduleDetail(schedule, draft) {
   openDetail(postPackage, [scheduleDraft]);
 }
 
-function renderAccounts(selectedAccountId) {
+async function renderAccounts(selectedAccountId) {
   const target = document.querySelector("#accounts-grid");
   const detail = document.querySelector("#account-detail");
   const scope = document.querySelector("#account-scope-strip");
@@ -1055,7 +1055,8 @@ function renderAccounts(selectedAccountId) {
     || accounts.find((account) => account.id === state.context?.socialAccountId)
     || accounts[0];
   if (selected) selectedAccountId = selected.id;
-  if (scope) scope.innerHTML = renderAccountScope(companyId, brandId, accounts);
+  const version = await window.diamond?.getVersion?.() || "unknown";
+  if (scope) scope.innerHTML = renderAccountScope(companyId, brandId, accounts, version);
   target.innerHTML = `
     ${accounts.map((account) => renderAccountCard(account, selected?.id)).join("") || `<div class="empty-column">No accounts for this company and brand yet.</div>`}
   `;
@@ -1184,7 +1185,7 @@ function sessionProbeAccountPayload(account) {
   };
 }
 
-function renderAccountScope(companyId, brandId, accounts = []) {
+function renderAccountScope(companyId, brandId, accounts = [], version = "unknown") {
   return `
     <label>
       <span class="eyebrow">Company</span>
@@ -1197,6 +1198,10 @@ function renderAccountScope(companyId, brandId, accounts = []) {
     <article>
       <span class="eyebrow">Rule</span>
       <strong>Accounts are company-scoped</strong>
+    </article>
+    <article>
+      <span class="eyebrow">Diamond version</span>
+      <strong>${escapeHtml(version)}</strong>
     </article>
   `;
 }
