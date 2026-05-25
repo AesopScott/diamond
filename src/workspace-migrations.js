@@ -5,7 +5,29 @@ const CARD_BROWSER_PROFILE_ID = "thecard-bet-x-main";
 
 export function migrateWorkspaceState(workspace) {
   if (!workspace || typeof workspace !== "object") return workspace;
-  return migrateCardCompany(workspace);
+  let ws = migrateCardCompany(workspace);
+  ws = migrateClearBrandDerivedHandles(ws);
+  return ws;
+}
+
+/**
+ * Clear social account handles that were auto-derived from brand/company names.
+ * Brand names are used as advertised product identities, not platform login names.
+ * A handle is brand-derived when it contains spaces (no real handle has spaces)
+ * or matches a known non-handle pattern. Once cleared, users set the real handle
+ * via the @Username field in the account header.
+ * Migration flag: _handlesClearedV1 prevents re-running.
+ */
+function migrateClearBrandDerivedHandles(workspace) {
+  if (workspace._handlesClearedV1) return workspace;
+  const next = structuredClone(workspace);
+  (next.socialAccounts || []).forEach((account) => {
+    if (account.handle && account.handle.includes(" ")) {
+      account.handle = "";
+    }
+  });
+  next._handlesClearedV1 = true;
+  return next;
 }
 
 function migrateCardCompany(workspace) {

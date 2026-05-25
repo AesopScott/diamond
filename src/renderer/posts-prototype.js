@@ -2410,20 +2410,21 @@ async function createSocialAccountForScope(platform) {
     company,
     brand,
     platform,
-    desiredHandle: brand?.name || company?.name || platform,
+    desiredHandle: "",
   });
-  const handle = plan.desiredHandle || brand?.name || company?.name || platform;
-  const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
+  const handle = "";
+  const id = normalizeId(`${brandId}-${platform}-${Date.now()}`, "socialAccountId");
+  const defaultUrl = normalizeAccountUrl("", platform);
   const account = {
     id,
     companyId,
     brandId,
     platform,
     handle,
-    accountUrl: plan.accountUrl || normalizeAccountUrl(handle, platform),
+    accountUrl: plan.accountUrl || defaultUrl,
     loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
     composeUrl: plan.composeUrl || normalizeComposeUrl("", platform),
-    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || normalizeAccountUrl(handle, platform)),
+    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || defaultUrl),
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
