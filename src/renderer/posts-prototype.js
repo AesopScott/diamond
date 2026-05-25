@@ -351,7 +351,11 @@ function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyF
     const pkg = packageMap.get(draft.postPackageId);
     if (!pkg) return;
     const idea = pkg.ideaText || pkg.title || "";
-    const excerpt = idea.length > 60 ? `${idea.slice(0, 57)}…` : idea || "(no idea)";
+    const body = draft.llmRevisedText || draft.text || "";
+    const snippetSource = body || idea;
+    const excerpt = snippetSource.length > 80
+      ? `${snippetSource.slice(0, 77)}…`
+      : snippetSource || "(no content)";
     const colId = draftColumnForStatus(draft.status);
     const col = columnMap.get(colId) || columnMap.get("draft");
     col.posts.push({
