@@ -35,6 +35,9 @@ export function createCampaignRecord(input = {}) {
     brandId: normalizeId(input.brandId, "brandId"),
     name,
     status: input.status || "planning",
+    postTags: Array.isArray(input.postTags)
+      ? [...new Set(input.postTags.map((t) => String(t).trim().toLowerCase()).filter(Boolean))]
+      : [],
     createdAt: input.createdAt || new Date().toISOString(),
   };
 }

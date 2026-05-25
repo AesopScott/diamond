@@ -3017,6 +3017,7 @@ function renderCampaigns() {
           <div><dt>Campaign</dt><dd><select data-campaign-field="contextCampaignId">${campaignOptions(company.id, brand.id, campaign.id)}</select></dd></div>
           <div><dt>Campaign name</dt><dd><input data-campaign-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
           <div><dt>Status</dt><dd><input data-campaign-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
+          <div><dt>Post tags</dt><dd><input data-campaign-field="campaignPostTags" type="text" placeholder="comma-separated, locked on posts" value="${escapeHtml((campaign.postTags || []).join(", "))}"></dd></div>
         </dl>
         <section class="account-actions" aria-label="Campaign actions">
           <button type="button" data-campaign-action="save">Save campaign</button>
@@ -3192,6 +3193,7 @@ function saveCampaignWorkspace() {
     campaign.brandId = brandId;
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
+    campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
@@ -5523,6 +5525,7 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#detail-status").textContent = statusLabel(postPackage.status);
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
+  renderLockedCampaignTags(postPackage);
   const autoTagNames = [
     postPackage.brandId ? (state.brands || []).find((b) => b.id === postPackage.brandId)?.name : null,
     postPackage.campaignId ? (state.campaigns || []).find((c) => c.id === postPackage.campaignId)?.name : null,
@@ -6864,6 +6867,20 @@ function updatePreviewCopy() {
 function updatePreviewTags() {
   const value = document.querySelector("#post-tags").value;
   document.querySelector("#detail-status").title = `Tags: ${value || "none"}`;
+}
+
+function renderLockedCampaignTags(postPackage) {
+  const container = document.querySelector("#campaign-tags-locked");
+  if (!container) return;
+  const campaign = (state.campaigns || []).find((c) => c.id === postPackage?.campaignId);
+  const tags = campaign?.postTags || [];
+  if (!tags.length) {
+    container.hidden = true;
+    container.innerHTML = "";
+    return;
+  }
+  container.hidden = false;
+  container.innerHTML = tags.map((tag) => `<span class="locked-tag" title="Campaign tag — cannot be removed">${escapeHtml(tag)}</span>`).join("");
 }
 
 function persistActiveDetail() {
