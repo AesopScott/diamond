@@ -341,7 +341,7 @@ function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyF
     if (platformFilter.size > 0 && !platformFilter.has(d.platform)) return false;
     if (companyFilter.size > 0) {
       const pkg = packageMap.get(d.postPackageId);
-      if (!pkg || !companyFilter.has(pkg.context?.companyId)) return false;
+      if (!pkg || !companyFilter.has(pkg.companyId || pkg.context?.companyId)) return false;
     }
     return true;
   });
@@ -613,7 +613,10 @@ function renderBoardFilters() {
   const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
   const companyIds = [...new Set(
     (prototypeModel.platformDrafts || [])
-      .map((d) => pkgMap.get(d.postPackageId)?.context?.companyId)
+      .map((d) => {
+        const pkg = pkgMap.get(d.postPackageId);
+        return pkg?.companyId || pkg?.context?.companyId;
+      })
       .filter(Boolean)
   )];
   const platforms = [...new Set(
@@ -622,8 +625,8 @@ function renderBoardFilters() {
 
   const parts = [];
 
-  // Company row — only shown when there are 2+ distinct companies
-  if (companyIds.length >= 2) {
+  // Company row — shown whenever at least one company is represented
+  if (companyIds.length >= 1) {
     parts.push(`<span class="filter-group-label">Companies</span>`);
     parts.push(
       `<button type="button" class="filter-pill${activeBoardCompanyFilter.size === 0 ? " active" : ""}" data-company-filter="all">All</button>`
