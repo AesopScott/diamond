@@ -45,3 +45,61 @@ export const DEFAULT_REVIEW_REQUIRED_FLAGS = Object.freeze([
   "support_sensitive",
   "hostile",
 ]);
+
+export const CAMPAIGN_VIDEO_GENERATION_FIELDS = Object.freeze([
+  "videoGenerationEnabled",
+  "videoGenerationPlatforms",
+  "videoQualitySize",
+  "videoPromptGuidance",
+]);
+
+export const VIDEO_SPECS_BY_PLATFORM = Object.freeze({
+  tiktok: {
+    enabled: false,
+    videoDurationSeconds: 15,
+    format: "mp4",
+    aspectRatio: "9:16",
+  },
+  youtube: {
+    enabled: false,
+    videoDurationSeconds: 60,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
+  x: {
+    enabled: false,
+    videoDurationSeconds: 30,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
+  instagram: {
+    enabled: false,
+    videoDurationSeconds: 30,
+    format: "mp4",
+    aspectRatio: "1:1",
+  },
+  linkedin: {
+    enabled: false,
+    videoDurationSeconds: 30,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
+  facebook: {
+    enabled: false,
+    videoDurationSeconds: 30,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
+  reddit: {
+    enabled: false,
+    videoDurationSeconds: 30,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
+});
+
+export const VIDEO_QUALITY_LEVELS = Object.freeze([
+  "low",
+  "medium",
+  "high",
+]);
