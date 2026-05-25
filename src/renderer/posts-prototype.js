@@ -5857,11 +5857,27 @@ function renderPlatformPreview(draft, hidden = false) {
   `;
 }
 
+function accountLoginName(account) {
+  // Prefer the username extracted from the account's public URL — that's what
+  // the user actually entered and reflects their real login identity.
+  const url = account?.accountUrl || "";
+  if (url) {
+    try {
+      const { pathname } = new URL(url);
+      // Strip leading slash, /company/, /in/, /user/ prefixes (LinkedIn etc.)
+      const cleaned = pathname.replace(/^\/(company|in|user|profile)\//i, "/").replace(/^\//, "").split("/")[0];
+      if (cleaned) return cleaned;
+    } catch (_) { /* invalid URL — fall through */ }
+  }
+  // Fall back to explicitly-set handle field
+  return account?.handle || account?.username || "";
+}
+
 function renderSocialPreview(draft, preflight) {
   const account = preflight.account || accountForDraft(draft);
-  const handle = account?.handle || account?.username || account?.name || "";
-  const displayName = account?.displayName || account?.name || handle || "Your account";
-  const initial = (displayName[0] || "?").toUpperCase();
+  const loginName = accountLoginName(account);
+  const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "No account set";
+  const initial = (loginName.replace(/^@/, "")[0] || "?").toUpperCase();
   const stageUrl = draft.stageUrl || "";
   const openLink = stageUrl
     ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
@@ -5876,8 +5892,7 @@ function renderSocialPreview(draft, preflight) {
         <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
         <div class="social-preview-body">
           <div class="social-preview-meta">
-            <strong>${escapeHtml(displayName)}</strong>
-            ${handle ? `<span class="social-preview-handle">${escapeHtml(handle.startsWith("@") ? handle : `@${handle}`)}</span>` : ""}
+            <strong>${escapeHtml(displayHandle)}</strong>
           </div>
           <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
           ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}
@@ -6346,7 +6361,7 @@ function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)
   const account = accountForDraft(draft);
   const rows = [
     ["Platform", platformLabel(draft.platform)],
-    ["Account", account?.handle || account?.id || "Missing"],
+    ["Account", accountLoginName(account) || account?.id || "Missing"],
     ["Session", statusLabel(account?.sessionStatus || "unknown")],
     ["Approval", statusLabel(draft.status || "draft")],
     ["Schedule", draft.scheduledAt ? formatDateTime(draft.scheduledAt) : "Not scheduled"],
