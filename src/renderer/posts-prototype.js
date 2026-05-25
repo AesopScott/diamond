@@ -286,6 +286,14 @@ const firstRunSteps = getDiamondFirstRunSteps();
 const tourSteps = getDiamondTourSteps();
 const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
+const DRAFT_BOARD_COLUMNS = [
+  { id: "draft",        label: "Draft" },
+  { id: "needs_review", label: "Needs Review" },
+  { id: "scheduled",    label: "Scheduled" },
+  { id: "staged",       label: "Staged" },
+  { id: "published",    label: "Published" },
+  { id: "failed",       label: "Failed" },
+];
 let board = buildPlatformDraftBoardView(prototypeModel, "all");
 let activePostPackageId = null;
 let activePlatformTab = null; // currently visible platform tab inside the detail view
@@ -317,15 +325,6 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
 };
 const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "youtube-longform", "facebook", "pinterest", "reddit"];
 // ─── Platform-draft board view ────────────────────────────────────────────────
-
-const DRAFT_BOARD_COLUMNS = [
-  { id: "draft",        label: "Draft" },
-  { id: "needs_review", label: "Needs Review" },
-  { id: "scheduled",    label: "Scheduled" },
-  { id: "staged",       label: "Staged" },
-  { id: "published",    label: "Published" },
-  { id: "failed",       label: "Failed" },
-];
 
 function draftColumnForStatus(status) {
   const s = status || "draft";
