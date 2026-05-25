@@ -2289,6 +2289,36 @@ select.style-select {
   margin: 0;
 }
 
+.account-handle-label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.account-handle-label span {
+  color: var(--muted);
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-handle-input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 9px;
+  width: 160px;
+}
+
+.account-handle-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 .account-login-note {
   background: color-mix(in srgb, var(--surface-2) 78%, var(--accent) 22%);
   border: 1px solid color-mix(in srgb, var(--line) 72%, var(--accent) 28%);

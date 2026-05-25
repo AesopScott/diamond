@@ -1422,7 +1422,17 @@ function renderAccountDetail(account) {
         <div>
           <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
-          <p>${escapeHtml(account.handle || "Add the username for this account")}</p>
+          <label class="account-handle-label">
+            <span>@Username</span>
+            <input
+              class="account-handle-input"
+              data-account-field="handle"
+              type="text"
+              value="${escapeHtml(account.handle || "")}"
+              placeholder="e.g. @25experts"
+              autocomplete="off"
+              spellcheck="false">
+          </label>
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</em>
       </header>
@@ -1440,7 +1450,7 @@ function renderAccountDetail(account) {
         </div>
         <div>
           <span class="eyebrow">Public page</span>
-          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(account.handle || platformLabel(account.platform))}</a>` : "Not set"}</strong>
+          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(accountLoginName(account) || platformLabel(account.platform))}</a>` : "Not set"}</strong>
         </div>
       </section>
       <details class="account-advanced-panel">
@@ -5887,19 +5897,18 @@ function renderPlatformPreview(draft, hidden = false) {
 }
 
 function accountLoginName(account) {
-  // Prefer the username extracted from the account's public URL — that's what
-  // the user actually entered and reflects their real login identity.
+  // 1. Explicitly-set handle field — user typed this directly, most reliable.
+  if (account?.handle) return account.handle;
+  // 2. Extract username from accountUrl (e.g. https://x.com/25experts → 25experts).
   const url = account?.accountUrl || "";
   if (url) {
     try {
       const { pathname } = new URL(url);
-      // Strip leading slash, /company/, /in/, /user/ prefixes (LinkedIn etc.)
       const cleaned = pathname.replace(/^\/(company|in|user|profile)\//i, "/").replace(/^\//, "").split("/")[0];
       if (cleaned) return cleaned;
     } catch (_) { /* invalid URL — fall through */ }
   }
-  // Fall back to explicitly-set handle field
-  return account?.handle || account?.username || "";
+  return account?.username || "";
 }
 
 function renderSocialPreview(draft, preflight) {
