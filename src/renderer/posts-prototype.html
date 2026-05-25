@@ -73,14 +73,16 @@
                 <label class="scope-select">Company <select id="detail-company"></select></label>
                 <label class="scope-select">Brand <select id="detail-brand"></select></label>
                 <label class="scope-select">Campaign <select id="detail-campaign"></select></label>
+                <label class="scope-select">Voice
+                  <select id="generation-style" class="style-select" aria-label="Generation style">
+                    <option value="">Select Voice</option>
+                    <option value="Brand voice">Brand voice</option>
+                    <option value="Punchy">Punchy</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Storytelling">Storytelling</option>
+                  </select>
+                </label>
               </div>
-              <select id="generation-style" class="style-select" aria-label="Generation style">
-                <option value="">Select Voice</option>
-                <option value="Brand voice">Brand voice</option>
-                <option value="Punchy">Punchy</option>
-                <option value="Professional">Professional</option>
-                <option value="Storytelling">Storytelling</option>
-              </select>
               <button id="detail-generate" class="generate-button" type="button" hidden>+ Create Content</button>
               <button id="campaign-generate" class="campaign-generate-button" type="button" disabled>+ Campaign Content</button>
               <button id="detail-evaluate-all" class="media-button" type="button" hidden disabled>Evaluate All</button>
