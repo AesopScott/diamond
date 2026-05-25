@@ -6156,7 +6156,16 @@ async function handlePlatformDraftAction(event) {
   const draft = prototypeModel.platformDrafts.find((item) => item.id === button.dataset.platformDraftId);
   if (!draft) return;
   const action = button.dataset.platformAction;
-  if (action === "evaluate") await llmEvaluatePlatformDraft(draft);
+  if (action === "evaluate") {
+    button.disabled = true;
+    button.textContent = "Evaluating…";
+    try {
+      await llmEvaluatePlatformDraft(draft);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Evaluate";
+    }
+  }
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "add-media") await attachMediaToDraft(draft);
@@ -6645,15 +6654,44 @@ async function llmEvaluatePlatformDraft(draft) {
     },
   };
 
-  const result = await window.diamond?.evaluateDraft?.(payload);
-  if (!result || !result.ok || !result.evaluation) return; // degraded or error — keep deterministic result
+  let result;
+  try {
+    result = await window.diamond?.evaluateDraft?.(payload);
+  } catch (err) {
+    draft.llmEvaluation = {
+      score: draft.qualityScore || 50,
+      status: draft.status,
+      summary: `Evaluation error: ${err && err.message ? err.message : String(err)}`,
+      issues: [],
+      suggestions: [],
+      evaluatedAt: new Date().toISOString(),
+    };
+    draft.updatedAt = new Date().toISOString();
+    return;
+  }
+
+  if (!result || !result.ok || !result.evaluation) {
+    // Degraded (no key) or unexpected shape — store a note so it's visible, keep deterministic status.
+    draft.llmEvaluation = {
+      score: draft.qualityScore || 50,
+      status: draft.status,
+      summary: result?.error ? `Evaluation failed: ${result.error}` : "AI evaluation unavailable — deterministic result shown.",
+      issues: [],
+      suggestions: [],
+      evaluatedAt: new Date().toISOString(),
+    };
+    draft.updatedAt = new Date().toISOString();
+    return;
+  }
 
   const { score, status, summary, issues, suggestions } = result.evaluation;
   draft.llmEvaluation = { score, status, summary, issues, suggestions, evaluatedAt: new Date().toISOString() };
   draft.qualityScore = score;
   // Take the more cautious status: blocked always wins, then needs_review, then LLM result.
   if (draft.status !== "blocked") {
-    draft.status = status === "blocked" ? "blocked" : (status === "needs_review" || draft.status === "needs_review") ? "needs_review" : status;
+    draft.status = status === "blocked" ? "blocked"
+      : (status === "needs_review" || draft.status === "needs_review") ? "needs_review"
+      : status;
   }
   draft.evaluatedAt = new Date().toISOString();
   draft.updatedAt = draft.evaluatedAt;
