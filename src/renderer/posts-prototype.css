@@ -746,6 +746,18 @@ button:disabled {
   padding: 16px;
 }
 
+/* When platform drafts have content, hide the idea brief and show the copy directly */
+.post-detail.has-drafts .idea-panel { display: none; }
+
+.char-count {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 4px 0 12px;
+  text-align: right;
+}
+
 .idea-panel label,
 .style-select,
 .tag-input {
@@ -941,6 +953,11 @@ select.style-select {
 .platform-preview header span {
   color: var(--muted);
   font-weight: 800;
+}
+
+.platform-preview textarea {
+  margin-bottom: 2px;
+  width: 100%;
 }
 
 .draft-reliability-grid {

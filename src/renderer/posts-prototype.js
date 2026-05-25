@@ -5557,6 +5557,10 @@ function openDetail(postPackage, drafts) {
   });
   renderPlatformButtons(drafts, postPackage);
   renderPlatformPreviews(drafts);
+  // Swap layout: hide the idea panel when any draft already has content so the
+  // platform copy becomes the primary view rather than the brief textarea.
+  const hasDraftContent = drafts.some((draft) => String(draft.text || "").trim().length > 0);
+  document.querySelector("#post-detail").classList.toggle("has-drafts", hasDraftContent);
 }
 
 function renderPlatformButtons(drafts, postPackage) {
@@ -5599,6 +5603,7 @@ function renderPlatformPreviews(drafts) {
 function renderPlatformPreview(draft) {
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
+  const charCount = draft.charLimit ? `<span class="char-count">${draft.text.length}/${draft.charLimit}</span>` : "";
   return `
     <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}">
       <header>
@@ -5607,20 +5612,20 @@ function renderPlatformPreview(draft) {
           <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(statusLabel(draft.status || "draft"))}</em>
           <em class="session-pill ${preflight.ok ? "ready" : "needs_login"}">${escapeHtml(preflight.ok ? t("Ready") : t("Needs Attention"))}</em>
         </div>
-        ${draft.charLimit ? `<span>${draft.text.length}/${draft.charLimit}</span>` : ""}
       </header>
-      ${renderContextHelpCard(draft, preflight, plan)}
-      ${renderWorkflowChecklist(draft, preflight, plan)}
-      ${renderDraftReliability(draft, preflight)}
-      ${renderStagingPlan(draft, plan)}
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
+      ${charCount}
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
       ${renderDraftMediaList(draft)}
+      ${renderContextHelpCard(draft, preflight, plan)}
+      ${renderWorkflowChecklist(draft, preflight, plan)}
       ${renderPlatformActionRow(draft, preflight, plan)}
+      ${renderDraftReliability(draft, preflight)}
+      ${renderStagingPlan(draft, plan)}
       ${renderDraftEvaluation(draft)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
