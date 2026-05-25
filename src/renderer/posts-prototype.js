@@ -341,7 +341,8 @@ function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyF
     if (platformFilter.size > 0 && !platformFilter.has(d.platform)) return false;
     if (companyFilter.size > 0) {
       const pkg = packageMap.get(d.postPackageId);
-      if (!pkg || !companyFilter.has(pkg.companyId || pkg.context?.companyId)) return false;
+      const draftCompanyId = d.companyId || pkg?.companyId || pkg?.context?.companyId;
+      if (!companyFilter.has(draftCompanyId)) return false;
     }
     return true;
   });
@@ -611,21 +612,28 @@ function renderBoardFilters() {
 
   // Derive companies and platforms present in current drafts
   const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
+
+  // Read companyId from the draft directly first (createPlatformDraft sets it),
+  // then fall back to the linked package, then to context sub-object.
+  const draftCompanyIds = (prototypeModel.platformDrafts || []).map((d) => {
+    const pkg = pkgMap.get(d.postPackageId);
+    return d.companyId || pkg?.companyId || pkg?.context?.companyId;
+  }).filter(Boolean);
+
+  // If no draft carries a companyId, use all configured companies as the list.
   const companyIds = [...new Set(
-    (prototypeModel.platformDrafts || [])
-      .map((d) => {
-        const pkg = pkgMap.get(d.postPackageId);
-        return pkg?.companyId || pkg?.context?.companyId;
-      })
-      .filter(Boolean)
+    draftCompanyIds.length
+      ? draftCompanyIds
+      : (state.companies || []).map((c) => c.id).filter(Boolean)
   )];
+
   const platforms = [...new Set(
     (prototypeModel.platformDrafts || []).map((d) => d.platform).filter(Boolean)
   )].sort();
 
   const parts = [];
 
-  // Company row — shown whenever at least one company is represented
+  // Company row — shown whenever at least one company exists
   if (companyIds.length >= 1) {
     parts.push(`<span class="filter-group-label">Companies</span>`);
     parts.push(
