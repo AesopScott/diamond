@@ -6678,6 +6678,11 @@ function evaluatePlatformDraft(draft) {
 // LLM-powered evaluation — calls OpenAI, overlays result onto the draft.
 // Falls back gracefully when no API key is configured (deterministic result kept).
 async function llmEvaluatePlatformDraft(draft, { skipRewrite = false } = {}) {
+  // Clear any stale results from a previous run so old data never bleeds into a fresh evaluation.
+  delete draft.llmEvaluation;
+  delete draft.llmRevisedText;
+  delete draft.llmRevisedAt;
+
   // Deterministic checks run first so there's immediate feedback while the API call is in flight.
   evaluatePlatformDraft(draft);
 
