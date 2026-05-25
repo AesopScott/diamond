@@ -2761,6 +2761,84 @@ select.style-select {
   width: 100%;
 }
 
+.draft-compose-browser {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  grid-template-rows: auto auto 560px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.draft-compose-browser-header {
+  align-items: flex-start;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.draft-compose-browser-header div,
+.draft-compose-browser-header strong,
+.draft-compose-browser-header span {
+  display: block;
+  min-width: 0;
+}
+
+.draft-compose-browser-header strong {
+  font-size: 14px;
+}
+
+.draft-compose-browser-header span,
+.draft-compose-browser-header p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  margin: 0;
+}
+
+.draft-compose-browser-header p {
+  max-width: 420px;
+  text-align: right;
+}
+
+.draft-compose-browser-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.draft-compose-browser-toolbar button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.draft-compose-webview-shell {
+  background: #030405;
+  min-height: 560px;
+  overflow: hidden;
+  position: relative;
+}
+
+.draft-compose-webview-shell webview {
+  background: #030405;
+  border: 0;
+  display: flex;
+  height: 100%;
+  min-height: 560px;
+  width: 100%;
+}
+
 .account-meta {
   display: grid;
   gap: 10px;

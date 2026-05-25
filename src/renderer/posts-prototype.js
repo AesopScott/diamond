@@ -1808,6 +1808,99 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
   `;
 }
 
+function renderDraftComposeBrowser(draft, account, partition, composeUrl) {
+  const handle = account?.handle || account?.id || "No handle set";
+  const platform = draft.platform || account?.platform || "";
+  const webviewId = `draft-compose-webview-${draft.id}`;
+  return `
+    <section class="draft-compose-browser" aria-label="${escapeHtml(platformLabel(platform))} compose browser">
+      <header class="draft-compose-browser-header">
+        <div>
+          <strong>${escapeHtml(platformLabel(platform))}</strong>
+          <span>${escapeHtml(handle)}</span>
+        </div>
+        <p>Manual publishing required. Review the composer yourself before pressing the platform's post button.</p>
+      </header>
+      <div class="draft-compose-browser-toolbar">
+        <button type="button" data-platform-action="compose-browser-reload" data-platform-draft-id="${escapeHtml(draft.id)}">Reload</button>
+        <button type="button" data-platform-action="compose-browser-fill" data-platform-draft-id="${escapeHtml(draft.id)}">Fill text</button>
+        <button type="button" data-platform-action="compose-browser-close" data-platform-draft-id="${escapeHtml(draft.id)}">Close browser</button>
+      </div>
+      <div class="draft-compose-webview-shell">
+        <webview
+          id="${escapeHtml(webviewId)}"
+          title="${escapeHtml(platformLabel(platform))} compose browser"
+          partition="${escapeHtml(partition)}"
+          src="${escapeHtml(composeUrl)}"
+          data-draft-id="${escapeHtml(draft.id)}"
+          data-platform="${escapeHtml(platform)}"
+          allowpopups
+        ></webview>
+      </div>
+    </section>
+  `;
+}
+
+function initializeDraftComposeBrowser(draft) {
+  const webview = document.querySelector(`#draft-compose-webview-${CSS.escape(draft.id)}`);
+  if (!webview || webview.dataset.wired === "true") return;
+  webview.dataset.wired = "true";
+  webview.addEventListener("did-fail-load", (event) => {
+    const reason = event?.errorDescription || event?.errorCode || "unknown load error";
+    setOperatorMessage(`Compose browser failed to load: ${reason}`);
+  });
+}
+
+async function fillDraftComposeText(draft) {
+  const webview = document.querySelector(`#draft-compose-webview-${CSS.escape(draft.id)}`);
+  if (!webview) return;
+  const selectorMap = {
+    x: [
+      '[data-testid="tweetTextarea_0"]',
+      'div[role="textbox"][contenteditable="true"]',
+      'textarea',
+    ],
+    linkedin: [
+      '.ql-editor[contenteditable="true"]',
+      'div[role="textbox"][contenteditable="true"]',
+      'textarea',
+    ],
+  };
+  const selectors = selectorMap[draft.platform];
+  const copyFallback = async () => {
+    await window.diamond?.writeClipboard?.(draft.text || "");
+    setOperatorMessage("Copied draft text to clipboard. Paste it into the composer manually.");
+  };
+  if (!selectors) {
+    await copyFallback();
+    return;
+  }
+  try {
+    const inserted = await webview.executeJavaScript(`
+      (() => {
+        const selectors = ${JSON.stringify(selectors)};
+        const text = ${JSON.stringify(draft.text || "")};
+        const target = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
+        if (!target) return false;
+        target.focus();
+        if ("value" in target) {
+          target.value = "";
+          target.dispatchEvent(new Event("input", { bubbles: true }));
+        } else {
+          target.textContent = "";
+        }
+        document.execCommand("insertText", false, text);
+        target.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+        return true;
+      })();
+    `);
+    if (!inserted) await copyFallback();
+    else setOperatorMessage("Draft text filled in the compose browser. Review it before publishing.");
+  } catch {
+    await copyFallback();
+  }
+}
+
 function accountBrowserUserAgent(account) {
   if (!accountPrefersMobileBrowser(account)) return "";
   return "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
@@ -5867,9 +5960,17 @@ function renderPlatformPreviews(drafts) {
     return renderPlatformPreview(draft, hidden);
   }).join("");
   target.innerHTML = tabStrip + panels;
+  requestAnimationFrame(() => {
+    drafts
+      .filter((draft) => draft.composeBrowserOpen)
+      .forEach((draft) => initializeDraftComposeBrowser(draft));
+  });
 }
 
 function renderPlatformPreview(draft, hidden = false) {
+  const account = accountForDraft(draft);
+  const partition = account ? accountBrowserPartition(account) : "";
+  const composeUrl = account ? resolveComposeUrl(account) : "";
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   const charCount = draft.charLimit ? `<span class="char-count">${draft.text.length}/${draft.charLimit}</span>` : "";
@@ -5901,6 +6002,7 @@ function renderPlatformPreview(draft, hidden = false) {
       ${renderStagingPlan(draft, plan)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
+      ${draft.composeBrowserOpen && account && partition && composeUrl ? renderDraftComposeBrowser(draft, account, partition, composeUrl) : ""}
       ${renderSocialPreview(draft, preflight)}
     </article>
   `;
@@ -6015,8 +6117,8 @@ function beginnerActionForStep(stepLabel = "") {
     "Evaluate": "evaluate",
     "Approve": "approve",
     "Add media if needed": "add-media",
-    "Stage in browser": "stage",
-    "Publish manually": "stage",
+    "Stage in browser": "stage-browser",
+    "Publish manually": "stage-browser",
     "Capture proof": "proof",
     "Mark posted": "posted",
   }[stepLabel] || "";
@@ -6053,7 +6155,7 @@ function platformActionHelpItems(draft, preflight, plan) {
       help: "Adds this draft to Diamond's schedule so it can be staged or posted at the planned time.",
     },
     {
-      action: "stage",
+      action: "stage-browser",
       label: "Stage",
       shortHelp: "Open composer",
       help: `Opens the ${platform} composer and prepares the post. You still publish manually inside the social site.`,
@@ -6298,7 +6400,7 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     },
     {
       label: "Stage in browser",
-      action: "stage",
+      action: "stage-browser",
       complete: staged,
       detail: "Opens the platform composer with your post pre-filled. Review it, then click Post when ready.",
       doneDetail: "The browser composer was opened. Use 'Open compose page' in the preview below to return to it.",
@@ -6525,6 +6627,48 @@ async function handlePlatformDraftAction(event) {
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
+  if (action === "stage-browser") {
+    await inspectDraftMedia(draft);
+    const preflight = platformDraftPreflight(draft);
+    if (!preflight.ok) {
+      draft.status = draft.status === "published" ? draft.status : "needs_review";
+      draft.stageNote = `Staging blocked: ${preflight.issues.join(" ")}`;
+      draft.updatedAt = new Date().toISOString();
+      await saveProductionState();
+      await refreshProductionViews();
+      reopenActiveDetail();
+      return;
+    }
+    const composeUrl = resolveComposeUrl(preflight.account);
+    const stagedAt = new Date().toISOString();
+    draft.composeBrowserOpen = true;
+    draft.status = "staged";
+    draft.stagedAt = stagedAt;
+    draft.stageUrl = composeUrl;
+    draft.stageNote = "Compose browser opened. Fill text if needed, review the post, then publish manually.";
+    draft.updatedAt = stagedAt;
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+    return;
+  }
+  if (action === "compose-browser-close") {
+    draft.composeBrowserOpen = false;
+    draft.updatedAt = new Date().toISOString();
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+    return;
+  }
+  if (action === "compose-browser-reload") {
+    const webview = document.querySelector(`#draft-compose-webview-${CSS.escape(draft.id)}`);
+    webview?.reload?.();
+    return;
+  }
+  if (action === "compose-browser-fill") {
+    await fillDraftComposeText(draft);
+    return;
+  }
   if (action === "stage") {
     await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
