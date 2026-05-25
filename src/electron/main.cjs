@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session, webContents } = require("electron");
 const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
@@ -571,6 +571,41 @@ ipcMain.handle("diamond:pick-media", async () => {
 ipcMain.handle("diamond:inspect-media", (_event, paths = []) => {
   return (Array.isArray(paths) ? paths : [])
     .map((filePath) => inspectMediaPath(filePath));
+});
+ipcMain.handle("diamond:attach-webview-media", async (_event, input = {}) => {
+  const { webContentsId, selector, files } = input;
+  if (!webContentsId || !selector || !Array.isArray(files) || !files.length) {
+    return { ok: false, error: "Missing webContentsId, selector, or files." };
+  }
+  const contents = webContents.fromId(webContentsId);
+  if (!contents) return { ok: false, error: "WebContents not found — webview may have been destroyed." };
+  let attached = false;
+  try {
+    contents.debugger.attach("1.3");
+    attached = true;
+  } catch (e) {
+    if (String(e.message || "").includes("already")) {
+      attached = true; // already attached from a previous call
+    } else {
+      return { ok: false, error: `Debugger attach failed: ${e.message}` };
+    }
+  }
+  try {
+    const { root } = await contents.debugger.sendCommand("DOM.getDocument", { depth: 1 });
+    const { nodeId } = await contents.debugger.sendCommand("DOM.querySelector", {
+      nodeId: root.nodeId,
+      selector,
+    });
+    if (!nodeId) return { ok: false, error: `File input not found with selector: ${selector}` };
+    await contents.debugger.sendCommand("DOM.setFileInputFiles", { nodeId, files });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message || "CDP command failed." };
+  } finally {
+    if (attached) {
+      try { contents.debugger.detach(); } catch {}
+    }
+  }
 });
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();

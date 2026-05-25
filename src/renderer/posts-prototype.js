@@ -1862,12 +1862,38 @@ async function autoFillComposeBrowser(draft, webview, maxAttempts, intervalMs) {
     const filled = await tryInjectDraftText(draft, webview);
     if (filled) {
       setOperatorMessage("Draft text filled in the compose browser. Review it before publishing.");
+      if (draft.media?.length) await attachMediaToComposeBrowser(draft, webview, 6, intervalMs);
       return;
     }
   }
   // All retries exhausted — copy to clipboard as fallback.
   await window.diamond?.writeClipboard?.(draft.text || "");
   setOperatorMessage("Text couldn't be auto-filled — copied to clipboard. Paste it into the composer manually.");
+}
+
+// Media input selectors per platform — matches platform-browser-adapter.js.
+const COMPOSE_MEDIA_SELECTORS = {
+  x: 'input[data-testid="fileInput"][type="file"], input[type="file"]',
+  linkedin: 'input[type="file"]',
+  instagram: 'input[type="file"]',
+  facebook: 'input[type="file"]',
+};
+
+async function attachMediaToComposeBrowser(draft, webview, maxAttempts = 5, intervalMs = 700) {
+  const media = (draft.media || []).filter(Boolean);
+  if (!media.length) return;
+  const selector = COMPOSE_MEDIA_SELECTORS[draft.platform] || 'input[type="file"]';
+  const webContentsId = webview.getWebContentsId?.();
+  if (!webContentsId) return;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const result = await window.diamond?.attachWebviewMedia?.({ webContentsId, selector, files: media });
+    if (result?.ok) {
+      setOperatorMessage(`Draft text and ${media.length} media file(s) attached. Review before publishing.`);
+      return;
+    }
+  }
+  setOperatorMessage("Media couldn't be attached automatically — attach it manually in the composer.");
 }
 
 // Returns true if text was successfully injected, false if the target wasn't found yet.

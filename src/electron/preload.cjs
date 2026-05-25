@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("diamond", {
   saveGeneratedAsset: (input) => ipcRenderer.invoke("diamond:save-generated-asset", input),
   pickMedia: () => ipcRenderer.invoke("diamond:pick-media"),
   inspectMedia: (paths) => ipcRenderer.invoke("diamond:inspect-media", paths),
+  attachWebviewMedia: (input) => ipcRenderer.invoke("diamond:attach-webview-media", input),
   stageWithPlaywright: (input) => ipcRenderer.invoke("diamond:stage-with-playwright", input),
   generatePostDrafts: (payload) => ipcRenderer.invoke("diamond:generate-post-drafts", payload),
   evaluateDraft: (payload) => ipcRenderer.invoke("diamond:evaluate-draft", payload),
