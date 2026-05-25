@@ -106,6 +106,18 @@
       "dependencies": [
         7
       ]
+    },
+    {
+      "number": 9,
+      "title": "build image generation",
+      "description": "Connect to an image generation service and connect to Diamond.\nAdd ability to turn on automatic image creation for posts at campaign level and in new posts UI\nAdd image generation option per campaign per platform\nadd campaign guidance for image generation prompt",
+      "category": "feature",
+      "priority": 90,
+      "impact": "standard",
+      "status": "backlog",
+      "created_at": "2026-05-25",
+      "completed_at": null,
+      "dependencies": []
     }
   ]
 }
