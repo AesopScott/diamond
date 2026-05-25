@@ -67,6 +67,37 @@ Per-post overrides to campaign video generation defaults. Stored at post level (
 - `null` in any field means "inherit campaign value"
 - `true`/`false` explicitly overrides campaign setting
 
+**Examples:**
+
+_Disable video for this post only:_
+```json
+{
+  "videoGenerationOverride": false
+}
+```
+
+_Custom prompt without changing enable/disable:_
+```json
+{
+  "videoGenerationOverride": null,
+  "videoPromptOverride": "Make this video about sustainable fashion"
+}
+```
+
+_Per-platform TikTok override (20-second duration):_
+```json
+{
+  "videoGenerationOverride": null,
+  "videoGenerationPlatforms": {
+    "tiktok": {
+      "enabled": true,
+      "videoDurationSeconds": 20,
+      "promptOverride": "Fast-paced TikTok version"
+    }
+  }
+}
+```
+
 **Producers**
 - `src/renderer/posts-prototype.js` — post creation form
 
