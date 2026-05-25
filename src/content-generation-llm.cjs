@@ -20,7 +20,7 @@
 //   { ok: false, drafts: null, error: "<writer failure>" }
 
 const DEFAULT_WRITER_MODEL = "claude-haiku-4-5-20251001";
-const DEFAULT_REVIEWER_MODEL = "gpt-5.4";
+const DEFAULT_REVIEWER_MODEL = "gpt-4o";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const STAGE_TIMEOUT_MS = 60000;
