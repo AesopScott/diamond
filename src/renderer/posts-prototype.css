@@ -1602,7 +1602,8 @@ select.style-select {
   border-radius: 7px;
   display: grid;
   gap: 6px;
-  margin-top: 12px;
+  margin-bottom: 12px;
+  margin-top: 6px;
   padding: 10px;
 }
 

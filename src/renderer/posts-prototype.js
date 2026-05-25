@@ -5646,6 +5646,7 @@ function renderPlatformPreview(draft, hidden = false) {
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       ${charCount}
+      ${renderDraftEvaluation(draft)}
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
@@ -5657,7 +5658,6 @@ function renderPlatformPreview(draft, hidden = false) {
       ${renderPlatformActionRow(draft, preflight, plan)}
       ${renderDraftReliability(draft, preflight)}
       ${renderStagingPlan(draft, plan)}
-      ${renderDraftEvaluation(draft)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
       <div class="social-preview">
