@@ -5546,7 +5546,13 @@ function openDetail(postPackage, drafts) {
 function renderPlatformButtons(drafts, postPackage) {
   const target = document.querySelector("#platform-buttons");
   const activePlatforms = new Set(drafts.map((draft) => draft.platform));
-  const toggleable = TOGGLEABLE_PLATFORMS;
+  const companyId = postPackage?.companyId || "";
+  const connectedPlatforms = companyId
+    ? new Set((state.socialAccounts || []).filter((a) => a.companyId === companyId).map((a) => a.platform))
+    : null;
+  const toggleable = connectedPlatforms
+    ? TOGGLEABLE_PLATFORMS.filter((p) => connectedPlatforms.has(p))
+    : TOGGLEABLE_PLATFORMS;
   target.innerHTML = toggleable.map((platform) => {
     const isActive = activePlatforms.has(platform);
     const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
