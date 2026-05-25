@@ -1,6 +1,6 @@
 {
   "name": "diamond",
-  "version": "0.1.68",
+  "version": "0.1.69",
   "description": "Standalone multitenant social operating system with assisted browser publishing.",
   "private": true,
   "type": "module",
