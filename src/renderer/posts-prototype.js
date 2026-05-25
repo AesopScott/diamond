@@ -1272,7 +1272,7 @@ function accountsForScope(companyId, brandId) {
 }
 
 function renderAccountPlatformStatusBoard(companyId, brandId, accounts = [], selectedAccountId = "") {
-  const scopedLabel = `${companyName(companyId)} / ${brandName(brandId)}`;
+  const scopedLabel = companyName(companyId);
   return `
     <section class="account-platform-status-board" aria-label="Platform login status">
       <header>
@@ -1313,7 +1313,7 @@ function renderAccountCard(account, selectedAccountId) {
       <span>
         <strong>${escapeHtml(platformLabel(account.platform))}</strong>
         <small>${escapeHtml(account.handle || account.id)}</small>
-        <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
+        <small>${escapeHtml(company)}</small>
       </span>
       <em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>
     </button>
@@ -1767,7 +1767,7 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       <header>
         <div>
           <span class="eyebrow">Logging into</span>
-          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
+          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))}</h3>
           <label class="account-handle-label account-login-handle">
             <span>Handle</span>
             <input class="account-handle-input" data-account-field="handle" type="text"
@@ -1780,7 +1780,6 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       </header>
       <section class="account-login-context" aria-label="Selected account context">
         <label><span>Company</span><select data-login-scope-field="companyId">${companyOptions(account.companyId)}</select></label>
-        <label><span>Brand</span><select data-login-scope-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></label>
         <label><span>Account</span><select data-login-scope-field="accountId">${accountOptions(account.companyId, account.brandId, account.id)}</select></label>
         <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
       </section>
