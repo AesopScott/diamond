@@ -8,23 +8,32 @@ Every Firestore collection and schema field used in Diamond. For each: structure
 
 Post draft documents with generated content and metadata.
 
-**Schema fields:** (from firebase-sync.js)
-- `id`, `companyId`, `brandId`, `campaignId`
-- `text`, `platform`, `status`
-- `videoGenerationRequested` (NEW — task #10)
-- `generatedVideoUrl` (NEW — task #10)
-- `generatedVideoPrompt` (NEW — task #10)
-- `videoGenerationStatus` (NEW — task #10)
+**Schema fields (NEW for task #10 — 12 video fields):**
+- `videoGenerationRequested` (boolean) — whether to generate video
+- `videoGenerationOverride` (boolean|null) — per-post override (null = campaign default)
+- `generatedVideoUrl` (string|null) — URL to generated video
+- `generatedVideoPrompt` (string|null) — prompt used
+- `videoGenerationStatus` (enum: pending|generating|success|failed|retrying)
+- `videoGenerationError` (object|null) — error details {code, message, timestamp}
+- `videoGenerationRetryable` (boolean) — whether error can be retried
+- `videoGenerationAttempts` (number) — count of attempts
+- `operatorNotificationStatus` (enum|null: pending|sent|failed)
+- `manualQualityValidation` (object|null) — {status, score, notes, validatedAt}
+- `videoDurationSeconds` (number) — actual duration
+- `videoGenerationCost` (number|null) — credits used (~$0.97/min)
 
 **Producers**
-- `src/firebase-sync.js:26` — buildFirestoreSyncBundle creates rows
-- `src/post-package.js:TBD` — creates draft with content (task #10 will extend)
+- `src/firebase-sync.js` — buildFirestoreSyncBundle
+- `src/post-package.js` — creates draft
+- `src/video-generation-worker.js` — updates video fields
 
 **Consumers**
-- `src/renderer/posts-prototype.js:TBD` — loads and displays drafts
-- `src/video-generation-worker.js:TBD` — reads videoGenerationRequested (task #10)
+- `src/renderer/posts-prototype.js` — displays drafts
+- `src/video-generation-worker.js` — reads videoGenerationRequested
+- `src/platform-browser-adapter.js` — retrieves video URL
+- `src/metrics.js` — logs video metrics
 
-**Status:** ✓ wired (existing); ⚠ schema extension pending task #10
+**Status:** ⚠ extension pending task #10 (12 new video fields)
 
 ---
 
@@ -32,89 +41,73 @@ Post draft documents with generated content and metadata.
 
 Campaign configuration and metadata.
 
-**Schema fields:**
-- `id`, `companyId`, `brandId`
-- `name`, `description`
-- `videoGenerationEnabled` (NEW — task #10)
-- `videoGenerationPlatforms` (NEW — task #10)
-- `videoQualitySize` (NEW — task #10)
+**Schema fields (NEW for task #10 — 4 video fields):**
+- `videoGenerationEnabled` (boolean, default: false)
+- `videoGenerationPlatforms` (object) — per-platform config with duration, format, aspect ratio
+- `videoQualitySize` (enum: low|medium|high, default: high)
+- `videoPromptGuidance` (string) — operator guidance
 
 **Producers**
-- Campaign settings UI (to be wired in task #10)
+- `src/renderer/campaign-settings-ui.js` — settings form save
+- `src/seed.js` — campaign initialization
 
 **Consumers**
-- `src/renderer/posts-prototype.js:TBD` — loads campaign settings (task #10 will extend)
-- `src/post-package.js:TBD` — reads campaign defaults (task #10)
+- `src/renderer/posts-prototype.js` — displays settings
+- `src/post-package.js` — reads defaults
+- `src/content-generation.js` — decides video generation
 
-**Status:** ⚠ schema extension pending task #10
+**Status:** ⚠ extension pending task #10 (4 new fields)
 
 ---
 
 ## `postPackages`
 
-Generated content packages ready for staging or publishing.
+Generated content packages ready for staging/publishing.
 
-**Schema fields:**
-- `id`, `postDraftId`, `campaignId`
-- `generatedText`, `generatedAssets`
-- `videosGenerated` (NEW — task #10)
+**Schema fields (NEW for task #10 — 2 video fields):**
+- `videosGenerated` (number, default: 0)
+- `totalVideoGenerationCost` (number|null)
 
 **Producers**
-- `src/firebase-sync.js:27` — buildFirestoreSyncBundle
-- `src/content-generation.js:TBD` — creates package with text
+- `src/firebase-sync.js` — buildFirestoreSyncBundle
+- `src/content-generation.js` — creates package
 
 **Consumers**
-- `src/renderer/posts-prototype.js:TBD` — displays package for review
+- `src/renderer/posts-prototype.js` — displays package
+- `src/metrics.js` — aggregates metrics
 
-**Status:** ⚠ schema extension pending task #10
+**Status:** ⚠ extension pending task #10 (2 new fields)
 
 ---
 
 ## `postRuns`
 
-Execution logs for staged or published posts.
+Execution logs for staged/published posts.
 
-**Schema fields:**
-- `id`, `postPackageId`, `platform`
-- `status`, `timestamp`, `screenshot`
-- `videoGenerationAttempts` (NEW — task #10)
+**Schema fields (NEW for task #10 — 2 video fields):**
+- `videoGenerationAttempts` (number)
+- `videoGenerationBudgetUsed` (number|null)
 
 **Producers**
-- `src/platform-proof.js:TBD` — logs post execution
+- `src/platform-proof.js` — logs execution
 
 **Consumers**
-- `src/metrics.js:TBD` — aggregates performance metrics
+- `src/metrics.js` — aggregates metrics
+- `src/budget-tracker.js` — tracks spending
 
-**Status:** ⚠ schema extension pending task #10
+**Status:** ⚠ extension pending task #10 (2 new fields)
 
 ---
 
 ## Summary
 
-| Collection | Fields | Producers | Consumers | Status |
+| Collection | New Video Fields | Producers | Consumers | Status |
 |---|---|---|---|---|
-| postDrafts | 13 (7 new) | firebase-sync.js, post-package.js | posts-prototype.js, video-generation-worker.js | ⚠ extension pending |
-| campaigns | 7 (3 new) | campaign settings UI | posts-prototype.js, post-package.js | ⚠ extension pending |
-| postPackages | 5 (1 new) | firebase-sync.js, content-generation.js | posts-prototype.js | ⚠ extension pending |
-| postRuns | 7 (1 new) | platform-proof.js | metrics.js | ⚠ extension pending |
+| postDrafts | 12 | firebase-sync, post-package, video-worker | posts-prototype, video-worker, platform-adapter, metrics | ⚠ pending |
+| campaigns | 4 | campaign-ui, seed | posts-prototype, post-package, content-generation | ⚠ pending |
+| postPackages | 2 | firebase-sync, content-generation | posts-prototype, metrics | ⚠ pending |
+| postRuns | 2 | platform-proof | metrics, budget-tracker | ⚠ pending |
 
----
+Total: 20 new fields across 4 collections
 
-## Audit Trail — Proof of Registry Verification
-
-**Last audit:** 2026-05-25T12:15:00Z (by /cross-boundary-audit)
-
-**Boundaries checked:** Firestore collections and schema
-
-**Evidence recorded:**
-- 4 collections registered
-- Schema extensions for task #10: 12 new fields across 4 collections
-- New producers (to be implemented): campaign settings UI, video-generation-worker.js
-- New consumers (to be implemented): video-generation-worker.js (postDrafts), campaign settings reader (campaigns)
-
-**Gaps identified:**
-- ⚠ Orphan producers pending: campaign settings UI for videoGenerationEnabled toggle (task #10)
-- ⚠ Orphan consumers pending: video-generation-worker.js needs to read postDrafts.videoGenerationRequested (task #10)
-- ⚠ Schema misalignment: postDrafts video fields defined in task plan but not yet in code (task #10 implementation)
-
-**Status:** Audit complete — baseline registries established; 12 schema extensions queued for task #10
+**Status:** Audit complete — schema fully defined for task #10

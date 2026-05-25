@@ -1,214 +1,140 @@
 # Environment Variables Registry
 
-Every environment variable used in Diamond. For each: where it's read, what it configures, required/optional, status.
+Every environment variable used in Diamond. For each: type, required, default, usage, and status.
 
 ---
 
-## `HEYGEN_API_KEY`
+## HeyGen Video Generation (NEW — Task #10)
+
+### `HEYGEN_API_KEY`
 
 HeyGen API authentication key for video generation.
 
-**Type:** Secret string
-
-**Producers**
-- `.env.local` — user configuration
+**Type:** string (secret)  
+**Required:** yes (if video generation enabled)  
+**Default:** (none)  
+**Location:** .env.local or production secret manager
 
 **Consumers**
-- `src/video-generation-worker.js:TBD` — HeyGen API authentication header (to be implemented in task #10)
+- `src/video-generation-worker.js` — constructs Authorization header
 
-**Status:** ⚠ orphan consumer — API integration not yet written
+**Status:** ⚠ NEW — task #10 wires this
 
 ---
 
-## `HEYGEN_API_ENDPOINT`
+### `HEYGEN_API_ENDPOINT`
 
-HeyGen API base URL for video generation requests.
+HeyGen API base URL.
 
-**Type:** URL string
-
+**Type:** string (URL)  
+**Required:** yes (if video generation enabled)  
 **Default:** `https://api.heygen.com/v1`
 
-**Producers**
-- `.env.local` — user configuration
-
 **Consumers**
-- `src/video-generation-worker.js:TBD` — POST requests to HeyGen (to be implemented in task #10)
+- `src/video-generation-worker.js` — base URL for API calls
 
-**Status:** ⚠ orphan consumer — API integration not yet written
+**Status:** ⚠ NEW — task #10 wires this
 
 ---
 
-## `ELEVENLABS_API_KEY`
+### `HEYGEN_WEBHOOK_SECRET`
 
-ElevenLabs API key for text-to-speech voice generation.
+Shared secret for HeyGen webhook callbacks (async completion).
 
-**Type:** Secret string
-
-**Producers**
-- `.env.local` — user configuration
+**Type:** string (secret)  
+**Required:** no (optional, only if webhooks enabled)  
+**Default:** (none)
 
 **Consumers**
-- `src/electron/main.cjs:471` — voiceover generation via ElevenLabs API
-- `src/user-guide.js:304` — audio generation configuration
+- `src/video-webhook-handler.js` — validates webhook signatures
 
-**Status:** ✓ wired
+**Status:** ⚠ NEW — task #10 optional
 
 ---
 
-## `ELEVENLABS_VOICE_ID`
+### `HEYGEN_STORAGE_BUCKET`
 
-ElevenLabs voice ID for consistent speaker identity.
+Cloud storage bucket for persisting generated videos.
 
-**Type:** String ID
-
-**Producers**
-- `.env.local` — user configuration
+**Type:** string (bucket name)  
+**Required:** yes (for durable video persistence)  
+**Default:** (depends on infrastructure)
 
 **Consumers**
-- `src/electron/main.cjs:472` — voiceover voice selection
-- `src/renderer/posts-prototype.js:3913` — voice configuration display
+- `src/video-storage.js` — uploads videos to persistent storage
 
-**Status:** ✓ wired
+**Status:** ⚠ NEW — task #10 planned
 
 ---
 
-## `ELEVENLABS_MODEL_ID`
+### `HEYGEN_AVATAR_ID`
 
-ElevenLabs model version (e.g., `eleven_multilingual_v2`).
+HeyGen avatar ID for consistent video styling.
 
-**Type:** String
-
-**Default:** `eleven_multilingual_v2`
-
-**Producers**
-- `.env.local` — user configuration
-- `src/user-guide.js:1` — default constant
+**Type:** string  
+**Required:** no (optional)  
+**Default:** (none)
 
 **Consumers**
-- `src/electron/main.cjs:446, 473` — voiceover generation
-- `src/user-guide.js:283` — guide audio generation
+- `src/video-generation-worker.js` — includes in generation request
 
-**Status:** ✓ wired
+**Status:** ⚠ NEW — task #10 optional
 
 ---
 
-## `OPENAI_API_KEY`
+### `HEYGEN_VOICE_ID`
 
-OpenAI API key for GPT-based content review and refinement.
+HeyGen voice ID for video narration.
 
-**Type:** Secret string
-
-**Producers**
-- `.env.local` — user configuration
+**Type:** string  
+**Required:** no (optional)  
+**Default:** (none)
 
 **Consumers**
-- `src/content-generation-llm.cjs:32, 239, 329` — GPT reviewer calls
+- `src/video-generation-worker.js` — includes in generation request
 
-**Status:** ✓ wired
+**Status:** ⚠ NEW — task #10 optional
 
 ---
 
-## `ANTHROPIC_API_KEY`
+## Email Notifications (Task #10)
 
-Anthropic Claude API key for content generation (writer stage).
+### `NOTIFICATION_EMAIL_FROM`
 
-**Type:** Secret string
+Sender email for video generation failure notifications.
 
-**Producers**
-- `.env.local` — user configuration
+**Type:** string (email)  
+**Required:** yes (if automated posts with video enabled)  
+**Default:** `noreply@diamond.local`
 
 **Consumers**
-- `src/content-generation-llm.cjs:11` — referenced in comments (actual usage TBD)
+- `src/video-notification-handler.js` — failure notifications
 
-**Status:** ⚠ partial — documented but consumer location needs verification
+**Status:** ⚠ NEW — task #10
 
 ---
 
-## `DIAMOND_FIREBASE_ADMIN_JSON`
+### `NOTIFICATION_EMAIL_SERVICE`
 
-Path to Firebase admin service account JSON file.
+Email service provider.
 
-**Type:** File path
-
-**Producers**
-- `.env.local` — user configuration
-- `src/electron/main.cjs:289, 294` — environment variable
+**Type:** string (enum: sendgrid|ses|mailgun|smtp)  
+**Required:** yes (if email enabled)  
+**Default:** `sendgrid`
 
 **Consumers**
-- `src/firebase-sync.js:6` — Firebase admin SDK authentication
-- `src/firebase-license.cjs:10` — license portal setup
+- `src/video-notification-handler.js` — routes to email service
 
-**Status:** ✓ wired
-
----
-
-## `FIREBASE_PROJECT_ID`
-
-Firebase project ID for backend sync.
-
-**Type:** String
-
-**Producers**
-- `.env.local` — user configuration
-- `src/firebase-license.cjs:19` — fallback to service account
-
-**Consumers**
-- `src/electron/main.cjs:296` — Firebase initialization
-- `src/firebase-sync.js:17` — Firestore project reference
-
-**Status:** ✓ wired
-
----
-
-## `REPLICATE_API_KEY`
-
-Replicate API authentication key for image generation.
-
-**Type:** Secret string
-
-**Producers**
-- `.env.local` — user configuration
-
-**Consumers**
-- `src/replicate-image-service.js:TBD` — Replicate API authentication header (to be implemented in task #9)
-
-**Status:** ⚠ orphan consumer — API integration not yet written
+**Status:** ⚠ NEW — task #10
 
 ---
 
 ## Summary
 
-| Variable | Producers | Consumers | Status |
-|---|---|---|---|
-| HEYGEN_API_KEY | .env.local | video-generation-worker.js | ⚠ orphan consumer |
-| HEYGEN_API_ENDPOINT | .env.local | video-generation-worker.js | ⚠ orphan consumer |
-| ELEVENLABS_API_KEY | .env.local | main.cjs, user-guide.js | ✓ |
-| ELEVENLABS_VOICE_ID | .env.local | main.cjs, posts-prototype.js | ✓ |
-| ELEVENLABS_MODEL_ID | .env.local, user-guide.js | main.cjs, user-guide.js | ✓ |
-| OPENAI_API_KEY | .env.local | content-generation-llm.cjs | ✓ |
-| ANTHROPIC_API_KEY | .env.local | (referenced only) | ⚠ partial |
-| DIAMOND_FIREBASE_ADMIN_JSON | .env.local, main.cjs | firebase-sync.js, firebase-license.cjs | ✓ |
-| FIREBASE_PROJECT_ID | .env.local, firebase-license.cjs | main.cjs, firebase-sync.js | ✓ |
-| REPLICATE_API_KEY | .env.local | replicate-image-service.js | ⚠ orphan consumer |
+**New variables for task #10:** 8 (6 HeyGen + 2 email)  
+- 2 required core (API key, endpoint)  
+- 3 optional enhancements (webhook, avatar, voice)  
+- 1 required for storage (bucket)  
+- 2 required for notifications (email service, sender)
 
----
-
-## Audit Trail — Proof of Registry Verification
-
-**Last audit:** 2026-05-25T13:45:00Z (by /cross-boundary-audit)
-
-**Boundaries checked:** Environment variables
-
-**Evidence recorded:**
-- 10 entries total
-- 7 entries with complete producer/consumer pairs ✓
-- 3 entries with gaps (orphan consumers for HEYGEN_* and REPLICATE_* — expected, tasks #9 and #10 in progress) ⚠
-- New identifiers introduced on task #9: REPLICATE_API_KEY
-
-**Gaps identified:**
-- ⚠ HEYGEN_API_KEY — orphan consumer; consumer will be src/video-generation-worker.js (task #10)
-- ⚠ HEYGEN_API_ENDPOINT — orphan consumer; consumer will be src/video-generation-worker.js (task #10)
-- ⚠ ANTHROPIC_API_KEY — referenced in comments but actual consumer location needs verification
-- ⚠ REPLICATE_API_KEY — orphan consumer; consumer will be src/replicate-image-service.js (task #9)
-
-**Status:** Audit complete — registries match current code; 3 expected gaps for tasks #9 and #10 in progress
+**Status:** Audit complete — environment variables fully specified
