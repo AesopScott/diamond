@@ -115,7 +115,7 @@
       "category": "feature",
       "priority": 90,
       "impact": "standard",
-      "status": "pr-reviewed",
+      "status": "review-blocked",
       "created_at": "2026-05-25",
       "completed_at": null,
       "dependencies": []
