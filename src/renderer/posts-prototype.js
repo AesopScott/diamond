@@ -286,9 +286,10 @@ const firstRunSteps = getDiamondFirstRunSteps();
 const tourSteps = getDiamondTourSteps();
 const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
-let board = buildPostBoardView(prototypeModel);
+let board = buildPlatformDraftBoardView(prototypeModel, "all");
 let activePostPackageId = null;
 let activePlatformTab = null; // currently visible platform tab inside the detail view
+let activeBoardPlatformFilter = "all"; // "all" | platform string
 let selectedAccountId = state.context?.socialAccountId || null;
 let activePrototypeView = "posts-view";
 let latestFirebaseStatus = null;
@@ -315,6 +316,60 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "fit-login-panel": 5000,
 };
 const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "youtube-longform", "facebook", "pinterest", "reddit"];
+// ─── Platform-draft board view ────────────────────────────────────────────────
+
+const DRAFT_BOARD_COLUMNS = [
+  { id: "draft",        label: "Draft" },
+  { id: "needs_review", label: "Needs Review" },
+  { id: "scheduled",    label: "Scheduled" },
+  { id: "staged",       label: "Staged" },
+  { id: "published",    label: "Published" },
+  { id: "failed",       label: "Failed" },
+];
+
+function draftColumnForStatus(status) {
+  const s = status || "draft";
+  if (s === "approved")  return "needs_review";
+  if (s === "blocked")   return "needs_review";
+  if (s === "abandoned") return "failed";
+  return DRAFT_BOARD_COLUMNS.some((c) => c.id === s) ? s : "draft";
+}
+
+function buildPlatformDraftBoardView(model, platformFilter = "all") {
+  const drafts = (model.platformDrafts || []).filter((d) =>
+    platformFilter === "all" || d.platform === platformFilter
+  );
+  const packageMap = new Map((model.postPackages || []).map((p) => [p.id, p]));
+  const columns = DRAFT_BOARD_COLUMNS.map((col) => ({ ...col, posts: [] }));
+  const columnMap = new Map(columns.map((col) => [col.id, col]));
+  drafts.forEach((draft) => {
+    const pkg = packageMap.get(draft.postPackageId);
+    if (!pkg) return;
+    const idea = pkg.ideaText || pkg.title || "";
+    const excerpt = idea.length > 60 ? `${idea.slice(0, 57)}…` : idea || "(no idea)";
+    const colId = draftColumnForStatus(draft.status);
+    const col = columnMap.get(colId) || columnMap.get("draft");
+    col.posts.push({
+      id:            draft.id,
+      postPackageId: draft.postPackageId,
+      platform:      draft.platform,
+      title:         idea,
+      excerpt,
+      status:        draft.status || "draft",
+      updatedAt:     draft.updatedAt || pkg.updatedAt,
+      createdAt:     draft.createdAt || pkg.createdAt,
+      tags:          pkg.tags || [],
+    });
+  });
+  columns.forEach((col) => {
+    col.posts.sort((a, b) =>
+      new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
+    col.count = col.posts.length;
+  });
+  return columns;
+}
+
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -390,13 +445,13 @@ function buildProductionPostModel(workspace) {
 async function saveProductionState() {
   state.postPackages = prototypeModel.postPackages;
   state.platformDrafts = prototypeModel.platformDrafts;
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
   await window.diamond?.saveState?.(state);
 }
 
 async function refreshProductionBoard() {
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
   renderBoard(board);
 }
 
@@ -526,6 +581,7 @@ function renderBoard(columns) {
   document.querySelector("#posts-board").classList.remove("hidden");
   document.querySelector(".prototype-toolbar").classList.remove("hidden");
   document.querySelector("#post-detail").classList.add("hidden");
+  renderBoardPlatformFilter();
   const target = document.querySelector("#posts-board");
   target.innerHTML = columns.map((column) => `
     <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}" data-board-status="${escapeHtml(column.id)}">
@@ -540,19 +596,38 @@ function renderBoard(columns) {
   `).join("");
 }
 
-function renderCard(post) {
-  const platformStatuses = post.platformStatuses?.length
-    ? post.platformStatuses
-    : (post.platforms || []).map((platform) => ({ platform, status: post.status || "draft" }));
+function renderBoardPlatformFilter() {
+  const toolbar = document.querySelector(".prototype-toolbar");
+  if (!toolbar) return;
+  const platforms = [...new Set(
+    prototypeModel.platformDrafts.map((d) => d.platform).filter(Boolean)
+  )].sort();
+  toolbar.innerHTML = [
+    `<button type="button" class="filter-pill${activeBoardPlatformFilter === "all" ? " active" : ""}" data-platform-filter="all">All</button>`,
+    ...platforms.map((p) =>
+      `<button type="button" class="filter-pill${activeBoardPlatformFilter === p ? " active" : ""}" data-platform-filter="${escapeHtml(p)}">${escapeHtml(platformLabel(p))}</button>`
+    ),
+  ].join("");
+}
+
+function renderCard(card) {
+  const pkgId = card.postPackageId || card.id;
   return `
-    <article class="post-card" data-package-id="${escapeHtml(post.id)}" draggable="true" tabindex="0" role="button" aria-label="Open ${escapeHtml(post.title || post.excerpt || "post")}">
+    <article class="post-card"
+      data-package-id="${escapeHtml(pkgId)}"
+      data-draft-platform="${escapeHtml(card.platform || "")}"
+      draggable="true" tabindex="0" role="button"
+      aria-label="Open ${escapeHtml(card.title || card.excerpt || "post")}">
       <header class="post-card-header">
-        <button class="post-card-delete" type="button" data-board-action="delete" data-package-id="${escapeHtml(post.id)}" title="Delete post" aria-label="Delete post">Delete</button>
+        ${card.platform ? `<span class="card-platform-badge platform-${escapeHtml(card.platform)}">${escapeHtml(platformLabel(card.platform))}</span>` : ""}
+        <button class="post-card-delete" type="button"
+          data-board-action="delete"
+          data-package-id="${escapeHtml(pkgId)}"
+          title="Delete post" aria-label="Delete post">×</button>
       </header>
-      <strong>${escapeHtml(post.excerpt || post.title)}</strong>
-      <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
-      ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(statusLabel(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>${escapeHtml(t("Platform Not Set"))}</span></div>`}
-      ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+      <strong>${escapeHtml(card.excerpt || card.title)}</strong>
+      <time datetime="${escapeHtml(card.updatedAt || card.createdAt || "")}">${formatDate(card.updatedAt || card.createdAt)}</time>
+      ${card.tags?.length ? `<div class="tag-row">${card.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </article>
   `;
 }
@@ -583,6 +658,13 @@ function wirePrototypeControls() {
   document.querySelector("#add-campaign-record")?.addEventListener("click", addCampaignRecord);
   document.querySelector("#add-template-record")?.addEventListener("click", addTemplateRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
+  document.querySelector(".prototype-toolbar")?.addEventListener("click", (event) => {
+    const pill = event.target.closest("[data-platform-filter]");
+    if (!pill) return;
+    activeBoardPlatformFilter = pill.dataset.platformFilter;
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+    renderBoard(board);
+  });
   document.querySelector("#posts-board").addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-board-action]");
     if (actionButton) {
@@ -591,12 +673,14 @@ function wirePrototypeControls() {
     }
     const card = event.target.closest(".post-card[data-package-id]");
     if (!card) return;
+    if (card.dataset.draftPlatform) activePlatformTab = card.dataset.draftPlatform;
     openPackageDetail(card.dataset.packageId);
   });
   document.querySelector("#posts-board").addEventListener("keydown", (event) => {
     const card = event.target.closest(".post-card[data-package-id]");
     if (!card || !["Enter", " "].includes(event.key)) return;
     event.preventDefault();
+    if (card.dataset.draftPlatform) activePlatformTab = card.dataset.draftPlatform;
     openPackageDetail(card.dataset.packageId);
   });
   document.querySelector("#posts-board").addEventListener("dragstart", handleBoardDragStart);
@@ -719,7 +803,7 @@ function destroyAccountLoginWebview() {
 }
 
 async function refreshProductionViews() {
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
   renderAccounts(selectedAccountId);
   renderCompanies();
   renderBrands();
@@ -747,6 +831,7 @@ function handleBoardDragStart(event) {
   if (!card) return;
   event.dataTransfer?.setData("text/plain", card.dataset.packageId);
   event.dataTransfer?.setData("application/x-diamond-package-id", card.dataset.packageId);
+  event.dataTransfer?.setData("application/x-diamond-draft-platform", card.dataset.draftPlatform || "");
   event.dataTransfer.effectAllowed = "move";
   card.classList.add("dragging");
 }
@@ -773,7 +858,13 @@ async function handleBoardDrop(event) {
   document.querySelectorAll(".post-card.dragging").forEach((item) => item.classList.remove("dragging"));
   const packageId = event.dataTransfer?.getData("application/x-diamond-package-id") || event.dataTransfer?.getData("text/plain");
   if (!packageId) return;
-  await movePostPackageToStatus(packageId, column.dataset.dropStatus || "draft");
+  const platform = event.dataTransfer?.getData("application/x-diamond-draft-platform");
+  const nextStatus = column.dataset.dropStatus || "draft";
+  if (platform) {
+    await movePlatformDraftToStatus(packageId, platform, nextStatus);
+  } else {
+    await movePostPackageToStatus(packageId, nextStatus);
+  }
 }
 
 function clearBoardDragState() {
@@ -817,11 +908,31 @@ async function movePostPackageToStatus(packageId, nextStatus) {
     run.updatedAt = now;
   });
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
   renderAnalytics();
+}
+
+async function movePlatformDraftToStatus(packageId, platform, nextStatus) {
+  const normalized = normalizeId(nextStatus || "draft", "status").replace(/-/g, "_");
+  const draft = prototypeModel.platformDrafts.find(
+    (d) => d.postPackageId === packageId && d.platform === platform
+  );
+  if (!draft) return;
+  const now = new Date().toISOString();
+  draft.status = normalized;
+  draft.updatedAt = now;
+  const stateDraft = (state.platformDrafts || []).find((d) => d.id === draft.id);
+  if (stateDraft) {
+    stateDraft.status = normalized;
+    stateDraft.updatedAt = now;
+  }
+  updatePostPackageFromDrafts(packageId);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  await saveProductionState();
+  renderBoard(board);
 }
 
 async function deletePostPackage(packageId) {
@@ -837,7 +948,7 @@ async function deletePostPackage(packageId) {
   state.scheduledPosts = (state.scheduledPosts || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   state.postRuns = (state.postRuns || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
@@ -3768,7 +3879,7 @@ async function handleSettingsChange(event) {
     state.operatorLanguage = normalizeOperatorLanguage(field.value);
     applyOperatorLanguage();
     await saveProductionState();
-    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter));
     renderCalendar();
     renderAnalytics();
     renderTemplates();
@@ -3781,7 +3892,7 @@ async function handleSettingsChange(event) {
     state.beginnerMode = field.checked;
     applyBeginnerMode();
     await saveProductionState();
-    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter));
     renderCalendar();
     renderSettings();
     reopenActiveDetail();
@@ -6467,7 +6578,7 @@ async function requestPlatformGeneration() {
     applyGenerationResult(drafts, result, postPackage);
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
-    board = buildPostBoardView(prototypeModel);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
     renderBoard(board);
     reopenActiveDetail();
   } finally {
@@ -6521,7 +6632,7 @@ async function requestCampaignGeneration() {
     updatePostPackageFromDrafts(activePostPackageId);
     // Rebuild board variable so clicking Back shows updated cards — no renderBoard call here
     // because the user is still in detail view; Back button will call renderBoard(board).
-    board = buildPostBoardView(prototypeModel);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
     await saveProductionState();
     reopenActiveDetail();
   } finally {

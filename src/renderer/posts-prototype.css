@@ -416,6 +416,12 @@ button:disabled {
   padding: 8px 12px;
 }
 
+.filter-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
 .create-button {
   background: var(--accent);
   color: var(--accent-text);
@@ -560,6 +566,16 @@ button:disabled {
   display: flex;
   gap: 8px;
   justify-content: space-between;
+}
+
+.card-platform-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  text-transform: uppercase;
 }
 
 .post-card-delete {
