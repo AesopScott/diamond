@@ -5852,15 +5852,38 @@ function renderPlatformPreview(draft, hidden = false) {
       ${renderStagingPlan(draft, plan)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
-      <div class="social-preview">
-        <div class="avatar"></div>
-        <div>
-          <strong>Your Name</strong>
-          <p>Your headline<br>now</p>
-        </div>
-        <p>${escapeHtml(draft.text)}</p>
-      </div>
+      ${renderSocialPreview(draft, preflight)}
     </article>
+  `;
+}
+
+function renderSocialPreview(draft, preflight) {
+  const account = preflight.account || accountForDraft(draft);
+  const handle = account?.handle || account?.username || account?.name || "";
+  const displayName = account?.displayName || account?.name || handle || "Your account";
+  const initial = (displayName[0] || "?").toUpperCase();
+  const stageUrl = draft.stageUrl || "";
+  const openLink = stageUrl
+    ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
+    : "";
+  return `
+    <section class="social-preview" aria-label="Post preview">
+      <header class="social-preview-header">
+        <strong>Preview</strong>
+        ${openLink}
+      </header>
+      <div class="social-preview-card">
+        <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
+        <div class="social-preview-body">
+          <div class="social-preview-meta">
+            <strong>${escapeHtml(displayName)}</strong>
+            ${handle ? `<span class="social-preview-handle">${escapeHtml(handle.startsWith("@") ? handle : `@${handle}`)}</span>` : ""}
+          </div>
+          <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
+          ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -6197,13 +6220,13 @@ function workflowChecklistForDraft(draft, preflight, plan) {
       label: "Stage in browser",
       action: "stage",
       complete: staged,
-      detail: "Stage opens the platform composer and prepares the post.",
-      doneDetail: "The platform composer has been staged or opened for manual finish.",
+      detail: "Opens the platform composer with your post pre-filled. Review it, then click Post when ready.",
+      doneDetail: "The browser composer was opened. Use 'Open compose page' in the preview below to return to it.",
     },
     {
       label: "Publish manually",
       complete: published,
-      detail: "Review the platform composer yourself, then publish inside the social site.",
+      detail: "In the browser composer, review the post and click the Post button to publish it.",
       doneDetail: "This draft is marked as published.",
     },
     {
