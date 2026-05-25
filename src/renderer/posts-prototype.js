@@ -5848,7 +5848,6 @@ function renderPlatformPreview(draft, hidden = false) {
       ${renderDraftMediaList(draft)}
       ${renderContextHelpCard(draft, preflight, plan)}
       ${renderWorkflowChecklist(draft, preflight, plan)}
-      ${renderPlatformActionRow(draft, preflight, plan)}
       ${renderDraftReliability(draft, preflight)}
       ${renderStagingPlan(draft, plan)}
       ${renderDraftProofPanel(draft)}
@@ -6106,11 +6105,19 @@ function renderWorkflowChecklist(draft, preflight, plan) {
       ${nextStep ? `<p class="workflow-next-step"><strong>Next:</strong> ${escapeHtml(nextStep.label)}. ${escapeHtml(nextStep.detail)}</p>` : `<p class="workflow-next-step complete"><strong>Complete:</strong> This draft has reached the posted state.</p>`}
       <ol>
         ${checklist.map((item, index) => {
-          const badge = item.complete ? "Done" : item === nextStep ? "Next" : "Open";
-          const isEvaluateJump = item.label === "Evaluate" && item === nextStep && !item.complete;
-          const badgeHtml = isEvaluateJump
-            ? `<button type="button" class="workflow-jump-btn" data-workflow-jump="platform-previews">${escapeHtml(badge)}</button>`
-            : `<em>${escapeHtml(badge)}</em>`;
+          let badgeHtml;
+          if (item.complete) {
+            badgeHtml = `<em class="workflow-badge done">Done</em>`;
+          } else if (item.action) {
+            const isCurrent = item === nextStep;
+            badgeHtml = `<button type="button"
+              class="workflow-action-btn${isCurrent ? " workflow-action-btn--next" : ""}"
+              data-platform-action="${escapeHtml(item.action)}"
+              data-platform-draft-id="${escapeHtml(draft.id)}"
+              title="${escapeHtml(item.detail)}">${escapeHtml(item.label)}</button>`;
+          } else {
+            badgeHtml = `<em class="workflow-badge open">Open</em>`;
+          }
           return `
           <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${item === nextStep ? "current" : ""}">
             <span class="workflow-step-number">${index + 1}</span>
@@ -6156,26 +6163,30 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     },
     {
       label: "Evaluate",
+      action: "evaluate",
       complete: evaluated,
-      detail: "Click Evaluate so Diamond checks the text, brand fit, claims, and risk.",
+      detail: "Run Evaluate — Diamond checks the text, brand fit, claims, and risk.",
       doneDetail: "This draft has an evaluation record.",
     },
     {
       label: "Approve",
+      action: "approve",
       complete: approved,
-      detail: "Click Approve only after the evaluation is clean enough to continue.",
+      detail: "Approve only after the evaluation is clean enough to continue.",
       doneDetail: "This draft is approved for staging or has moved beyond approval.",
     },
     {
       label: "Add media if needed",
+      action: "add-media",
       complete: mediaReady,
       detail: plan.mediaRequired ? `${plan.label} needs media before staging.` : "Media is optional for this platform.",
       doneDetail: plan.mediaRequired ? "Required media is attached." : "No required media is missing.",
     },
     {
       label: "Stage in browser",
+      action: "stage",
       complete: staged,
-      detail: "Click Stage so Diamond opens the platform composer and prepares the post.",
+      detail: "Stage opens the platform composer and prepares the post.",
       doneDetail: "The platform composer has been staged or opened for manual finish.",
     },
     {
@@ -6186,12 +6197,14 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     },
     {
       label: "Capture proof",
+      action: "proof",
       complete: proofed,
       detail: "Capture a screenshot or URL proof so the run has a record.",
       doneDetail: "Proof has been captured for this draft.",
     },
     {
       label: "Mark posted",
+      action: "posted",
       complete: published,
       detail: "After the post is live, click Mark Posted so queues and metrics stay correct.",
       doneDetail: "Diamond has moved this draft into the posted state.",
