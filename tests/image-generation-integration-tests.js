@@ -13,7 +13,7 @@ import {
 // ---------------------------------------------------------------------------
 
 function testResolvesInheritWhenDraftOverrideIsNull() {
-  // Campaign enabled, draft inherits (null) → enabled
+  // Campaign enabled, draft inherits (null), no platform → falls back to campaign master
   const campaign = { imageGenerationEnabled: true };
   const draft = { imageGenerationEnabled: null };
   assert.equal(resolveImageGenerationEnabled(draft, campaign), true, "should inherit campaign enabled");
@@ -23,6 +23,36 @@ function testResolvesInheritWhenDraftOverrideIsUndefined() {
   const campaign = { imageGenerationEnabled: true };
   const draft = {};
   assert.equal(resolveImageGenerationEnabled(draft, campaign), true, "undefined override inherits campaign");
+}
+
+function testInheritUsesPerPlatformFlagWhenNull() {
+  // Draft is null/inherit, platform has enabled: false → resolver should return false
+  const campaign = {
+    imageGenerationEnabled: true,
+    imageGenerationPlatforms: { x: { enabled: false } },
+  };
+  const draft = { imageGenerationEnabled: null };
+  assert.equal(resolveImageGenerationEnabled(draft, campaign, "x"), false, "null inherits platform-level false");
+}
+
+function testInheritUsesPerPlatformFlagWhenNullAndEnabled() {
+  const campaign = {
+    imageGenerationEnabled: true,
+    imageGenerationPlatforms: { instagram: { enabled: true } },
+  };
+  const draft = { imageGenerationEnabled: null };
+  assert.equal(resolveImageGenerationEnabled(draft, campaign, "instagram"), true, "null inherits platform-level true");
+}
+
+function testExplicitOverrideIgnoresPlatformLevel() {
+  // Explicit true on draft should bypass platform-level (handled by defensive gate in integration)
+  const campaign = {
+    imageGenerationEnabled: true,
+    imageGenerationPlatforms: { x: { enabled: false } },
+  };
+  const draft = { imageGenerationEnabled: true };
+  // resolveImageGenerationEnabled returns true; the defensive gate in integrateImageGenerationIntoPostCreation blocks
+  assert.equal(resolveImageGenerationEnabled(draft, campaign, "x"), true, "explicit true bypasses platform check in resolver");
 }
 
 function testDraftOverrideTrueWhenCampaignEnabled() {
@@ -105,10 +135,12 @@ async function testReturnsNotOkWhenPlatformDisabled() {
     imageGenerationEnabled: true,
     imageGenerationPlatforms: { x: { enabled: false } },
   };
+  // draft inherits (null) → resolveImageGenerationEnabled checks platform spec → returns false
   const draft = { platform: "x", text: "Test post", imageGenerationEnabled: null };
   const result = await integrateImageGenerationIntoPostCreation({}, draft, campaign, {});
   assert.equal(result.ok, false);
-  assert.ok(result.reason.includes("disabled for platform"), `reason: ${result.reason}`);
+  // Gate 2 fires via resolver returning false for the platform-disabled inherit case
+  assert.ok(result.reason.toLowerCase().includes("platform"), `reason should mention platform: ${result.reason}`);
 }
 
 async function testReturnsNotOkWhenNoPrompt() {
@@ -171,6 +203,9 @@ async function testDraftUpdatedWithImageUrlOnSuccess() {
 const tests = [
   ["resolveImageGenerationEnabled — inherits when null", testResolvesInheritWhenDraftOverrideIsNull],
   ["resolveImageGenerationEnabled — inherits when undefined", testResolvesInheritWhenDraftOverrideIsUndefined],
+  ["resolveImageGenerationEnabled — null inherits platform-level false", testInheritUsesPerPlatformFlagWhenNull],
+  ["resolveImageGenerationEnabled — null inherits platform-level true", testInheritUsesPerPlatformFlagWhenNullAndEnabled],
+  ["resolveImageGenerationEnabled — explicit true bypasses platform level", testExplicitOverrideIgnoresPlatformLevel],
   ["resolveImageGenerationEnabled — explicit true", testDraftOverrideTrueWhenCampaignEnabled],
   ["resolveImageGenerationEnabled — explicit false overrides campaign", testDraftOverrideFalseDisablesWhenCampaignEnabled],
   ["resolveImageGenerationEnabled — campaign gate wins", testReturnsFalseWhenCampaignDisabled],

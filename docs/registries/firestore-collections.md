@@ -167,7 +167,7 @@ Platform-specific drafts (one per platform per post). Text and media ready for s
 **Boundaries checked:** Firestore collections, sub-collections, schema fields
 
 **Changes from previous version:**
-- `campaigns.imageGenerationPlatforms` aspect ratios corrected: linkedin/facebook/reddit `"1.91:1"` → `"16:9"` (Replicate Flux Pro does not support "1.91:1")
+- `campaigns.imageGenerationPlatforms` aspect ratios standardised: linkedin/facebook/reddit set to `"16:9"` (standard Flux Pro ratio for 1200×628 landscape)
 - `images` sub-collection status changed from `⚠ NEW (planned)` → `⛔ DEFERRED` — no code in task #9 diff writes to this sub-collection; image metadata is stored on `platformDrafts` documents via `saveProductionState()`
 - `platformDrafts` schema extended with task #9 image generation fields: `imageGenerationEnabled`, `imageGenerationStatus`, `generatedImageUrl`, `generatedImageMetadata`, `imageGenerationError`
 - `platformDrafts` producers/consumers updated to include task #9 functions

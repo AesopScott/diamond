@@ -7,14 +7,35 @@ import { createImageCostRecord, logImageCost } from "./image-generation-cost-tra
 
 /**
  * Determine whether image generation is enabled for a given draft, applying the
- * campaign-level default and the per-post override (null = inherit from campaign).
+ * campaign-level default and the per-post override.
+ *
+ * Override semantics:
+ *   - draft.imageGenerationEnabled === null | undefined  → "inherit"
+ *   - draft.imageGenerationEnabled === true              → explicitly enabled for this post
+ *   - draft.imageGenerationEnabled === false             → explicitly disabled for this post
+ *
+ * When inheriting (null), the platform-level enabled flag from
+ * campaign.imageGenerationPlatforms[platform] is consulted if a platform is
+ * supplied; otherwise the campaign master flag is used as the fallback.
+ *
+ * @param {object}      draft    - platform draft (has imageGenerationEnabled field)
+ * @param {object|null} campaign - campaign record (has imageGenerationEnabled master flag)
+ * @param {string}      [platform] - optional platform key for null/inherit resolution
  */
-export function resolveImageGenerationEnabled(draft, campaign) {
+export function resolveImageGenerationEnabled(draft, campaign, platform) {
   if (!campaign?.imageGenerationEnabled) return false;
-  // Per-post override: null means "inherit", true/false overrides the campaign
+  // Per-post override: explicit true/false short-circuits platform-level check
   if (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined) {
     return Boolean(draft.imageGenerationEnabled);
   }
+  // null = inherit: use the campaign platform-level setting if available
+  if (platform && campaign.imageGenerationPlatforms) {
+    const platformSpec = campaign.imageGenerationPlatforms[platform];
+    if (platformSpec !== undefined) {
+      return Boolean(platformSpec.enabled);
+    }
+  }
+  // No platform spec — fall back to campaign master flag
   return Boolean(campaign.imageGenerationEnabled);
 }
 
@@ -44,15 +65,18 @@ export async function integrateImageGenerationIntoPostCreation(postPackage, post
     return { ok: false, reason: "Image generation disabled for campaign" };
   }
 
-  const enabled = resolveImageGenerationEnabled(postDraft, campaign);
+  // Derive platform key before the resolver so it can consult per-platform spec for null/inherit
+  const platformKey = postDraft.platform?.replace("-shorts", "").replace("-longform", "") || "";
+
+  const enabled = resolveImageGenerationEnabled(postDraft, campaign, platformKey);
   if (!enabled) {
-    return { ok: false, reason: "Image generation disabled for this post" };
+    return { ok: false, reason: `Image generation disabled for this post or platform ${postDraft.platform}` };
   }
 
-  // Check per-platform enable flag
-  const platformKey = postDraft.platform?.replace("-shorts", "").replace("-longform", "") || "";
+  // Defensive gate: also block if the platform spec explicitly disables generation, regardless
+  // of per-post override. Keeps platform-level as an operator constraint that can't be bypassed.
   const platformSpec = campaign.imageGenerationPlatforms?.[platformKey];
-  if (platformSpec && !platformSpec.enabled) {
+  if (platformSpec && !platformSpec.enabled && postDraft.imageGenerationEnabled === true) {
     return { ok: false, reason: `Image generation disabled for platform ${postDraft.platform}` };
   }
 
