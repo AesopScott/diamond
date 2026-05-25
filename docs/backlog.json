@@ -119,6 +119,18 @@
       "created_at": "2026-05-25",
       "completed_at": null,
       "dependencies": []
+    },
+    {
+      "number": 10,
+      "title": "build video generation feature",
+      "description": "Connect to an video generation service and connect to Diamond.\nAdd ability to turn on automatic video creation for posts at campaign level and in new posts UI\nAdd video generation option per campaign per platform\nadd campaign guidance for video generation prompt",
+      "category": "feature",
+      "priority": 90,
+      "impact": "standard",
+      "status": "backlog",
+      "created_at": "2026-05-25",
+      "completed_at": null,
+      "dependencies": []
     }
   ]
 }
