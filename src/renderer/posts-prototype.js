@@ -614,8 +614,6 @@ function wirePrototypeControls() {
   document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
   document.querySelector("#campaign-generate")?.addEventListener("click", requestCampaignGeneration);
-  document.querySelector("#eval-auto-generate")?.addEventListener("click", requestEvaluationAutomation);
-  document.querySelector("#detail-evaluate-all")?.addEventListener("click", evaluateAllDrafts);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#post-detail")?.addEventListener("click", (event) => {
     const jump = event.target.closest("[data-workflow-jump]");
@@ -5591,16 +5589,6 @@ function renderPlatformButtons(drafts, postPackage) {
     const hasCampaign = Boolean(postPackage?.campaignId);
     campaignButton.disabled = !(hasActivePlatforms && hasCampaign);
   }
-  const evalAutoButton = document.querySelector("#eval-auto-generate");
-  if (evalAutoButton) {
-    // Enable when platforms are active and at least one draft already has content to evaluate.
-    const hasContent = drafts.some((d) => String(d.text || "").trim().length > 0);
-    evalAutoButton.disabled = !(hasActivePlatforms && hasContent);
-  }
-  const evaluateAllButton = document.querySelector("#detail-evaluate-all");
-  if (evaluateAllButton) {
-    evaluateAllButton.hidden = !hasActivePlatforms;
-  }
 }
 
 function renderPlatformPreviews(drafts) {
@@ -6412,15 +6400,30 @@ async function addAllReadyPlatformsToActivePackage() {
   if (!activePostPackageId) return;
   const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
   if (!postPackage) return;
-  const existingPlatforms = new Set(prototypeModel.platformDrafts
-    .filter((draft) => draft.postPackageId === activePostPackageId)
-    .map((draft) => draft.platform));
-  const accounts = (await readyAccountsForPostContext(postPackage.context))
-    .filter((account) => !existingPlatforms.has(account.platform));
-  if (!accounts.length) return;
-  const guidance = guidanceForContext(postPackage.context);
-  const drafts = createPlatformDraftsForAccounts(postPackage, accounts, guidance);
-  prototypeModel.platformDrafts.push(...drafts);
+  const readyAccounts = await readyAccountsForPostContext(postPackage.context);
+  const existingPlatforms = new Set(
+    prototypeModel.platformDrafts
+      .filter((draft) => draft.postPackageId === activePostPackageId)
+      .map((draft) => draft.platform)
+  );
+  const readyPlatforms = new Set(readyAccounts.map((a) => a.platform));
+  // Toggle: if all ready platforms are already active → remove them all.
+  // If any ready platform is missing → add all of them.
+  const allActive = readyPlatforms.size > 0 && [...readyPlatforms].every((p) => existingPlatforms.has(p));
+  if (allActive) {
+    readyPlatforms.forEach((platform) => {
+      prototypeModel.platformDrafts = removePlatformDraft(
+        prototypeModel.platformDrafts, activePostPackageId, platform
+      );
+    });
+  } else {
+    const toAdd = readyAccounts.filter((account) => !existingPlatforms.has(account.platform));
+    if (toAdd.length) {
+      const guidance = guidanceForContext(postPackage.context);
+      const newDrafts = createPlatformDraftsForAccounts(postPackage, toAdd, guidance);
+      prototypeModel.platformDrafts.push(...newDrafts);
+    }
+  }
   updatePostPackageFromDrafts(postPackage.id);
   await saveProductionState();
   reopenActiveDetail();
@@ -6455,7 +6458,7 @@ async function requestPlatformGeneration() {
   } finally {
     if (generateButton) {
       generateButton.disabled = false;
-      generateButton.textContent = "Content Automation";
+      generateButton.textContent = "+ Create Content";
     }
   }
 }
@@ -6509,30 +6512,8 @@ async function requestCampaignGeneration() {
   } finally {
     if (campaignButton) {
       campaignButton.disabled = false;
-      campaignButton.textContent = "Campaign Automation";
+      campaignButton.textContent = "+ Campaign Content";
     }
-  }
-}
-
-// Evaluation Automation — runs LLM evaluation + auto-rewrite on all active platform drafts.
-async function requestEvaluationAutomation() {
-  if (!activePostPackageId) return;
-  const drafts = prototypeModel.platformDrafts.filter(
-    (draft) => draft.postPackageId === activePostPackageId && String(draft.text || "").trim().length > 0
-  );
-  if (!drafts.length) return;
-  const btn = document.querySelector("#eval-auto-generate");
-  if (btn) { btn.disabled = true; btn.textContent = "Evaluating…"; }
-  try {
-    for (const draft of drafts) {
-      await llmEvaluatePlatformDraft(draft);
-    }
-    updatePostPackageFromDrafts(activePostPackageId);
-    await saveProductionState();
-    await refreshProductionViews();
-    reopenActiveDetail();
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Evaluation Automation"; }
   }
 }
 
