@@ -57,6 +57,26 @@ export async function stagePostWithPlaywright(input = {}, driver) {
     args: ["--disable-blink-features=AutomationControlled"],
   });
 
+  // Inject cookies from the Electron session so the user doesn't have to
+  // log in again. Electron holds the Partitions directory open (SingletonLock),
+  // so we can't share the profile directly — cookie injection is the safe path.
+  if (Array.isArray(input.sessionCookies) && input.sessionCookies.length) {
+    const sameSiteMap = { strict: "Strict", lax: "Lax", no_restriction: "None" };
+    const playwrightCookies = input.sessionCookies
+      .filter((c) => c.name && c.value && c.domain)
+      .map((c) => ({
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path || "/",
+        expires: typeof c.expirationDate === "number" ? c.expirationDate : -1,
+        httpOnly: Boolean(c.httpOnly),
+        secure: Boolean(c.secure),
+        sameSite: sameSiteMap[c.sameSite] || "None",
+      }));
+    if (playwrightCookies.length) await context.addCookies(playwrightCookies);
+  }
+
   try {
     const page = await resolveWorkerPage(context);
     const composeUrl = input.composeUrl || input.account.composeUrl;

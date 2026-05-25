@@ -575,23 +575,28 @@ ipcMain.handle("diamond:inspect-media", (_event, paths = []) => {
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();
   const { stagePostWithPlaywright } = await import(pathToFileURL(path.join(PROJECT_ROOT, "src", "playwright-worker.js")).href);
-  // Point Playwright at the same Electron partition directory so it reuses
-  // the existing login session — no second login prompt for the user.
-  const partitionId = sanitizePartitionPart(
+  // Extract cookies from the Electron session and pass them to Playwright.
+  // Sharing the Partitions directory directly causes a SingletonLock conflict
+  // because Electron holds the profile open. Cookie injection avoids that.
+  const partitionName = `persist:${sanitizePartitionPart(
     input.account?.browserPartitionId ||
     input.context?.browserProfileId ||
     input.account?.browserProfileId
-  );
-  const electronPartitionDir = partitionId
-    ? path.join(APP_DIR, "Partitions", partitionId)
-    : null;
+  )}`;
+  let sessionCookies = [];
+  try {
+    const electronSession = session.fromPartition(partitionName);
+    sessionCookies = await electronSession.cookies.get({});
+  } catch {
+    // Session may not exist yet — proceed without cookies.
+  }
   return stagePostWithPlaywright({
     ...input,
     appDir: APP_DIR,
     screenshotsDir: path.join(APP_DIR, "screenshots"),
     headless: false,
     keepOpen: true,
-    ...(electronPartitionDir ? { profilePath: electronPartitionDir } : {}),
+    sessionCookies,
   });
 });
 
