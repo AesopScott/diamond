@@ -546,7 +546,6 @@ function renderCard(post) {
   return `
     <article class="post-card" data-package-id="${escapeHtml(post.id)}" draggable="true" tabindex="0" role="button" aria-label="Open ${escapeHtml(post.title || post.excerpt || "post")}">
       <header class="post-card-header">
-        <span class="card-status ${escapeHtml(post.status || "draft")}">${escapeHtml(statusLabel(post.status || "draft"))}</span>
         <button class="post-card-delete" type="button" data-board-action="delete" data-package-id="${escapeHtml(post.id)}" title="Delete post" aria-label="Delete post">Delete</button>
       </header>
       <strong>${escapeHtml(post.excerpt || post.title)}</strong>
