@@ -16,6 +16,7 @@ export * from "./platform-proof.js";
 export * from "./polaris-bridge.js";
 export * from "./post-package.js";
 export * from "./quality.js";
+export * from "./replicate-image-service.js";
 export * from "./risk.js";
 export * from "./reply-classifier.js";
 export * from "./reddit-monitoring.js";
