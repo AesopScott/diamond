@@ -75,8 +75,11 @@ export function extractGenerationCost({ predictTime, model }) {
   return Math.round(predictTime * COST_PER_SECOND * 100) / 100;
 }
 
+// HTTP statuses that are transient and safe to retry
+const RETRIABLE_HTTP_STATUSES = new Set([429, 500, 502, 503]);
+
 export function handleReplicateError({ status, message, retryAfter }) {
-  const retriable = status >= 429 && status <= 503; // Rate limits and temporary errors
+  const retriable = RETRIABLE_HTTP_STATUSES.has(status); // Transient errors only (excludes 501 Not Implemented)
   return {
     ok: false,
     code: status,

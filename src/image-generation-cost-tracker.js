@@ -15,8 +15,9 @@ export function createImageCostRecord({
   prompt,
   predictTime,
   model,
+  cost, // explicit cost from caller; derived from predictTime when absent
 }) {
-  const generationCost = extractGenerationCost({ predictTime, model });
+  const generationCost = cost !== undefined ? cost : extractGenerationCost({ predictTime, model });
 
   return {
     id: imageId || `img-${Date.now()}`,
@@ -120,7 +121,6 @@ export function logImageCost(costRecord) {
     model: costRecord.model,
   };
 
-  console.log("Image generation cost logged:", logEntry);
   return logEntry;
 }
 

@@ -18,7 +18,7 @@ API authentication key for Replicate.com image generation service (Flux Pro mode
 
 **Constraints:**
 - Required for image generation to work
-- Must be a valid Replicate API key (format: `rep_...`)
+- Must be a valid Replicate API key (format: `r8_...`)
 - Never logged or exposed in error messages
 - Loaded at app startup; missing key should fail gracefully with user-facing error
 

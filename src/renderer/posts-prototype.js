@@ -65,6 +65,7 @@ import {
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
 import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
+import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -3256,16 +3257,13 @@ function saveCampaignWorkspace() {
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
     campaign.imageGenerationEnabled = checkedFor("imageGenerationEnabled");
     campaign.imagePromptGuidance = valueFor("imagePromptGuidance") || campaign.imagePromptGuidance || "";
-    campaign.imageGenerationPlatforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
-    Object.keys(campaign.imageGenerationPlatforms).forEach((platform) => {
-      const checkbox = workspace?.querySelector(`[data-platform-image-field="${platform}"]`);
-      if (checkbox) {
-        campaign.imageGenerationPlatforms[platform] = {
-          ...campaign.imageGenerationPlatforms[platform],
-          enabled: checkbox.checked,
-        };
-      }
-    });
+    const basePlatforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
+    campaign.imageGenerationPlatforms = Object.fromEntries(
+      Object.entries(basePlatforms).map(([platform, spec]) => {
+        const checkbox = workspace?.querySelector(`[data-platform-image-field="${platform}"]`);
+        return [platform, checkbox ? { ...spec, enabled: checkbox.checked } : { ...spec }];
+      })
+    );
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
@@ -6368,6 +6366,23 @@ async function toggleDraftImageGeneration(draft) {
   }
 
   draft.updatedAt = new Date().toISOString();
+
+  // When user explicitly enables image generation for this post, generate immediately
+  if (draft.imageGenerationEnabled === true) {
+    draft.imageGenerationStatus = "generating";
+    draft.imageGenerationError = null;
+    await saveProductionState();
+    reopenActiveDetail();
+
+    const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+    const result = await integrateImageGenerationIntoPostCreation(postPackage, draft, campaign, {});
+    const updated = result.updatedDraft || draft;
+    draft.imageGenerationStatus = updated.imageGenerationStatus || (result.ok ? "complete" : "failed");
+    draft.generatedImageUrl = updated.generatedImageUrl || null;
+    draft.generatedImageMetadata = updated.generatedImageMetadata || null;
+    draft.imageGenerationError = updated.imageGenerationError || null;
+  }
+
   await saveProductionState();
   reopenActiveDetail();
 }

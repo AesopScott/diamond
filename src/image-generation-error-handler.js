@@ -131,9 +131,6 @@ export function logImageGenerationError(error, context = {}) {
     severity: error.retriable ? "warning" : "error",
   };
 
-  // In production, this would write to logging service
-  console.error("Image generation error", logEntry);
-
   return logEntry;
 }
 

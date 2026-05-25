@@ -36,46 +36,41 @@ Configuration for post text generation (existing, not task #9 scope).
 
 ---
 
-## `imageGenerationSettings`
+## `imageGenerationPlatforms`
 
-**NEW for Task #9** — Per-platform image generation configuration.
+**NEW for Task #9** — Per-platform image generation enable flags and dimension specs. Stored as a flat object keyed by platform name. Campaign-level prompt guidance is stored separately in `imagePromptGuidance` (top-level field, not per-platform).
 
 **Type:** object, keyed by platform name:
 ```json
 {
-  "x": {
-    "enabled": boolean,
-    "promptTemplate": string,
-    "serviceChoice": "replicate"
-  },
-  "instagram": {
-    "enabled": boolean,
-    "promptTemplate": string,
-    "serviceChoice": "replicate"
-  },
-  "tiktok": { "enabled": boolean, "promptTemplate": string, "serviceChoice": "replicate" },
-  "linkedin": { "enabled": boolean, "promptTemplate": string, "serviceChoice": "replicate" },
-  "youtube": { "enabled": boolean, "promptTemplate": string, "serviceChoice": "replicate" },
-  "facebook": { "enabled": boolean, "promptTemplate": string, "serviceChoice": "replicate" },
-  "reddit": { "enabled": boolean, "promptTemplate": string, "serviceChoice": "replicate" }
+  "x":        { "enabled": boolean, "width": 1200, "height": 675,  "aspectRatio": "16:9",   "format": "webp" },
+  "instagram":{ "enabled": boolean, "width": 1080, "height": 1350, "aspectRatio": "4:5",    "format": "webp" },
+  "tiktok":   { "enabled": boolean, "width": 1080, "height": 1920, "aspectRatio": "9:16",   "format": "webp" },
+  "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
+  "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9",   "format": "webp" },
+  "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
+  "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" }
 }
 ```
 
 **Constraints:**
-- Platform keys must match `PLATFORMS` constant in `src/constants.js`
-- `enabled` is required (boolean); default `false` for all platforms except `instagram` (default `true` — required)
-- `promptTemplate` is required (string); provides guidance for image generation prompt construction
-- `serviceChoice` is required (string); currently only `"replicate"` supported
+- Platform keys must match `IMAGE_SPECS_BY_PLATFORM` in `src/constants.js`
+- `enabled` is required (boolean); defaults to `false` for all platforms
+- `width`, `height`, `aspectRatio`, `format` are dimension specs passed to Replicate; defaults from `IMAGE_SPECS_BY_PLATFORM`
+- Service choice is fixed as Replicate/Flux Pro; no per-platform override in this version
+
+**Related fields (top-level campaign):**
+- `imageGenerationEnabled` — master on/off toggle for the entire campaign
+- `imagePromptGuidance` — campaign-wide prompt guidance string combined with post text at generation time
 
 **Producers**
-- `src/renderer/campaign-settings-image-panel.js:TBD` — image generation settings UI save (task #9)
-- User edits campaign settings and clicks Save
+- `src/renderer/posts-prototype.js:saveCampaignWorkspace` — reads per-platform checkboxes and writes full platforms object (task #9)
 
 **Consumers**
-- `src/content-generation.js:TBD` — reads campaign settings to determine per-platform image generation (task #9)
-- `src/renderer/posts-prototype.js:TBD` — displays campaign image settings in UI (task #9)
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — reads per-platform enabled flag before calling Replicate (task #9)
+- `src/renderer/posts-prototype.js:renderImageGenerationSection` — renders per-platform checkboxes with current enabled state (task #9)
 
-**Status:** ⚠ NEW — task #9 creates this field; producers/consumers are planned
+**Status:** ✓ wired — producer and consumers implemented (task #9)
 
 ---
 
@@ -129,7 +124,9 @@ Campaign last modification timestamp.
 |---|---|---|---|
 | `name` | account-setup.js | posts-prototype.js | ✓ |
 | `postGenerationSettings` | campaign-settings-ui.js | content-generation.js | ✓ |
-| **`imageGenerationSettings`** | **campaign-settings-image-panel.js** | **content-generation.js, posts-prototype.js** | **⚠ NEW (task #9)** |
+| **`imageGenerationEnabled`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js, posts-prototype.js** | **✓ wired (task #9)** |
+| **`imageGenerationPlatforms`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js, posts-prototype.js** | **✓ wired (task #9)** |
+| **`imagePromptGuidance`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js:buildImagePrompt** | **✓ wired (task #9)** |
 | `videoGenerationSettings` | (deferred) | (deferred) | ⚠ deferred (task #10) |
 | `createdAt` | seed.js, account-setup.js | posts-prototype.js | ✓ |
 | `updatedAt` | (all updates) | posts-prototype.js, firebase-sync.js | ✓ |
@@ -145,12 +142,12 @@ Campaign last modification timestamp.
 **Evidence recorded:**
 - 6 entries total (5 existing + 1 NEW)
 - 5 entries with complete producer/consumer pairs ✓
-- 1 NEW entry (imageGenerationSettings) with schema confirmed, producers/consumers pending ⚠
-- New identifiers introduced on task #9: `imageGenerationSettings` field with 7 platform sub-objects (x, instagram, tiktok, linkedin, youtube, facebook, reddit)
-- Service layer completed for task #9: replicate-image-service.js and support modules ready to accept imageGenerationSettings from UI
+- 3 NEW entries (imageGenerationEnabled, imageGenerationPlatforms, imagePromptGuidance) — all wired ✓
+- New identifiers introduced on task #9: `imageGenerationEnabled`, `imageGenerationPlatforms` (7-platform object), `imagePromptGuidance`
+- Producers and consumers confirmed: posts-prototype.js writes; image-generation-integration.js reads
+- Field name corrected from earlier planning doc (`imageGenerationSettings` → `imageGenerationPlatforms`) to match implementation
 
 **Gaps identified:**
-- ⚠ `imageGenerationSettings` — Schema documented and confirmed; producer (campaign-settings-image-panel.js UI component) and consumer (content-generation.js integration) deferred to Proof Units 3-4
 - ℹ `videoGenerationSettings` — Placeholder for task #10; deferred
 
-**Status:** Audit complete — schema confirmed, service layer wired, UI layer pending (Proof Units 3-4)
+**Status:** Audit complete — all task #9 campaign fields wired with confirmed producers and consumers

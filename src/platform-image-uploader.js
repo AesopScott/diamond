@@ -1,5 +1,15 @@
 // Platform-specific image upload adapters for generated images
 // Handles format conversion, sizing, and upload to each platform's requirements
+//
+// DEFERRED STUB NOTICE (Task #9 waiver — PU5):
+// The per-platform upload functions below (uploadImageToX, uploadImageToInstagram, etc.)
+// use simulate* helpers that return fake media IDs. Real platform API calls (X API v2,
+// Instagram Graph API, LinkedIn UGC API, etc.) each require separate OAuth flows,
+// rate-limit handling, and media-type negotiation. Implementing them is tracked as a
+// follow-on task. Diamond's Playwright-based browser staging layer handles actual image
+// attachment in the interim; these adapters are scaffolded and tested against their
+// structural contracts (validate, build payload, dispatch) but not yet live.
+// Remove this notice and the simulate* functions when real adapters are wired.
 
 import { formatImageDimensionsForPlatform } from "./replicate-image-service.js";
 

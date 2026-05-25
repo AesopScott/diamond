@@ -51,14 +51,16 @@ Campaign entities under a brand. Contains campaign-level post generation configu
   "brandId": "string",
   "companyId": "string",
   "postGenerationSettings": { ... },
-  "imageGenerationSettings": {
-    "x": { "enabled": boolean, "promptTemplate": string, "serviceChoice": string },
-    "instagram": { "enabled": boolean, ... },
-    "tiktok": { "enabled": boolean, ... },
-    "linkedin": { "enabled": boolean, ... },
-    "youtube": { "enabled": boolean, ... },
-    "facebook": { "enabled": boolean, ... },
-    "reddit": { "enabled": boolean, ... }
+  "imageGenerationEnabled": boolean,
+  "imagePromptGuidance": "string — campaign-wide prompt guidance combined with post text",
+  "imageGenerationPlatforms": {
+    "x":        { "enabled": boolean, "width": 1200, "height": 675,  "aspectRatio": "16:9",   "format": "webp" },
+    "instagram":{ "enabled": boolean, "width": 1080, "height": 1350, "aspectRatio": "4:5",    "format": "webp" },
+    "tiktok":   { "enabled": boolean, "width": 1080, "height": 1920, "aspectRatio": "9:16",   "format": "webp" },
+    "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
+    "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9",   "format": "webp" },
+    "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
+    "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" }
   },
   "videoGenerationSettings": { ... },
   "createdAt": "ISO string",
@@ -67,16 +69,16 @@ Campaign entities under a brand. Contains campaign-level post generation configu
 ```
 
 **Producers**
-- `src/renderer/campaign-settings-image-panel.js:TBD` — image generation settings UI (task #9)
-- `src/seed.js:TBD` — campaign initialization
+- `src/renderer/posts-prototype.js:saveCampaignWorkspace` — reads campaign settings form and writes `imageGenerationEnabled`, `imageGenerationPlatforms`, `imagePromptGuidance` (task #9)
+- `src/workspace-entities.js:createCampaignRecord` — initialises fields with defaults from `IMAGE_SPECS_BY_PLATFORM` (task #9)
 
 **Consumers**
-- `src/content-generation.js:TBD` — reads `imageGenerationSettings` per platform to decide image generation (task #9)
-- `src/renderer/posts-prototype.js:TBD` — displays campaign settings in UI (task #9)
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — reads per-platform enabled flag and `imagePromptGuidance` to build Replicate prompt (task #9)
+- `src/renderer/posts-prototype.js:renderImageGenerationSection` — renders UI controls from campaign fields (task #9)
 
-**Firestore Rule:** Required to exist and enforce `imageGenerationSettings` structure
+**Firestore Rule:** Required — access scoped to company/brand/campaign hierarchy
 
-**Status:** ⚠ partial — existing collection, but `imageGenerationSettings` fields are NEW (task #9)
+**Status:** ✓ wired — `imageGenerationEnabled`, `imageGenerationPlatforms`, `imagePromptGuidance` all have confirmed producers and consumers (task #9)
 
 ---
 
@@ -159,7 +161,7 @@ Platform-specific drafts (one per platform per post). Text and media ready for s
 |---|---|---|---|
 | `companies` | seed.js, workspace-entities.js | shell-switch.js, tenant-context.js | ✓ |
 | `brands` | seed.js, account-setup.js | posts-scope-helpers.js, tenant-context.js | ✓ |
-| `campaigns` | campaign-settings-ui, seed.js | content-generation.js, posts-prototype.js | ⚠ partial (imageGenerationSettings NEW) |
+| `campaigns` | posts-prototype.js, workspace-entities.js | image-generation-integration.js, posts-prototype.js | ✓ (imageGenerationEnabled/Platforms/Guidance wired, task #9) |
 | `postPackages` | posts-prototype.js, seed.js | content-generation.js, posts-prototype.js | ✓ |
 | **`images`** | **replicate-image-service.js, content-generation.js** | **posts-prototype.js, platform-browser-adapter.js, metrics.js** | **⚠ NEW (task #9)** |
 | `platformDrafts` | post-package.js, content-generation.js | posts-prototype.js, platform-proof.js, platform-browser-adapter.js | ✓ |
@@ -175,13 +177,12 @@ Platform-specific drafts (one per platform per post). Text and media ready for s
 **Evidence recorded:**
 - 6 entries total
 - 5 entries with complete producer/consumer pairs ✓
-- 1 NEW entry (images collection) with service-layer producers wired ⚠ (UI consumers pending)
-- 1 PARTIAL entry (campaigns collection) with new imageGenerationSettings fields ⚠
-- New identifiers introduced on task #9: `images` sub-collection (schema confirmed), `imageGenerationSettings` in campaigns (schema confirmed)
-- Service layer code verified: `src/replicate-image-service.js`, `src/platform-image-uploader.js` implement producers with full unit tests
+- 1 NEW entry (images collection) with service-layer producers wired ✓; platform upload adapters are formally deferred stubs (see PU5 waiver in backlog)
+- `campaigns` collection extended with `imageGenerationEnabled`, `imageGenerationPlatforms`, `imagePromptGuidance` — all wired ✓
+- Field name corrected from planning doc (`imageGenerationSettings` → `imageGenerationPlatforms`) to match implementation
+- `src/replicate-image-service.js`, `src/platform-image-uploader.js`, `src/image-generation-integration.js` implement the service layer with full unit tests
 
 **Gaps identified:**
-- ⚠ `images` collection — Producers wired (replicate-image-service.js, platform-image-uploader.js); UI consumers pending (posts-prototype.js displaying images, platform-browser-adapter.js uploading to platforms)
-- ⚠ `campaigns.imageGenerationSettings` — Schema documented; producer (campaign-settings-image-panel.js UI) and consumer (content-generation.js logic) implementation deferred to Proof Units 3-4
+- ℹ `images` collection — `platform-browser-adapter.js` and `metrics.js` listed as future consumers; deferred to follow-on task (Playwright-based staging handles image attachment in interim)
 
-**Status:** Audit complete — service layer implementation verified (Proof Units 1, 2, 5-7), UI layer pending (Proof Units 3-4)
+**Status:** Audit complete — all task #9 boundaries confirmed wired; platform upload adapters formally deferred with waiver
