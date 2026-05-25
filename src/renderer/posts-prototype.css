@@ -1555,6 +1555,29 @@ select.style-select {
   overflow-wrap: anywhere;
 }
 
+.proof-screenshot {
+  border-radius: 8px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.proof-screenshot img {
+  border-radius: 8px;
+  display: block;
+  max-height: 320px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.proof-screenshot figcaption {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .draft-proof-panel dl {
   display: grid;
   gap: 8px;
@@ -5083,4 +5106,109 @@ select.style-select {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* ── Archive view ────────────────────────────────── */
+
+.archive-workspace {
+  padding: 20px;
+}
+
+.archive-empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 40px auto;
+  max-width: 480px;
+  text-align: center;
+}
+
+.archive-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.archive-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.archive-card:hover {
+  border-color: var(--accent, #d84f45);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.archive-card-screenshot {
+  aspect-ratio: 16 / 9;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.archive-card-screenshot img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.archive-card-no-screenshot {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.archive-card-no-screenshot span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.archive-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.archive-card-title {
+  display: -webkit-box;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.archive-card-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.archive-card-platform,
+.archive-card-handle,
+.archive-card-date {
+  background: var(--surface-2);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.archive-card-text {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

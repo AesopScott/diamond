@@ -818,6 +818,12 @@ function wirePrototypeControls() {
   document.querySelector("#settings-shortcuts")?.addEventListener("click", handleSettingsShortcut);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
+  document.querySelector("#archive-workspace")?.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-archive-open]");
+    if (!card) return;
+    showPrototypeView("posts-view");
+    openPackageDetail(card.dataset.archiveOpen);
+  });
   document.querySelector("#tour-start")?.addEventListener("click", startGuideTour);
   document.querySelector("#tour-play-voiceover")?.addEventListener("click", playTourVoiceover);
   document.querySelector("#tour-prev")?.addEventListener("click", () => moveTour(-1));
@@ -855,6 +861,7 @@ function showPrototypeView(viewId) {
   if (viewId !== "accounts-view") destroyAccountLoginWebview();
   if (viewId === "posts-view") renderBoard(board);
   if (viewId === "analytics-view") renderAnalytics();
+  if (viewId === "archive-view") renderArchive();
   if (viewId === "calendar-view") renderCalendar();
   if (viewId === "templates-view") renderTemplates();
   if (viewId === "accounts-view") renderAccounts();
@@ -883,6 +890,7 @@ async function refreshProductionViews() {
   renderCalendar();
   renderSettings();
   renderAnalytics();
+  renderArchive();
   renderOperatorDrawer();
   await window.diamond?.saveState?.(state);
 }
@@ -4989,6 +4997,48 @@ function renderAccessibilitySettingsPanel() {
   `;
 }
 
+function renderArchive() {
+  const target = document.querySelector("#archive-workspace");
+  if (!target) return;
+  // Collect published platform drafts, newest first.
+  const publishedDrafts = (prototypeModel.platformDrafts || [])
+    .filter((d) => ["published", "posted"].includes(d.status))
+    .sort((a, b) => (b.publishedAt || b.updatedAt || "").localeCompare(a.publishedAt || a.updatedAt || ""));
+  const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
+  if (!publishedDrafts.length) {
+    target.innerHTML = `<p class="archive-empty">No published posts yet. Published posts will appear here with their proof screenshots.</p>`;
+    return;
+  }
+  target.innerHTML = `
+    <div class="archive-grid">
+      ${publishedDrafts.map((draft) => {
+        const pkg = pkgMap.get(draft.postPackageId);
+        const account = accountForDraft(draft);
+        const screenshot = draft.screenshotPath || "";
+        const publishedAt = draft.publishedAt || draft.updatedAt || "";
+        const handle = account?.handle ? (account.handle.startsWith("@") ? account.handle : `@${account.handle}`) : "";
+        return `
+          <article class="archive-card" data-package-id="${escapeHtml(draft.postPackageId || "")}" data-archive-open="${escapeHtml(draft.postPackageId || "")}">
+            ${screenshot
+              ? `<div class="archive-card-screenshot"><img src="${escapeHtml(localFileUrl(screenshot))}" alt="Proof screenshot" loading="lazy"></div>`
+              : `<div class="archive-card-screenshot archive-card-no-screenshot"><span>${escapeHtml(platformLabel(draft.platform))}</span></div>`
+            }
+            <div class="archive-card-body">
+              <strong class="archive-card-title">${escapeHtml(pkg?.title || draft.text?.slice(0, 60) || "Untitled")}</strong>
+              <div class="archive-card-meta">
+                <span class="archive-card-platform">${escapeHtml(platformLabel(draft.platform))}</span>
+                ${handle ? `<span class="archive-card-handle">${escapeHtml(handle)}</span>` : ""}
+                ${publishedAt ? `<span class="archive-card-date">${escapeHtml(formatDateTime(publishedAt))}</span>` : ""}
+              </div>
+              <p class="archive-card-text">${escapeHtml((draft.text || "").slice(0, 120))}${(draft.text || "").length > 120 ? "…" : ""}</p>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function renderAnalytics() {
   const target = document.querySelector("#analytics-workspace");
   if (!target) return;
@@ -6526,22 +6576,29 @@ function nextWorkflowStep(checklist) {
 function renderDraftProofPanel(draft) {
   const account = accountForDraft(draft);
   const run = latestRunForDraft(draft);
+  const screenshotPath = draft.screenshotPath || run?.screenshotPath || "";
   const rows = [
     ["Proof status", proofStatus(draft, account)],
     ["Last proof", draft.proofCapturedAt ? formatDateTime(draft.proofCapturedAt) : "None"],
     ["Proof kind", titleCase(draft.proofKind || "not captured")],
     ["Staged URL", draft.stageUrl || run?.platformUrl || "Missing"],
-    ["Screenshot", draft.screenshotPath || run?.screenshotPath || "Missing"],
     ["Run ID", draft.lastRunId || draft.runId || run?.id || "None"],
     ["Account proofs", String(account?.proofCount || 0)],
     ["Next", proofNextAction(draft)],
   ];
+  const screenshotImg = screenshotPath
+    ? `<figure class="proof-screenshot">
+        <img src="${escapeHtml(localFileUrl(screenshotPath))}" alt="Proof screenshot" loading="lazy">
+        <figcaption>${escapeHtml(screenshotPath.split(/[\\/]/).pop())}</figcaption>
+       </figure>`
+    : "";
   return `
     <section class="draft-proof-panel" aria-label="${escapeHtml(platformLabel(draft.platform))} proof">
       <header>
         <strong>${escapeHtml(t("Proof"))}</strong>
         <span>${escapeHtml(draft.proofNote || "Capture proof after staging or manual posting.")}</span>
       </header>
+      ${screenshotImg}
       <dl>
         ${rows.map(([label, value]) => `<div><dt>${escapeHtml(t(label))}</dt><dd>${escapeHtml(t(value))}</dd></div>`).join("")}
       </dl>
