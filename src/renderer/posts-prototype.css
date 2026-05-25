@@ -823,15 +823,49 @@ textarea {
   gap: 8px;
 }
 
+.platform-button:not(.active) {
+  opacity: 0.45;
+}
+
 .platform-button.active {
   border-color: #4d5bff;
   box-shadow: 0 0 0 1px rgba(77,91,255,0.25);
+  opacity: 1;
 }
 
 .round-add {
   border-style: dashed;
   font-size: 18px;
   width: 42px;
+}
+
+.detail-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.scope-select {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px;
+  letter-spacing: 0.04em;
+  min-width: 120px;
+  text-transform: uppercase;
+}
+
+.scope-select select {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+  padding: 5px 8px;
+  text-transform: none;
 }
 
 .tag-input {

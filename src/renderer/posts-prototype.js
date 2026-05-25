@@ -57,6 +57,13 @@ import {
   platformStagingPlan,
   stagingProofSessionProgress,
 } from "../index.js";
+import {
+  TOGGLEABLE_PLATFORMS,
+  computeCompanyCascade,
+  computeBrandCascade,
+  applyDraftScope,
+  removePlatformDraft,
+} from "./posts-scope-helpers.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -606,7 +613,10 @@ function wirePrototypeControls() {
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
   document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
   document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
-  document.querySelector("#detail-add-platform")?.addEventListener("click", addPlatformToActivePackage);
+  document.querySelector("#platform-buttons")?.addEventListener("click", handlePlatformToggle);
+  document.querySelector("#detail-company")?.addEventListener("change", handleDetailCompanyChange);
+  document.querySelector("#detail-brand")?.addEventListener("change", handleDetailBrandChange);
+  document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
@@ -5515,6 +5525,16 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
   const styleSelect = document.querySelector("#generation-style");
   if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
+  // Seed Company/Brand/Campaign scope selects from the post package context.
+  const detailCompany = document.querySelector("#detail-company");
+  const detailBrand = document.querySelector("#detail-brand");
+  const detailCampaign = document.querySelector("#detail-campaign");
+  const pkgCompanyId = postPackage.companyId || postPackage.context?.companyId || "";
+  const pkgBrandId = postPackage.brandId || postPackage.context?.brandId || "";
+  const pkgCampaignId = postPackage.campaignId || postPackage.context?.campaignId || "";
+  if (detailCompany) detailCompany.innerHTML = companyOptions(pkgCompanyId);
+  if (detailBrand) detailBrand.innerHTML = brandOptions(pkgCompanyId, pkgBrandId);
+  if (detailCampaign) detailCampaign.innerHTML = campaignOptions(pkgCompanyId, pkgBrandId, pkgCampaignId);
   // Backfill textSource for legacy drafts: a draft is "auto" only if its text still
   // matches the template value, otherwise it is operator-owned ("manual") and preserved.
   drafts.forEach((draft) => {
@@ -5524,15 +5544,19 @@ function openDetail(postPackage, drafts) {
         : "manual";
     }
   });
-  renderPlatformButtons(drafts);
+  renderPlatformButtons(drafts, postPackage);
   renderPlatformPreviews(drafts);
 }
 
-function renderPlatformButtons(drafts) {
+function renderPlatformButtons(drafts, postPackage) {
   const target = document.querySelector("#platform-buttons");
-  target.innerHTML = drafts.map((draft) => `
-    <button type="button" class="platform-button active">${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</button>
-  `).join("");
+  const activePlatforms = new Set(drafts.map((draft) => draft.platform));
+  const toggleable = TOGGLEABLE_PLATFORMS;
+  target.innerHTML = toggleable.map((platform) => {
+    const isActive = activePlatforms.has(platform);
+    const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
+    return `<button type="button" class="platform-button${isActive ? " active" : ""}" data-platform-toggle="${escapeHtml(platform)}" title="${escapeHtml(tip)}">${platformIcon(platform)} ${escapeHtml(platformLabel(platform))}</button>`;
+  }).join("");
 }
 
 function renderPlatformPreviews(drafts) {
@@ -6103,6 +6127,114 @@ async function inspectDraftMedia(draft) {
   const inspected = await window.diamond?.inspectMedia?.(media);
   draft.mediaInspection = Array.isArray(inspected) ? inspected : media.map(mediaPathFallback);
   return draft.mediaInspection;
+}
+
+async function handlePlatformToggle(event) {
+  const chip = event.target.closest("[data-platform-toggle]");
+  if (!chip || !activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const platform = chip.dataset.platformToggle;
+  const existingDraft = prototypeModel.platformDrafts.find(
+    (draft) => draft.postPackageId === activePostPackageId && draft.platform === platform
+  );
+  if (existingDraft) {
+    if (existingDraft.textSource !== "auto") {
+      const ok = await showConfirmModal(`Remove ${platformLabel(platform)}? Your edited draft text will be lost.`);
+      if (!ok) return;
+    }
+    prototypeModel.platformDrafts = removePlatformDraft(prototypeModel.platformDrafts, activePostPackageId, platform);
+  } else {
+    const draftId = `${postPackage.id}-${platform}`;
+    // Guard against duplicate IDs from rapid double-click before reopenActiveDetail completes.
+    if (prototypeModel.platformDrafts.some((d) => d.id === draftId)) return;
+    const now = new Date().toISOString();
+    const context = { ...postPackage.context, platform, socialAccountId: socialAccountIdForPlatform(platform) };
+    const guidance = guidanceForContext(context);
+    const draft = createPlatformDraft({
+      id: draftId,
+      postPackage,
+      context,
+      platform,
+      socialAccountId: socialAccountIdForPlatform(platform),
+      text: platformCopy(postPackage.ideaText || "", platform),
+      brandGuidanceModules: guidance.modules,
+      brandGuidanceSummary: guidance.summary,
+      campaignGuidanceModules: guidance.campaignModules,
+      campaignGuidanceSummary: guidance.campaignSummary,
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    });
+    prototypeModel.platformDrafts.push(draft);
+  }
+  updatePostPackageFromDrafts(postPackage.id);
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+function propagateScopeChangeToDrafts(postPackage) {
+  const scope = postPackage.context || {};
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map((draft) => {
+    if (draft.postPackageId !== postPackage.id) return draft;
+    return applyDraftScope(draft, scope);
+  });
+}
+
+async function handleDetailCompanyChange() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const rawCompanyId = document.querySelector("#detail-company")?.value || "";
+  const { companyId, brandId, campaignId } = computeCompanyCascade(rawCompanyId, state.brands || [], state.campaigns || []);
+  postPackage.context = { ...postPackage.context, companyId, brandId, campaignId };
+  postPackage.companyId = companyId;
+  postPackage.brandId = brandId;
+  postPackage.campaignId = campaignId;
+  const detailBrand = document.querySelector("#detail-brand");
+  const detailCampaign = document.querySelector("#detail-campaign");
+  if (detailBrand) detailBrand.innerHTML = brandOptions(companyId, brandId);
+  if (detailCampaign) detailCampaign.innerHTML = campaignOptions(companyId, brandId, campaignId);
+  propagateScopeChangeToDrafts(postPackage);
+  state.context = { ...state.context, companyId, brandId, campaignId };
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+async function handleDetailBrandChange() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const rawCompanyId = document.querySelector("#detail-company")?.value || postPackage.context?.companyId || "";
+  const rawBrandId = document.querySelector("#detail-brand")?.value || "";
+  const { companyId, brandId, campaignId } = computeBrandCascade(rawCompanyId, rawBrandId, state.campaigns || []);
+  postPackage.context = { ...postPackage.context, companyId, brandId, campaignId };
+  postPackage.companyId = companyId;
+  postPackage.brandId = brandId;
+  postPackage.campaignId = campaignId;
+  const detailCampaign = document.querySelector("#detail-campaign");
+  if (detailCampaign) detailCampaign.innerHTML = campaignOptions(companyId, brandId, campaignId);
+  propagateScopeChangeToDrafts(postPackage);
+  state.context = { ...state.context, companyId, brandId, campaignId };
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+async function handleDetailCampaignChange() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const companyId = document.querySelector("#detail-company")?.value || postPackage.context?.companyId || "";
+  const brandId = document.querySelector("#detail-brand")?.value || postPackage.context?.brandId || "";
+  const campaignId = document.querySelector("#detail-campaign")?.value || "";
+  postPackage.context = { ...postPackage.context, companyId, brandId, campaignId };
+  postPackage.companyId = companyId;
+  postPackage.brandId = brandId;
+  postPackage.campaignId = campaignId;
+  propagateScopeChangeToDrafts(postPackage);
+  state.context = { ...state.context, companyId, brandId, campaignId };
+  await saveProductionState();
+  reopenActiveDetail();
 }
 
 async function addPlatformToActivePackage() {
