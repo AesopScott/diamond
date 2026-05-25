@@ -168,19 +168,20 @@ Platform-specific drafts (one per platform per post). Text and media ready for s
 
 ## Audit Trail — Proof of Registry Verification
 
-**Last audit:** 2026-05-25T13:45:00Z (by /cross-boundary-audit)
+**Last audit:** 2026-05-25T18:05:00Z (by /cross-boundary-audit)
 
 **Boundaries checked:** Firestore collections, sub-collections, schema fields
 
 **Evidence recorded:**
 - 6 entries total
 - 5 entries with complete producer/consumer pairs ✓
-- 1 NEW entry (images collection) with 3 producers and 3 consumers planned ⚠
+- 1 NEW entry (images collection) with service-layer producers wired ⚠ (UI consumers pending)
 - 1 PARTIAL entry (campaigns collection) with new imageGenerationSettings fields ⚠
-- New identifiers introduced on task #9: `images` sub-collection, `imageGenerationSettings` in campaigns
+- New identifiers introduced on task #9: `images` sub-collection (schema confirmed), `imageGenerationSettings` in campaigns (schema confirmed)
+- Service layer code verified: `src/replicate-image-service.js`, `src/platform-image-uploader.js` implement producers with full unit tests
 
 **Gaps identified:**
-- ⚠ `images` collection — NEW; producers/consumers are task #9 implementation (currently TBD)
-- ⚠ `campaigns.imageGenerationSettings` — NEW fields; producer is campaign UI, consumer is content-generation.js (currently TBD)
+- ⚠ `images` collection — Producers wired (replicate-image-service.js, platform-image-uploader.js); UI consumers pending (posts-prototype.js displaying images, platform-browser-adapter.js uploading to platforms)
+- ⚠ `campaigns.imageGenerationSettings` — Schema documented; producer (campaign-settings-image-panel.js UI) and consumer (content-generation.js logic) implementation deferred to Proof Units 3-4
 
-**Status:** Audit complete — registries record planned additions for task #9
+**Status:** Audit complete — service layer implementation verified (Proof Units 1, 2, 5-7), UI layer pending (Proof Units 3-4)

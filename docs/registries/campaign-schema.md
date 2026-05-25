@@ -138,18 +138,19 @@ Campaign last modification timestamp.
 
 ## Audit Trail — Proof of Registry Verification
 
-**Last audit:** 2026-05-25T13:45:00Z (by /cross-boundary-audit)
+**Last audit:** 2026-05-25T18:05:00Z (by /cross-boundary-audit)
 
 **Boundaries checked:** Campaign document top-level fields and sub-objects
 
 **Evidence recorded:**
 - 6 entries total (5 existing + 1 NEW)
 - 5 entries with complete producer/consumer pairs ✓
-- 1 NEW entry (imageGenerationSettings) with 2 producers and 2 consumers planned ⚠
-- New identifiers introduced on task #9: `imageGenerationSettings` field with 7 platform sub-objects
+- 1 NEW entry (imageGenerationSettings) with schema confirmed, producers/consumers pending ⚠
+- New identifiers introduced on task #9: `imageGenerationSettings` field with 7 platform sub-objects (x, instagram, tiktok, linkedin, youtube, facebook, reddit)
+- Service layer completed for task #9: replicate-image-service.js and support modules ready to accept imageGenerationSettings from UI
 
 **Gaps identified:**
-- ⚠ `imageGenerationSettings` — NEW; producers/consumers are task #9 implementation (currently TBD)
-- ℹ `videoGenerationSettings` — placeholder; deferred to task #10
+- ⚠ `imageGenerationSettings` — Schema documented and confirmed; producer (campaign-settings-image-panel.js UI component) and consumer (content-generation.js integration) deferred to Proof Units 3-4
+- ℹ `videoGenerationSettings` — Placeholder for task #10; deferred
 
-**Status:** Audit complete — registries record planned additions for task #9
+**Status:** Audit complete — schema confirmed, service layer wired, UI layer pending (Proof Units 3-4)
