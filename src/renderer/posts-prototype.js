@@ -5551,6 +5551,12 @@ function renderPlatformButtons(drafts, postPackage) {
     const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
     return `<button type="button" class="platform-button${isActive ? " active" : ""}" data-platform-toggle="${escapeHtml(platform)}" title="${escapeHtml(tip)}">${escapeHtml(platformLabel(platform))}</button>`;
   }).join("");
+  const generateButton = document.querySelector("#detail-generate");
+  if (generateButton) {
+    const hasActivePlatforms = activePlatforms.size > 0;
+    generateButton.hidden = !hasActivePlatforms;
+    generateButton.disabled = !hasActivePlatforms;
+  }
 }
 
 function renderPlatformPreviews(drafts) {
@@ -6311,7 +6317,7 @@ async function requestPlatformGeneration() {
   } finally {
     if (generateButton) {
       generateButton.disabled = false;
-      generateButton.textContent = "Generate platform versions";
+      generateButton.textContent = "Content Automation";
     }
   }
 }
