@@ -2830,6 +2830,14 @@ select.style-select {
   margin-left: auto;
 }
 
+.draft-compose-browser.proof-mode {
+  border-color: var(--accent, #2a7d4f);
+}
+
+.draft-compose-browser.proof-mode .draft-compose-browser-header {
+  background: color-mix(in srgb, var(--accent, #2a7d4f) 15%, var(--surface-2));
+}
+
 .draft-compose-webview-shell {
   background: #030405;
   min-height: 560px;
