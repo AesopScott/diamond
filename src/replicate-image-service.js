@@ -53,15 +53,16 @@ export function formatImageDimensionsForPlatform(platform) {
 export function buildReplicateRequestPayload({
   prompt,
   platform,
-  model = MODEL_ID,
   numOutputs = 1,
 }) {
   const dims = formatImageDimensionsForPlatform(platform);
+  // For official Replicate models (owner/model slug), the payload contains only `input`.
+  // The `version` field is only used with /v1/predictions + a concrete version SHA.
+  // We use /v1/models/{owner}/{model}/predictions instead (see generateImageViaReplicate).
   return {
-    version: model, // Replicate uses version ID, not model name
     input: {
       prompt,
-      aspect_ratio: dims.aspectRatio.replace(":", "."),
+      aspect_ratio: dims.aspectRatio, // pass colon-form as-is: "4:5", "16:9", etc.
       output_format: dims.format,
       num_outputs: numOutputs,
     },
@@ -102,15 +103,20 @@ export async function generateImageViaReplicate({
   try {
     const payload = buildReplicateRequestPayload({ prompt, platform });
 
-    // Start prediction request
-    const predictionResponse = await fetch(`${REPLICATE_API_BASE}/predictions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    // Use /v1/models/{owner}/{model}/predictions for named (non-versioned) models.
+    // This accepts { input: {...} } with no `version` field, which is correct for
+    // official Replicate models like black-forest-labs/flux-pro.
+    const predictionResponse = await fetch(
+      `${REPLICATE_API_BASE}/models/${MODEL_ID}/predictions`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (!predictionResponse.ok) {
       const errorData = await predictionResponse.json();
