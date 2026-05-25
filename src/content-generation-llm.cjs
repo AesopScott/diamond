@@ -86,9 +86,12 @@ function buildWriterPrompt({ payload = {}, platform, charLimit }) {
   const brand = payload.brand || {};
   const campaign = payload.campaign || {};
   const claims = payload.claims || {};
+  const isCampaignMode = payload.mode === "campaign" && !payload.idea;
   const lines = [
     `You are a social media copywriter. Write ONE ${platformLabel(platform)} post.`,
-    `Core idea: ${payload.idea || ""}`,
+    isCampaignMode
+      ? "Generate a post based entirely on the campaign information below. No specific idea is provided — derive compelling content from the campaign goals, audience, offer, and CTA."
+      : `Core idea: ${payload.idea || ""}`,
   ];
   if (payload.style && payload.style !== "Default") lines.push(`Style: ${payload.style}.`);
   if (payload.language && payload.language !== "en") lines.push(`Write the post in language code "${payload.language}".`);

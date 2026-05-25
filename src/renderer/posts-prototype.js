@@ -6372,7 +6372,16 @@ async function requestCampaignGeneration() {
     campaignButton.textContent = "Generating…";
   }
   drafts.forEach((draft) => { draft.generationStatus = "generating"; });
-  const payload = { ...buildGenerationPayload(postPackage, drafts), idea: "", mode: "campaign" };
+  // Derive a meaningful idea string from campaign strategy so the LLM writer has
+  // a concrete prompt even when the idea field is intentionally blank.
+  const strategy = strategyFor(drafts[0] || { campaignId: postPackage.campaignId });
+  const campaignIdea = [
+    strategy.offer,
+    (strategy.goals || []).join(", "),
+    strategy.cta,
+  ].filter(Boolean).join(" | ")
+    || "Create platform-appropriate content for this campaign based on the campaign strategy.";
+  const payload = { ...buildGenerationPayload(postPackage, drafts), idea: campaignIdea, mode: "campaign" };
   let result;
   try {
     result = await window.diamond?.generatePostDrafts(payload);
@@ -6381,8 +6390,17 @@ async function requestCampaignGeneration() {
   }
   try {
     applyGenerationResult(drafts, result, postPackage);
+    // Campaign automation always targets needs_review — reviewers must approve before publishing.
+    drafts.forEach((draft) => {
+      if (draft.textSource === "llm" && draft.status !== "blocked") {
+        draft.status = "needs_review";
+      }
+    });
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
+    // Rebuild the board so card status/content reflects the newly generated drafts.
+    board = buildPostBoardView(prototypeModel);
+    renderBoard(board);
     reopenActiveDetail();
   } finally {
     if (campaignButton) {
@@ -6418,6 +6436,7 @@ function applyGenerationResult(drafts, result, postPackage) {
     draft.changeNote = generated.changeNote || null;
     draft.generationStatus = "ok";
     draft.generationError = null;
+    draft.status = "needs_review";
     draft.updatedAt = now;
     evaluatePlatformDraft(draft); // Stage 3: deterministic claim/banned-phrase enforcement.
   });
