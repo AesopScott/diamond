@@ -2823,6 +2823,13 @@ select.style-select {
   padding: 6px 10px;
 }
 
+.compose-browser-mark-published-btn {
+  background: var(--accent, #2a7d4f) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  margin-left: auto;
+}
+
 .draft-compose-webview-shell {
   background: #030405;
   min-height: 560px;

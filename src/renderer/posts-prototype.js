@@ -1824,6 +1824,7 @@ function renderDraftComposeBrowser(draft, account, partition, composeUrl) {
       <div class="draft-compose-browser-toolbar">
         <button type="button" data-platform-action="compose-browser-reload" data-platform-draft-id="${escapeHtml(draft.id)}">Reload</button>
         <button type="button" data-platform-action="compose-browser-fill" data-platform-draft-id="${escapeHtml(draft.id)}">Fill text</button>
+        <button type="button" data-platform-action="compose-browser-mark-published" data-platform-draft-id="${escapeHtml(draft.id)}" class="compose-browser-mark-published-btn" title="Mark this draft as published and close the browser">✓ Mark Published</button>
         <button type="button" data-platform-action="compose-browser-close" data-platform-draft-id="${escapeHtml(draft.id)}">Close browser</button>
       </div>
       <div class="draft-compose-webview-shell">
@@ -6746,6 +6747,15 @@ async function handlePlatformDraftAction(event) {
   }
   if (action === "compose-browser-fill") {
     await fillDraftComposeText(draft);
+    return;
+  }
+  if (action === "compose-browser-mark-published") {
+    draft.composeBrowserOpen = false;
+    markPlatformDraftPosted(draft);
+    updatePostPackageFromDrafts(draft.postPackageId);
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
     return;
   }
   if (action === "stage") {
