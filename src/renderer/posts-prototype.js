@@ -3243,18 +3243,33 @@ function renderEditableCampaignPanel(title, field, items = [], placeholder = "")
 
 async function handleCampaignWorkspaceChange(event) {
   const field = event.target.closest("[data-campaign-field]");
-  if (!field || !["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
-  if (field.dataset.campaignField === "contextBrandId") {
-    const brandId = normalizeId(field.value, "brandId");
-    const brand = (state.brands || []).find((item) => item.id === brandId) || {};
-    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
-    state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+  if (field && ["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) {
+    if (field.dataset.campaignField === "contextBrandId") {
+      const brandId = normalizeId(field.value, "brandId");
+      const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+      const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
+      state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+    }
+    if (field.dataset.campaignField === "contextCampaignId") {
+      state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+    }
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  if (field.dataset.campaignField === "contextCampaignId") {
-    state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+  const platformToggle = event.target.closest("[data-platform-video-field]");
+  if (platformToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  await saveProductionState();
-  renderCampaigns();
+  if (field && ["videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
 }
 
 async function handleCampaignWorkspaceClick(event) {
@@ -3368,6 +3383,7 @@ async function deleteSelectedCampaign() {
 function saveCampaignWorkspace() {
   const workspace = document.querySelector("#campaign-workspace");
   const valueFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.value || "";
+  const checkedFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.checked || false;
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
   const brand = (state.brands || []).find((item) => item.id === brandId) || {};
   const companyId = brand.companyId || state.context?.companyId || "";
@@ -3379,6 +3395,19 @@ function saveCampaignWorkspace() {
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    campaign.videoGenerationEnabled = checkedFor("videoGenerationEnabled");
+    campaign.videoQualitySize = valueFor("videoQualitySize") || campaign.videoQualitySize || "high";
+    campaign.videoPromptGuidance = valueFor("videoPromptGuidance") || campaign.videoPromptGuidance || "";
+    campaign.videoGenerationPlatforms = campaign.videoGenerationPlatforms || { ...VIDEO_SPECS_BY_PLATFORM };
+    Object.keys(campaign.videoGenerationPlatforms).forEach((platform) => {
+      const checkbox = workspace?.querySelector(`[data-platform-video-field="${platform}"]`);
+      if (checkbox) {
+        campaign.videoGenerationPlatforms[platform] = {
+          ...campaign.videoGenerationPlatforms[platform],
+          enabled: checkbox.checked,
+        };
+      }
+    });
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
