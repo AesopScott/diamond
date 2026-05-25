@@ -614,6 +614,8 @@ function wirePrototypeControls() {
   document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
   document.querySelector("#campaign-generate")?.addEventListener("click", requestCampaignGeneration);
+  document.querySelector("#detail-evaluate-all")?.addEventListener("click", evaluateAllDrafts);
+  document.querySelector("#eval-auto-generate")?.addEventListener("click", requestEvaluationAutomation);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#post-detail")?.addEventListener("click", (event) => {
     const jump = event.target.closest("[data-workflow-jump]");
@@ -5589,6 +5591,17 @@ function renderPlatformButtons(drafts, postPackage) {
     const hasCampaign = Boolean(postPackage?.campaignId);
     campaignButton.disabled = !(hasActivePlatforms && hasCampaign);
   }
+  // Enable evaluation buttons when platforms are active and at least one has content.
+  const hasContent = drafts.some((d) => String(d.text || "").trim().length > 0);
+  const evaluateAllButton = document.querySelector("#detail-evaluate-all");
+  if (evaluateAllButton) {
+    evaluateAllButton.hidden = !hasActivePlatforms;
+    evaluateAllButton.disabled = !hasContent;
+  }
+  const evalAutoButton = document.querySelector("#eval-auto-generate");
+  if (evalAutoButton) {
+    evalAutoButton.disabled = !(hasActivePlatforms && hasContent);
+  }
 }
 
 function renderPlatformPreviews(drafts) {
@@ -6664,7 +6677,7 @@ function evaluatePlatformDraft(draft) {
 
 // LLM-powered evaluation — calls OpenAI, overlays result onto the draft.
 // Falls back gracefully when no API key is configured (deterministic result kept).
-async function llmEvaluatePlatformDraft(draft) {
+async function llmEvaluatePlatformDraft(draft, { skipRewrite = false } = {}) {
   // Deterministic checks run first so there's immediate feedback while the API call is in flight.
   evaluatePlatformDraft(draft);
 
@@ -6734,8 +6747,8 @@ async function llmEvaluatePlatformDraft(draft) {
   draft.updatedAt = draft.evaluatedAt;
 
   // Auto-rewrite: apply the evaluation's recommendations to produce a suggested revision.
-  // Skipped when the draft is blocked (no point revising unapprovable content).
-  if ((issues?.length || suggestions?.length) && draft.status !== "blocked") {
+  // Skipped when the draft is blocked or the caller opted out (evaluate-only mode).
+  if (!skipRewrite && (issues?.length || suggestions?.length) && draft.status !== "blocked") {
     const rewritePayload = {
       platform: draft.platform,
       text: draft.text || "",
@@ -6756,20 +6769,47 @@ async function llmEvaluatePlatformDraft(draft) {
   }
 }
 
+// Evaluate All — LLM evaluation on every active draft, no auto-rewrite.
 async function evaluateAllDrafts() {
   if (!activePostPackageId) return;
-  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  const drafts = prototypeModel.platformDrafts.filter(
+    (draft) => draft.postPackageId === activePostPackageId && String(draft.text || "").trim().length > 0
+  );
   if (!drafts.length) return;
   const btn = document.querySelector("#detail-evaluate-all");
   if (btn) { btn.disabled = true; btn.textContent = "Evaluating…"; }
   try {
-    drafts.forEach((draft) => evaluatePlatformDraft(draft));
+    for (const draft of drafts) {
+      await llmEvaluatePlatformDraft(draft, { skipRewrite: true });
+    }
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
     await refreshProductionViews();
     reopenActiveDetail();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Evaluate"; }
+    if (btn) { btn.disabled = false; btn.textContent = "Evaluate All"; }
+  }
+}
+
+// Evaluation Automation — LLM evaluation + auto-rewrite on every active draft.
+async function requestEvaluationAutomation() {
+  if (!activePostPackageId) return;
+  const drafts = prototypeModel.platformDrafts.filter(
+    (draft) => draft.postPackageId === activePostPackageId && String(draft.text || "").trim().length > 0
+  );
+  if (!drafts.length) return;
+  const btn = document.querySelector("#eval-auto-generate");
+  if (btn) { btn.disabled = true; btn.textContent = "Evaluating…"; }
+  try {
+    for (const draft of drafts) {
+      await llmEvaluatePlatformDraft(draft);
+    }
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Evaluation Automation"; }
   }
 }
 
