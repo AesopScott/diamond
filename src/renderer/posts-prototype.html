@@ -69,6 +69,11 @@
             </section>
 
             <section class="detail-tools" aria-label="Media, platforms, and tags">
+              <div id="detail-scope" class="detail-scope">
+                <label class="scope-select">Company <select id="detail-company"></select></label>
+                <label class="scope-select">Brand <select id="detail-brand"></select></label>
+                <label class="scope-select">Campaign <select id="detail-campaign"></select></label>
+              </div>
               <label class="style-select">
                 Generation style
                 <select id="generation-style">
@@ -82,8 +87,7 @@
               <button id="detail-generate" class="generate-button" type="button">Generate platform versions</button>
               <button id="detail-add-media" class="media-button" type="button">+ Media</button>
               <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>
-              <button id="detail-add-all-platforms" class="media-button" type="button">All ready platforms</button>
-              <button id="detail-add-platform" class="round-add" type="button" aria-label="Add platform">+</button>
+              <button id="detail-add-all-platforms" class="media-button" type="button">Select all ready</button>
               <label class="tag-input">
                 Post tags
                 <input id="post-tags" type="text" placeholder="+ Post tags">
