@@ -4,10 +4,14 @@ import {
   pollVideoGeneration,
   updatePostDraftWithVideoResult,
 } from "./video-generation-worker.js";
+import {
+  buildVideoErrorNotificationPayload,
+  sendVideoErrorNotification,
+} from "./video-error-handler.js";
 
 export async function integrateVideoGenerationIntoPostCreation(postPackage, postDraft, campaign, config = {}) {
   const videoGenerationEnabled =
-    postDraft.videoGenerationOverride !== null
+    postDraft.videoGenerationOverride != null
       ? postDraft.videoGenerationOverride
       : campaign.videoGenerationEnabled;
 
@@ -40,11 +44,12 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       };
     }
 
+    // Attempt counting is owned entirely by updatePostDraftWithVideoResult —
+    // do not increment here to avoid double-counting on failure paths.
     const workingDraft = {
       ...postDraft,
       videoGenerationStatus: "generating",
       generatedVideoPrompt: videoRequest.prompt,
-      videoGenerationAttempts: (postDraft.videoGenerationAttempts || 0) + 1,
     };
 
     if (config.skipPolling) {
@@ -62,6 +67,17 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
     });
 
     const finalDraft = updatePostDraftWithVideoResult(workingDraft, pollResult);
+
+    // Unit 10: trigger email notification after 3 failed attempts
+    if (!pollResult.ok && finalDraft.videoGenerationAttempts >= 3) {
+      const notificationPayload = buildVideoErrorNotificationPayload(postPackage, finalDraft);
+      if (notificationPayload) {
+        await sendVideoErrorNotification(notificationPayload, {
+          service: config.notificationService || process.env.NOTIFICATION_EMAIL_SERVICE,
+          sendgridApiKey: config.sendgridApiKey || process.env.SENDGRID_API_KEY,
+        });
+      }
+    }
 
     return {
       ok: pollResult.ok,

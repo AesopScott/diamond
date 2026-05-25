@@ -108,7 +108,7 @@ Sender email for video generation failure notifications.
 **Default:** `noreply@diamond.local`
 
 **Consumers**
-- `src/video-notification-handler.js` — failure notifications
+- `src/video-error-handler.js` — failure notifications
 
 **Status:** ⚠ NEW — task #10
 
@@ -123,7 +123,7 @@ Email service provider.
 **Default:** `sendgrid`
 
 **Consumers**
-- `src/video-notification-handler.js` — routes to email service
+- `src/video-error-handler.js` — routes to email service
 
 **Status:** ⚠ NEW — task #10
 

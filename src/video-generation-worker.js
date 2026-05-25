@@ -4,7 +4,7 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
   if (!postDraft || !campaign) return null;
 
   const videoGenerationEnabled =
-    postDraft.videoGenerationOverride !== null
+    postDraft.videoGenerationOverride != null
       ? postDraft.videoGenerationOverride
       : campaign.videoGenerationEnabled;
 
@@ -182,6 +182,9 @@ export function updatePostDraftWithVideoResult(postDraft, result) {
 
   const updated = { ...postDraft };
 
+  // All outcomes increment the attempt counter — this is the single source of truth.
+  updated.videoGenerationAttempts = (updated.videoGenerationAttempts || 0) + 1;
+
   if (result.status === "completed") {
     updated.generatedVideoUrl = result.videoUrl;
     updated.videoGenerationStatus = "success";
@@ -190,10 +193,9 @@ export function updatePostDraftWithVideoResult(postDraft, result) {
     updated.videoGenerationError = null;
     updated.videoGenerationRetryable = false;
   } else if (result.status === "timeout" || result.status === "failed") {
-    updated.videoGenerationStatus = result.status === "timeout" ? "failed" : "failed";
+    updated.videoGenerationStatus = "failed";
     updated.videoGenerationError = result.error || null;
     updated.videoGenerationRetryable = result.error?.retryable !== false;
-    updated.videoGenerationAttempts = (updated.videoGenerationAttempts || 0) + 1;
   } else {
     updated.videoGenerationStatus = result.status;
   }
