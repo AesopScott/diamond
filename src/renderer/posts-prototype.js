@@ -5190,7 +5190,23 @@ async function runOperatorAction(action, dataset = {}) {
     return recordOperatorProofRequirement(account, "login");
   }
   if (action === "stage-browser") {
-    return stageOperatorDraft(account, draft);
+    if (!account) return setOperatorMessage("Browser staging blocked: no active account.");
+    if (!draft) return setOperatorMessage("Browser staging blocked: no active draft.");
+    await inspectDraftMedia(draft);
+    const composeUrl = resolveComposeUrl(account);
+    if (!composeUrl) return setOperatorMessage("Browser staging blocked: compose URL missing. Set the account compose URL first.");
+    await window.diamond?.writeClipboard?.(draft.text || "");
+    const stagedAt = new Date().toISOString();
+    draft.composeBrowserOpen = true;
+    draft.status = "staged";
+    draft.stagedAt = stagedAt;
+    draft.updatedAt = stagedAt;
+    draft.stageUrl = composeUrl;
+    draft.stageNote = "Compose browser opened. Fill text if needed, review the post, then publish manually.";
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+    return setOperatorMessage("Compose browser opened in draft panel. Fill text, review, then publish manually.");
   }
   if (action === "capture-proof") {
     return captureOperatorProof(account, draft);
