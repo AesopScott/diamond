@@ -80,7 +80,7 @@ export const IMAGE_SPECS_BY_PLATFORM = Object.freeze({
     enabled: false,
     width: 1200,
     height: 628,
-    aspectRatio: "1.91:1",
+    aspectRatio: "16:9", // Replicate Flux Pro does not support "1.91:1"; nearest standard ratio
     format: "webp",
   },
   youtube: {
@@ -94,14 +94,14 @@ export const IMAGE_SPECS_BY_PLATFORM = Object.freeze({
     enabled: false,
     width: 1200,
     height: 628,
-    aspectRatio: "1.91:1",
+    aspectRatio: "16:9", // Replicate Flux Pro does not support "1.91:1"; nearest standard ratio
     format: "webp",
   },
   reddit: {
     enabled: false,
     width: 1200,
     height: 628,
-    aspectRatio: "1.91:1",
+    aspectRatio: "16:9", // Replicate Flux Pro does not support "1.91:1"; nearest standard ratio
     format: "webp",
   },
 });

@@ -57,10 +57,10 @@ Campaign entities under a brand. Contains campaign-level post generation configu
     "x":        { "enabled": boolean, "width": 1200, "height": 675,  "aspectRatio": "16:9",   "format": "webp" },
     "instagram":{ "enabled": boolean, "width": 1080, "height": 1350, "aspectRatio": "4:5",    "format": "webp" },
     "tiktok":   { "enabled": boolean, "width": 1080, "height": 1920, "aspectRatio": "9:16",   "format": "webp" },
-    "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
-    "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9",   "format": "webp" },
-    "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
-    "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" }
+    "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" },
+    "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9", "format": "webp" },
+    "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" },
+    "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" }
   },
   "videoGenerationSettings": { ... },
   "createdAt": "ISO string",
@@ -102,37 +102,13 @@ Post packages (ideas) created in a campaign. Multi-platform post bundles.
 
 ## `companies/{companyId}/brands/{brandId}/campaigns/{campaignId}/postPackages/{postPackageId}/images`
 
-**NEW for Task #9** — Generated images for posts. Sub-collection under postPackages.
+**⛔ DEFERRED — NOT wired in Task #9**
 
-**Schema:**
-```json
-{
-  "service": "replicate",
-  "model": "flux-pro",
-  "prompt": "string — the prompt used to generate this image",
-  "platform": "x|instagram|tiktok|linkedin|youtube|facebook|reddit",
-  "imageUrl": "string — URL to the generated image in cloud storage",
-  "dimensions": { "width": number, "height": number, "aspectRatio": "string" },
-  "generationCost": 0.06,
-  "approvalStatus": "pending|approved|rejected",
-  "regenerationCount": number,
-  "uploadedAt": "ISO string",
-  "createdAt": "ISO string"
-}
-```
+No code in the task #9 diff writes to this sub-collection. Image metadata and URLs are stored directly on `platformDrafts` documents (see below) via `saveProductionState()`. A dedicated `images` sub-collection was planned but not implemented.
 
-**Producers**
-- `src/replicate-image-service.js:TBD` — Replicate API calls, stores generated image URL and metadata (task #9)
-- `src/content-generation.js:TBD` — initiates image generation and passes prompt (task #9)
+**When deferred collection lands:** a follow-on task will extract the `generatedImageMetadata` from the draft document and write it here, enabling per-image cost roll-ups and approval workflows across platforms.
 
-**Consumers**
-- `src/renderer/posts-prototype.js:TBD` — displays image preview in post dialog (task #9)
-- `src/platform-browser-adapter.js:TBD` — retrieves image URL for platform upload (task #9)
-- `src/metrics.js:TBD` — logs image generation metrics and cost (task #9)
-
-**Firestore Rule:** Sub-collection under postPackages; allow read/write with auth + company/brand/campaign scope validation
-
-**Status:** ⚠ NEW — task #9 creates this collection; producers/consumers are planned (TBD)
+**Status:** ⛔ DEFERRED — no producer or consumer wired in task #9; image data stored on `platformDrafts` instead
 
 ---
 
@@ -140,18 +116,34 @@ Post packages (ideas) created in a campaign. Multi-platform post bundles.
 
 Platform-specific drafts (one per platform per post). Text and media ready for staging.
 
-**Schema:** `{ platform, text, media, status, generationStatus, scheduledAt, publishedAt, ... }`
+**Schema (task #9 additions in bold):**
+```
+{ 
+  platform, text, media, status, generationStatus, scheduledAt, publishedAt,
+  imageGenerationEnabled,   // boolean | null — per-draft override (task #9)
+  imageGenerationStatus,    // "generating"|"complete"|"failed"|undefined (task #9)
+  generatedImageUrl,        // string | null — Replicate CDN URL (task #9)
+  generatedImageMetadata,   // object — full metadata record from createReplicateImageMetadata() (task #9)
+  imageGenerationError,     // string | null — human-readable failure reason (task #9)
+  ...
+}
+```
+
+**Note:** Image metadata (`generatedImageMetadata`, `generatedImageUrl`) lives here — on the draft document — not in a separate `images` sub-collection. The sub-collection is deferred (see entry above).
 
 **Producers**
 - `src/post-package.js:TBD` — platform draft creation
 - `src/content-generation.js:TBD` — platform-specific text generation
+- `src/renderer/posts-prototype.js:toggleDraftImageGeneration` — writes `imageGenerationEnabled`, `imageGenerationStatus`, `generatedImageUrl`, `generatedImageMetadata`, `imageGenerationError` via `saveProductionState()` (task #9)
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — returns `updatedDraft` with image fields set (task #9)
 
 **Consumers**
 - `src/renderer/posts-prototype.js:TBD` — draft display and editing
+- `src/renderer/posts-prototype.js:renderImageGenerationToggle` — reads `imageGenerationStatus`, `imageGenerationEnabled` for UI state (task #9)
 - `src/platform-proof.js:TBD` — staging proofs
 - `src/platform-browser-adapter.js:TBD` — staging/publishing flow
 
-**Status:** ✓ wired (existing, not task #9 scope)
+**Status:** ✓ wired — extended with task #9 image generation fields (stored via `saveProductionState()`)
 
 ---
 
@@ -163,26 +155,21 @@ Platform-specific drafts (one per platform per post). Text and media ready for s
 | `brands` | seed.js, account-setup.js | posts-scope-helpers.js, tenant-context.js | ✓ |
 | `campaigns` | posts-prototype.js, workspace-entities.js | image-generation-integration.js, posts-prototype.js | ✓ (imageGenerationEnabled/Platforms/Guidance wired, task #9) |
 | `postPackages` | posts-prototype.js, seed.js | content-generation.js, posts-prototype.js | ✓ |
-| **`images`** | **replicate-image-service.js, content-generation.js** | **posts-prototype.js, platform-browser-adapter.js, metrics.js** | **⚠ NEW (task #9)** |
-| `platformDrafts` | post-package.js, content-generation.js | posts-prototype.js, platform-proof.js, platform-browser-adapter.js | ✓ |
+| **`images`** | **— (none wired)** | **— (none wired)** | **⛔ DEFERRED — image data stored on platformDrafts instead (task #9)** |
+| **`platformDrafts`** | post-package.js, content-generation.js, **posts-prototype.js:toggleDraftImageGeneration** | posts-prototype.js, platform-proof.js, platform-browser-adapter.js | ✓ **(extended with image generation fields, task #9)** |
 
 ---
 
 ## Audit Trail — Proof of Registry Verification
 
-**Last audit:** 2026-05-25T18:05:00Z (by /cross-boundary-audit)
+**Last audit:** 2026-05-25T23:30:00Z (registry corrected to match implementation — Codex review fix)
 
 **Boundaries checked:** Firestore collections, sub-collections, schema fields
 
-**Evidence recorded:**
-- 6 entries total
-- 5 entries with complete producer/consumer pairs ✓
-- 1 NEW entry (images collection) with service-layer producers wired ✓; platform upload adapters are formally deferred stubs (see PU5 waiver in backlog)
-- `campaigns` collection extended with `imageGenerationEnabled`, `imageGenerationPlatforms`, `imagePromptGuidance` — all wired ✓
-- Field name corrected from planning doc (`imageGenerationSettings` → `imageGenerationPlatforms`) to match implementation
-- `src/replicate-image-service.js`, `src/platform-image-uploader.js`, `src/image-generation-integration.js` implement the service layer with full unit tests
+**Changes from previous version:**
+- `campaigns.imageGenerationPlatforms` aspect ratios corrected: linkedin/facebook/reddit `"1.91:1"` → `"16:9"` (Replicate Flux Pro does not support "1.91:1")
+- `images` sub-collection status changed from `⚠ NEW (planned)` → `⛔ DEFERRED` — no code in task #9 diff writes to this sub-collection; image metadata is stored on `platformDrafts` documents via `saveProductionState()`
+- `platformDrafts` schema extended with task #9 image generation fields: `imageGenerationEnabled`, `imageGenerationStatus`, `generatedImageUrl`, `generatedImageMetadata`, `imageGenerationError`
+- `platformDrafts` producers/consumers updated to include task #9 functions
 
-**Gaps identified:**
-- ℹ `images` collection — `platform-browser-adapter.js` and `metrics.js` listed as future consumers; deferred to follow-on task (Playwright-based staging handles image attachment in interim)
-
-**Status:** Audit complete — all task #9 boundaries confirmed wired; platform upload adapters formally deferred with waiver
+**Status:** Audit complete — all task #9 boundaries reflect actual implementation

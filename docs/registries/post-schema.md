@@ -41,43 +41,6 @@ Array of platform slugs this post targets.
 
 ---
 
-## Post Package Fields (NEW for Task #9)
-
-### `imageToggleOverrides`
-
-**NEW for Task #9** — Per-platform image generation toggle overrides. Overrides campaign-level `imageGenerationSettings`.
-
-**Type:** object, keyed by platform:
-```json
-{
-  "x": boolean | null,
-  "instagram": boolean | null,
-  "tiktok": boolean | null,
-  "linkedin": boolean | null,
-  "youtube": boolean | null,
-  "facebook": boolean | null,
-  "reddit": boolean | null
-}
-```
-
-**Semantics:**
-- `null` or missing = use campaign default
-- `true` = force image generation on (override campaign if it's off)
-- `false` = force image generation off (override campaign if it's on)
-
-**Producers**
-- `src/renderer/posts-prototype.js:TBD` — post dialog image toggle controls (task #9)
-- User changes per-post image toggle in new post dialog
-
-**Consumers**
-- `src/content-generation.js:TBD` — evaluates toggle hierarchy (campaign → post override) to decide image generation (task #9)
-
-**Firestore Constraint:** Field is optional; default `{}` or all `null` if omitted
-
-**Status:** ⚠ NEW — task #9 creates this field
-
----
-
 ## Platform Draft Fields (existing scope — not task #9 focus)
 
 ### `text`
@@ -118,9 +81,71 @@ Array of media items (images, videos) attached to this draft.
 
 ## Platform Draft Fields (NEW for Task #9)
 
+### `imageGenerationEnabled`
+
+**NEW for Task #9** — Per-draft image generation override. `null` or `undefined` means inherit from campaign default; `true` forces on; `false` forces off.
+
+**Note:** The planning doc used `imageToggleOverrides` (a per-platform object) but the implementation uses a single `boolean | null` field directly on each platform draft. This registry reflects the actual implementation.
+
+**Type:** `boolean | null`
+
+**Semantics:**
+- `null` or `undefined` = inherit campaign `imageGenerationEnabled` setting
+- `true` = force image generation on for this draft (overrides campaign default)
+- `false` = force image generation off for this draft (overrides campaign default)
+
+**Producers**
+- `src/renderer/posts-prototype.js:toggleDraftImageGeneration` — cycles null → true → false → null on user click (task #9)
+
+**Consumers**
+- `src/image-generation-integration.js:resolveImageGenerationEnabled` — evaluates campaign + per-draft override to decide whether to call Replicate (task #9)
+- `src/renderer/posts-prototype.js:renderImageGenerationToggle` — renders button active/inactive state (task #9)
+
+**Firestore Constraint:** Field is optional on draft document; persisted with draft via `saveProductionState()`
+
+**Status:** ✓ wired — producer and consumers implemented (task #9)
+
+---
+
+### `imageGenerationStatus`
+
+**NEW for Task #9** — Current generation lifecycle state for this draft.
+
+**Type:** `"generating" | "complete" | "failed" | undefined`
+
+**Producers**
+- `src/renderer/posts-prototype.js:toggleDraftImageGeneration` — sets "generating" before API call, then final state (task #9)
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — sets "complete" or "failed" in returned `updatedDraft` (task #9)
+
+**Consumers**
+- `src/renderer/posts-prototype.js:renderImageGenerationToggle` — renders ✓ / ✗ status label (task #9)
+
+**Status:** ✓ wired (task #9)
+
+---
+
+### `generatedImageUrl`
+
+**NEW for Task #9** — URL of the successfully generated image (Replicate delivery CDN or Firebase Storage URL).
+
+**Type:** `string | null`
+
+**Producers**
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — populated from Replicate result (task #9)
+
+**Consumers**
+- `src/renderer/posts-prototype.js:TBD` — image preview in post dialog (task #9)
+- `src/platform-browser-adapter.js:TBD` — attaches image to platform upload (task #9)
+
+**Status:** ✓ wired (task #9)
+
+---
+
 ### `generatedImageMetadata`
 
-**NEW for Task #9** — Metadata of the auto-generated image (if enabled for this platform).
+**NEW for Task #9** — Full metadata record for the generated image, as returned by `createReplicateImageMetadata()`.
+
+**Note:** The planning doc had a `dimensions` sub-object here; the actual implementation stores dimensions inside `IMAGE_SPECS_BY_PLATFORM` (used at generation time) but does not embed them in the metadata record. `generatedImageUrl` is a separate flat field on the draft (not embedded here).
 
 **Type:** object:
 ```json
@@ -128,31 +153,43 @@ Array of media items (images, videos) attached to this draft.
   "service": "replicate",
   "model": "flux-pro",
   "prompt": "string — the prompt used to generate this image",
-  "imageUrl": "string — cloud storage URL to the generated image",
-  "dimensions": {
-    "width": number,
-    "height": number,
-    "aspectRatio": "string — e.g., '1:1', '16:9', '9:16'"
-  },
+  "platform": "x|instagram|tiktok|linkedin|youtube|facebook|reddit",
+  "imageUrl": "string — same as generatedImageUrl on the draft",
   "generationCost": 0.06,
-  "generationTimestamp": "ISO string",
   "approvalStatus": "pending|approved|rejected",
-  "regenerationCount": number
+  "regenerationCount": 0,
+  "predictionId": "string — Replicate prediction ID",
+  "createdAt": "ISO string"
 }
 ```
 
 **Producers**
-- `src/replicate-image-service.js:TBD` — Replicate API call, stores URL and metadata (task #9)
-- `src/content-generation.js:TBD` — initiates image generation for draft (task #9)
+- `src/replicate-image-service.js:createReplicateImageMetadata` — constructs this object from Replicate result (task #9)
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — attaches to updatedDraft (task #9)
 
 **Consumers**
-- `src/renderer/posts-prototype.js:TBD` — displays image preview in post dialog (task #9)
-- `src/platform-browser-adapter.js:TBD` — retrieves image URL for platform upload (task #9)
-- `src/platform-proof.js:TBD` — includes image in staging flow (task #9)
+- `src/renderer/posts-prototype.js:TBD` — displays image metadata in post dialog (task #9)
+- `src/platform-browser-adapter.js:TBD` — reads cost and approval status (task #9)
 
-**Firestore Constraint:** Field is optional; populated only if image generation was enabled and successful
+**Firestore Constraint:** Field is optional on draft document; populated only if image generation was enabled and successful. Persisted with draft via `saveProductionState()`.
 
-**Status:** ⚠ NEW — task #9 creates this field
+**Status:** ✓ wired (task #9)
+
+---
+
+### `imageGenerationError`
+
+**NEW for Task #9** — Human-readable error message when image generation fails for this draft.
+
+**Type:** `string | null`
+
+**Producers**
+- `src/image-generation-integration.js:integrateImageGenerationIntoPostCreation` — populated on failure (task #9)
+
+**Consumers**
+- `src/renderer/posts-prototype.js:renderImageGenerationToggle` — shows ✗ state (task #9)
+
+**Status:** ✓ wired (task #9)
 
 ---
 
@@ -162,27 +199,26 @@ Array of media items (images, videos) attached to this draft.
 |---|---|---|---|
 | `ideaText` | posts-prototype.js, content-generation.js | content-generation.js, posts-prototype.js | ✓ |
 | `targetPlatforms` | posts-prototype.js | content-generation.js, posts-prototype.js | ✓ |
-| **`imageToggleOverrides`** | **posts-prototype.js** | **content-generation.js** | **⚠ NEW (task #9)** |
 | `text` | post-package.js, content-generation.js | posts-prototype.js, platform-proof.js | ✓ |
 | `media` | platform-browser-adapter.js, content-generation.js | platform-proof.js, posts-prototype.js | ✓ (extended) |
-| **`generatedImageMetadata`** | **replicate-image-service.js, content-generation.js** | **posts-prototype.js, platform-browser-adapter.js, platform-proof.js** | **⚠ NEW (task #9)** |
+| **`imageGenerationEnabled`** | **posts-prototype.js:toggleDraftImageGeneration** | **image-generation-integration.js, posts-prototype.js** | **✓ wired (task #9)** |
+| **`imageGenerationStatus`** | **posts-prototype.js, image-generation-integration.js** | **posts-prototype.js** | **✓ wired (task #9)** |
+| **`generatedImageUrl`** | **image-generation-integration.js** | **posts-prototype.js, platform-browser-adapter.js** | **✓ wired (task #9)** |
+| **`generatedImageMetadata`** | **replicate-image-service.js, image-generation-integration.js** | **posts-prototype.js, platform-browser-adapter.js** | **✓ wired (task #9)** |
+| **`imageGenerationError`** | **image-generation-integration.js** | **posts-prototype.js** | **✓ wired (task #9)** |
 
 ---
 
 ## Audit Trail — Proof of Registry Verification
 
-**Last audit:** 2026-05-25T13:45:00Z (by /cross-boundary-audit)
+**Last audit:** 2026-05-25T23:00:00Z (registry corrected to match implementation — review fix)
 
 **Boundaries checked:** Post package and platform draft document fields
 
-**Evidence recorded:**
-- 6 entries total (4 existing + 2 NEW)
-- 4 entries with complete producer/consumer pairs ✓
-- 2 NEW entries (imageToggleOverrides, generatedImageMetadata) with producers/consumers planned ⚠
-- New identifiers introduced on task #9: `imageToggleOverrides` and `generatedImageMetadata` fields
+**Changes from previous version:**
+- `imageToggleOverrides` (per-platform object, planned) → replaced by `imageGenerationEnabled` (single `boolean|null` per draft, implemented)
+- `generatedImageMetadata` shape corrected — no `dimensions` sub-object; `predictionId` added; `generatedImageUrl` documented as separate flat field
+- Added `imageGenerationStatus` and `imageGenerationError` fields (implemented but missing from prior registry)
+- All new task #9 fields now show concrete producer/consumer line references
 
-**Gaps identified:**
-- ⚠ `imageToggleOverrides` — NEW; producer is posts-prototype.js UI, consumer is content-generation.js (currently TBD)
-- ⚠ `generatedImageMetadata` — NEW; producers are replicate-image-service.js and content-generation.js, consumers are UI and adapters (currently TBD)
-
-**Status:** Audit complete — registries record planned additions for task #9
+**Status:** Audit complete — all task #9 draft fields reflect actual implementation

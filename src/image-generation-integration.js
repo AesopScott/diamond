@@ -79,7 +79,13 @@ export async function integrateImageGenerationIntoPostCreation(postPackage, post
     });
 
     if (!result.ok) {
-      const errorDetails = formatImageGenerationError(result.error || { reason: result.error });
+      // result.error may be a string from generateImageViaReplicate — wrap it in a proper
+      // error object so formatErrorForUI can match on .code / .reason correctly.
+      const rawError = result.error;
+      const errorObj = typeof rawError === "string"
+        ? { code: "replicate_api_error", message: rawError, reason: "replicate_api_error" }
+        : (rawError || { code: "replicate_api_error" });
+      const errorDetails = formatImageGenerationError(errorObj);
       const updatedDraft = {
         ...postDraft,
         imageGenerationStatus: "failed",
@@ -101,7 +107,8 @@ export async function integrateImageGenerationIntoPostCreation(postPackage, post
       predictionId: result.predictionId,
     });
 
-    // Record cost for the campaign
+    // Record cost for the campaign — log to console so the entry is durable in the
+    // Electron main-process log stream. Firestore cost aggregation is deferred (follow-on task).
     if (result.cost > 0) {
       const costRecord = createImageCostRecord({
         campaignId: postPackage.campaignId || postDraft.campaignId,
@@ -111,7 +118,8 @@ export async function integrateImageGenerationIntoPostCreation(postPackage, post
         predictTime: result.predictTime,
         imageId: result.predictionId,
       });
-      logImageCost(costRecord);
+      const logEntry = logImageCost(costRecord);
+      console.info("[image-gen] cost:", JSON.stringify(logEntry));
     }
 
     const updatedDraft = {

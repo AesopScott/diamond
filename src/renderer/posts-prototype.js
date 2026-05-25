@@ -6357,32 +6357,50 @@ async function toggleDraftImageGeneration(draft) {
 
   // Cycle: inherit (null) → on (true) → off (false) → inherit (null)
   const current = draft.imageGenerationEnabled;
-  if (current === null || current === undefined) {
-    draft.imageGenerationEnabled = true;
-  } else if (current === true) {
-    draft.imageGenerationEnabled = false;
-  } else {
-    draft.imageGenerationEnabled = null; // back to inherit
-  }
+  const nextEnabled = (current === null || current === undefined) ? true
+    : current === true ? false
+    : null;
 
-  draft.updatedAt = new Date().toISOString();
+  // Create immutable updated draft — never mutate the input object
+  let updatedDraft = {
+    ...draft,
+    imageGenerationEnabled: nextEnabled,
+    updatedAt: new Date().toISOString(),
+  };
 
-  // When user explicitly enables image generation for this post, generate immediately
-  if (draft.imageGenerationEnabled === true) {
-    draft.imageGenerationStatus = "generating";
-    draft.imageGenerationError = null;
+  if (nextEnabled !== true) {
+    // Toggle to off or inherit — apply immediately and return
+    prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+      (d) => (d.id === draft.id ? updatedDraft : d)
+    );
     await saveProductionState();
     reopenActiveDetail();
-
-    const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
-    const result = await integrateImageGenerationIntoPostCreation(postPackage, draft, campaign, {});
-    const updated = result.updatedDraft || draft;
-    draft.imageGenerationStatus = updated.imageGenerationStatus || (result.ok ? "complete" : "failed");
-    draft.generatedImageUrl = updated.generatedImageUrl || null;
-    draft.generatedImageMetadata = updated.generatedImageMetadata || null;
-    draft.imageGenerationError = updated.imageGenerationError || null;
+    return;
   }
 
+  // User explicitly enabled — start generation immediately
+  updatedDraft = { ...updatedDraft, imageGenerationStatus: "generating", imageGenerationError: null };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? updatedDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+
+  const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, {});
+  const resultDraft = result.updatedDraft || updatedDraft;
+
+  const finalDraft = {
+    ...updatedDraft,
+    imageGenerationStatus: resultDraft.imageGenerationStatus || (result.ok ? "complete" : "failed"),
+    generatedImageUrl: resultDraft.generatedImageUrl || null,
+    generatedImageMetadata: resultDraft.generatedImageMetadata || null,
+    imageGenerationError: resultDraft.imageGenerationError || null,
+  };
+
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? finalDraft : d)
+  );
   await saveProductionState();
   reopenActiveDetail();
 }

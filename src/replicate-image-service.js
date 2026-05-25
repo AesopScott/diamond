@@ -1,19 +1,10 @@
 // Replicate API service wrapper for Flux Pro image generation
 // Handles authentication, request formatting, response parsing, error handling, and cost tracking
 
+import { IMAGE_SPECS_BY_PLATFORM } from "./constants.js";
+
 const REPLICATE_API_BASE = "https://api.replicate.com/v1";
 const MODEL_ID = "black-forest-labs/flux-pro";
-
-// Platform-specific image dimensions and formats
-const PLATFORM_SPECS = {
-  instagram: { width: 1080, height: 1350, aspectRatio: "4:5", format: "webp" },
-  x: { width: 1200, height: 675, aspectRatio: "16:9", format: "webp" },
-  tiktok: { width: 1080, height: 1920, aspectRatio: "9:16", format: "webp" },
-  linkedin: { width: 1200, height: 628, aspectRatio: "1.91:1", format: "webp" },
-  youtube: { width: 1280, height: 720, aspectRatio: "16:9", format: "webp" },
-  facebook: { width: 1200, height: 628, aspectRatio: "1.91:1", format: "webp" },
-  reddit: { width: 1200, height: 628, aspectRatio: "1.91:1", format: "webp" },
-};
 
 // Flux Pro pricing: $0.03-$0.15 per image depending on resolution and processing time
 const COST_PER_SECOND = 0.015; // Approximate cost per second of predict time
@@ -38,7 +29,7 @@ export function authenticateReplicateRequest({ env }) {
 }
 
 export function formatImageDimensionsForPlatform(platform) {
-  const spec = PLATFORM_SPECS[platform];
+  const spec = IMAGE_SPECS_BY_PLATFORM[platform];
   if (!spec) {
     throw new Error(`Unknown platform: ${platform}`);
   }
