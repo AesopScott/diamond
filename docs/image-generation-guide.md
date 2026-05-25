@@ -54,10 +54,10 @@ Diamond automatically sets the correct image dimensions for each platform:
 | X (Twitter) | 1200 × 675 | 16:9 | WebP |
 | Instagram | 1080 × 1350 | 4:5 | WebP |
 | TikTok | 1080 × 1920 | 9:16 | WebP |
-| LinkedIn | 1200 × 628 | 1.91:1 | WebP |
+| LinkedIn | 1200 × 628 | 16:9 | WebP |
 | YouTube | 1280 × 720 | 16:9 | WebP |
-| Facebook | 1200 × 628 | 1.91:1 | WebP |
-| Reddit | 1200 × 628 | 1.91:1 | WebP |
+| Facebook | 1200 × 628 | 16:9 | WebP |
+| Reddit | 1200 × 628 | 16:9 | WebP |
 
 ---
 
@@ -111,7 +111,7 @@ Set the `REPLICATE_API_KEY` environment variable in `.env.local`:
 REPLICATE_API_KEY=r8_xxxxxxxxxxxxxxxxxxxx
 ```
 
-The key is used server-side only and never sent to the browser.
+The key is read from the main process (`process.env`) and passed to the renderer once per generation call via a secure IPC channel (`contextBridge`). It is never embedded in the renderer bundle or stored in app state.
 
 ---
 

@@ -46,10 +46,10 @@ Configuration for post text generation (existing, not task #9 scope).
   "x":        { "enabled": boolean, "width": 1200, "height": 675,  "aspectRatio": "16:9",   "format": "webp" },
   "instagram":{ "enabled": boolean, "width": 1080, "height": 1350, "aspectRatio": "4:5",    "format": "webp" },
   "tiktok":   { "enabled": boolean, "width": 1080, "height": 1920, "aspectRatio": "9:16",   "format": "webp" },
-  "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
-  "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9",   "format": "webp" },
-  "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" },
-  "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "1.91:1", "format": "webp" }
+  "linkedin": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" },
+  "youtube":  { "enabled": boolean, "width": 1280, "height": 720,  "aspectRatio": "16:9", "format": "webp" },
+  "facebook": { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" },
+  "reddit":   { "enabled": boolean, "width": 1200, "height": 628,  "aspectRatio": "16:9", "format": "webp" }
 }
 ```
 

@@ -6387,7 +6387,12 @@ async function toggleDraftImageGeneration(draft) {
   reopenActiveDetail();
 
   const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
-  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, {});
+  // Fetch API key from main process via IPC — process.env is not available in the renderer
+  // (contextIsolation: true, nodeIntegration: false). The key is never stored in the renderer bundle.
+  const replicateApiKey = window.diamond?.getReplicateApiKey
+    ? await window.diamond.getReplicateApiKey()
+    : undefined;
+  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { replicateApiKey });
   const resultDraft = result.updatedDraft || updatedDraft;
 
   const finalDraft = {
