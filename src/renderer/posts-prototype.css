@@ -1162,6 +1162,22 @@ select.style-select {
   color: #76f5a8;
 }
 
+.workflow-jump-btn {
+  background: none;
+  border: none;
+  color: var(--accent-text);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 1000;
+  padding: 4px 6px;
+  text-decoration: underline;
+  text-transform: uppercase;
+}
+
+.workflow-jump-btn:hover {
+  opacity: 0.8;
+}
+
 .staging-plan {
   background: var(--card);
   border: 1px solid var(--line);

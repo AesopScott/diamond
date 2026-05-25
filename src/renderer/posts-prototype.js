@@ -613,7 +613,13 @@ function wirePrototypeControls() {
   document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
   document.querySelector("#campaign-generate")?.addEventListener("click", requestCampaignGeneration);
+  document.querySelector("#detail-evaluate-all")?.addEventListener("click", evaluateAllDrafts);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
+  document.querySelector("#post-detail")?.addEventListener("click", (event) => {
+    const jump = event.target.closest("[data-workflow-jump]");
+    if (!jump) return;
+    document.querySelector(`#${jump.dataset.workflowJump}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
   document.querySelector("#calendar-board")?.addEventListener("click", handleCalendarAction);
@@ -5576,6 +5582,10 @@ function renderPlatformButtons(drafts, postPackage) {
     const hasCampaign = Boolean(postPackage?.campaignId);
     campaignButton.disabled = !(hasActivePlatforms && hasCampaign);
   }
+  const evaluateAllButton = document.querySelector("#detail-evaluate-all");
+  if (evaluateAllButton) {
+    evaluateAllButton.hidden = !hasActivePlatforms;
+  }
 }
 
 function renderPlatformPreviews(drafts) {
@@ -5863,16 +5873,22 @@ function renderWorkflowChecklist(draft, preflight, plan) {
       </header>
       ${nextStep ? `<p class="workflow-next-step"><strong>Next:</strong> ${escapeHtml(nextStep.label)}. ${escapeHtml(nextStep.detail)}</p>` : `<p class="workflow-next-step complete"><strong>Complete:</strong> This draft has reached the posted state.</p>`}
       <ol>
-        ${checklist.map((item, index) => `
+        ${checklist.map((item, index) => {
+          const badge = item.complete ? "Done" : item === nextStep ? "Next" : "Open";
+          const isEvaluateJump = item.label === "Evaluate" && item === nextStep && !item.complete;
+          const badgeHtml = isEvaluateJump
+            ? `<button type="button" class="workflow-jump-btn" data-workflow-jump="platform-previews">${escapeHtml(badge)}</button>`
+            : `<em>${escapeHtml(badge)}</em>`;
+          return `
           <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${item === nextStep ? "current" : ""}">
             <span class="workflow-step-number">${index + 1}</span>
             <div>
               <strong>${escapeHtml(item.label)}</strong>
               <small>${escapeHtml(item.complete ? item.doneDetail : item.detail)}</small>
             </div>
-            <em>${item.complete ? "Done" : item === nextStep ? "Next" : "Open"}</em>
-          </li>
-        `).join("")}
+            ${badgeHtml}
+          </li>`;
+        }).join("")}
       </ol>
     </section>
   `;
@@ -6510,6 +6526,23 @@ function evaluatePlatformDraft(draft) {
     : risk.level === "review_required" || quality.level === "review" ? "needs_review" : "draft";
   draft.evaluatedAt = new Date().toISOString();
   draft.updatedAt = draft.evaluatedAt;
+}
+
+async function evaluateAllDrafts() {
+  if (!activePostPackageId) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  if (!drafts.length) return;
+  const btn = document.querySelector("#detail-evaluate-all");
+  if (btn) { btn.disabled = true; btn.textContent = "Evaluating…"; }
+  try {
+    drafts.forEach((draft) => evaluatePlatformDraft(draft));
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Evaluate"; }
+  }
 }
 
 function approvePlatformDraft(draft) {
