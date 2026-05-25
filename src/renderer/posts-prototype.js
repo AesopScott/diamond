@@ -1918,9 +1918,10 @@ async function tryInjectDraftText(draft, webview) {
         const target = selectors.map((s) => document.querySelector(s)).find(Boolean);
         if (!target) return false;
         target.focus();
-        target.textContent = "";
+        // selectAll + insertText goes through the native input path React listens to,
+        // so React's state updates and the placeholder hides correctly.
+        document.execCommand("selectAll", false);
         document.execCommand("insertText", false, text);
-        target.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
         return target.textContent.length > 0;
       })();
     `);
