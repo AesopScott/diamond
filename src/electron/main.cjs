@@ -7,6 +7,9 @@ const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
 const { generatePostDrafts, evaluateDraftWithLlm } = require("../content-generation-llm.cjs");
 
+// Allowed protocols for shell.openExternal — keep attack surface minimal.
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
+
 // Allowed writable platforms — must match SUPPORTED_SOCIAL_PLATFORMS in renderer.
 const GENERATION_ALLOWED_PLATFORMS = new Set([
   "x", "instagram", "tiktok", "linkedin",
@@ -14,6 +17,20 @@ const GENERATION_ALLOWED_PLATFORMS = new Set([
 ]);
 const GENERATION_MAX_PLATFORMS = 8;
 const GENERATION_MAX_STRING_LENGTH = 5000;
+
+function validateExternalUrl(url) {
+  if (typeof url !== "string" || !url.trim()) return "URL must be a non-empty string.";
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "URL is not a valid URL.";
+  }
+  if (!ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) {
+    return `Protocol "${parsed.protocol}" is not allowed. Only https, http, and mailto links may be opened externally.`;
+  }
+  return null;
+}
 
 function validateGenerationPayload(payload) {
   if (!payload || typeof payload !== "object") return "Payload must be an object.";
@@ -494,7 +511,14 @@ ipcMain.handle("diamond:generate-tour-voiceovers", async (_event, input = {}) =>
     files: listTourAudioFiles(),
   };
 });
-ipcMain.handle("diamond:open-external", (_event, url) => shell.openExternal(url));
+ipcMain.handle("diamond:open-external", (_event, url) => {
+  const validationError = validateExternalUrl(url);
+  if (validationError) {
+    console.warn("[diamond:open-external] blocked:", validationError, url);
+    return { ok: false, error: validationError };
+  }
+  return shell.openExternal(url).then(() => ({ ok: true }));
+});
 ipcMain.handle("diamond:write-clipboard", (_event, text) => {
   clipboard.writeText(String(text || ""));
   return true;
