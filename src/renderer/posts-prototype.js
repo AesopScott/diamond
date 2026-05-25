@@ -5549,7 +5549,7 @@ function renderPlatformButtons(drafts, postPackage) {
   target.innerHTML = toggleable.map((platform) => {
     const isActive = activePlatforms.has(platform);
     const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
-    return `<button type="button" class="platform-button${isActive ? " active" : ""}" data-platform-toggle="${escapeHtml(platform)}" title="${escapeHtml(tip)}">${platformIcon(platform)} ${escapeHtml(platformLabel(platform))}</button>`;
+    return `<button type="button" class="platform-button${isActive ? " active" : ""}" data-platform-toggle="${escapeHtml(platform)}" title="${escapeHtml(tip)}">${escapeHtml(platformLabel(platform))}</button>`;
   }).join("");
 }
 
