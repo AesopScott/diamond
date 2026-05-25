@@ -5859,9 +5859,9 @@ function renderPlatformPreview(draft, hidden = false) {
 
 function renderSocialPreview(draft, preflight) {
   const account = preflight.account || accountForDraft(draft);
-  const handle = account?.handle || account?.username || account?.name || "";
-  const displayName = account?.displayName || account?.name || handle || "Your account";
-  const initial = (displayName[0] || "?").toUpperCase();
+  const handle = account?.handle || account?.username || "";
+  const initial = (handle.replace(/^@/, "")[0] || "?").toUpperCase();
+  const displayHandle = handle ? (handle.startsWith("@") ? handle : `@${handle}`) : "No account";
   const stageUrl = draft.stageUrl || "";
   const openLink = stageUrl
     ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
@@ -5876,8 +5876,7 @@ function renderSocialPreview(draft, preflight) {
         <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
         <div class="social-preview-body">
           <div class="social-preview-meta">
-            <strong>${escapeHtml(displayName)}</strong>
-            ${handle ? `<span class="social-preview-handle">${escapeHtml(handle.startsWith("@") ? handle : `@${handle}`)}</span>` : ""}
+            <strong>${escapeHtml(displayHandle)}</strong>
           </div>
           <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
           ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}
