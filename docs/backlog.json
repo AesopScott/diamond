@@ -83,7 +83,7 @@
       "number": 7,
       "title": "Scott workflow signoff on Diamond posting flow",
       "description": "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
-      "category": "Test",
+      "category": "test",
       "priority": 95,
       "status": "build-started",
       "created_at": "2026-05-23",
