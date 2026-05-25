@@ -1312,7 +1312,7 @@ function renderAccountCard(account, selectedAccountId) {
       <span class="platform-mark">${platformIcon(account.platform)}</span>
       <span>
         <strong>${escapeHtml(platformLabel(account.platform))}</strong>
-        <small>${escapeHtml(account.name || account.handle || account.id)}</small>
+        <small>${escapeHtml(account.handle || account.id)}</small>
         <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
       </span>
       <em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>
@@ -1423,18 +1423,7 @@ function renderAccountDetail(account) {
           <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
           <label class="account-handle-label">
-            <span>Name</span>
-            <input
-              class="account-handle-input"
-              data-account-field="name"
-              type="text"
-              value="${escapeHtml(account.name || "")}"
-              placeholder="e.g. The Card Bet"
-              autocomplete="off"
-              spellcheck="false">
-          </label>
-          <label class="account-handle-label">
-            <span>@Username</span>
+            <span>Handle</span>
             <input
               class="account-handle-input"
               data-account-field="handle"
@@ -1779,20 +1768,12 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <div>
           <span class="eyebrow">Logging into</span>
           <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
-          <div class="account-login-identity">
-            <label class="account-handle-label">
-              <span>Name</span>
-              <input class="account-handle-input" data-account-field="name" type="text"
-                value="${escapeHtml(account.name || "")}" placeholder="e.g. The Card Bet"
-                autocomplete="off" spellcheck="false">
-            </label>
-            <label class="account-handle-label">
-              <span>@Username</span>
-              <input class="account-handle-input" data-account-field="handle" type="text"
-                value="${escapeHtml(account.handle || "")}" placeholder="e.g. @25experts"
-                autocomplete="off" spellcheck="false">
-            </label>
-          </div>
+          <label class="account-handle-label account-login-handle">
+            <span>Handle</span>
+            <input class="account-handle-input" data-account-field="handle" type="text"
+              value="${escapeHtml(account.handle || "")}" placeholder="e.g. @25experts"
+              autocomplete="off" spellcheck="false">
+          </label>
           <p class="account-login-safety-note">Use this pane to confirm the account is actually logged in. For brand-new accounts, finish first login in normal Chrome when possible.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(statusMessage)}</span>
@@ -2444,7 +2425,6 @@ async function createSocialAccountForScope(platform) {
     companyId,
     brandId,
     platform,
-    name: "",
     handle,
     accountUrl: plan.accountUrl || defaultUrl,
     loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
@@ -5940,16 +5920,12 @@ function accountLoginName(account) {
 function renderSocialPreview(draft, preflight) {
   const account = preflight.account || accountForDraft(draft);
   const loginName = accountLoginName(account);
-  const displayName = account?.name || "";
-  const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "";
-  const initial = (displayName[0] || loginName?.replace(/^@/, "")[0] || "?").toUpperCase();
+  const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "No account set";
+  const initial = (loginName?.replace(/^@/, "")[0] || "?").toUpperCase();
   const stageUrl = draft.stageUrl || "";
   const openLink = stageUrl
     ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
     : "";
-  const identityHtml = displayName || displayHandle
-    ? `<strong class="social-preview-display-name">${escapeHtml(displayName || displayHandle)}</strong>${displayName && displayHandle ? `<span class="social-preview-handle">${escapeHtml(displayHandle)}</span>` : ""}`
-    : `<span class="social-preview-handle no-account">No account set</span>`;
   return `
     <section class="social-preview" aria-label="Post preview">
       <header class="social-preview-header">
@@ -5960,7 +5936,7 @@ function renderSocialPreview(draft, preflight) {
         <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
         <div class="social-preview-body">
           <div class="social-preview-meta">
-            ${identityHtml}
+            <strong class="social-preview-handle">${escapeHtml(displayHandle)}</strong>
           </div>
           <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
           ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}

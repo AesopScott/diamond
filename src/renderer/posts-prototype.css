@@ -1889,26 +1889,11 @@ select.style-select {
 }
 
 .social-preview-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   margin-bottom: 6px;
 }
 
-.social-preview-display-name {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
 .social-preview-handle {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.social-preview-handle.no-account {
-  font-style: italic;
+  font-size: 14px;
 }
 
 .social-preview-text {
@@ -2594,15 +2579,8 @@ select.style-select {
   text-align: right;
 }
 
-.account-login-identity {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.account-login-handle {
   margin: 8px 0 4px;
-}
-
-.account-login-identity .account-handle-label {
-  flex: 1 1 160px;
   max-width: 280px;
 }
 
