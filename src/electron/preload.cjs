@@ -25,4 +25,5 @@ contextBridge.exposeInMainWorld("diamond", {
   stageWithPlaywright: (input) => ipcRenderer.invoke("diamond:stage-with-playwright", input),
   generatePostDrafts: (payload) => ipcRenderer.invoke("diamond:generate-post-drafts", payload),
   evaluateDraft: (payload) => ipcRenderer.invoke("diamond:evaluate-draft", payload),
+  rewriteDraft: (payload) => ipcRenderer.invoke("diamond:rewrite-draft", payload),
 });

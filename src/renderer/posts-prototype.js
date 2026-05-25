@@ -614,6 +614,7 @@ function wirePrototypeControls() {
   document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
   document.querySelector("#campaign-generate")?.addEventListener("click", requestCampaignGeneration);
+  document.querySelector("#eval-auto-generate")?.addEventListener("click", requestEvaluationAutomation);
   document.querySelector("#detail-evaluate-all")?.addEventListener("click", evaluateAllDrafts);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#post-detail")?.addEventListener("click", (event) => {
@@ -5590,6 +5591,12 @@ function renderPlatformButtons(drafts, postPackage) {
     const hasCampaign = Boolean(postPackage?.campaignId);
     campaignButton.disabled = !(hasActivePlatforms && hasCampaign);
   }
+  const evalAutoButton = document.querySelector("#eval-auto-generate");
+  if (evalAutoButton) {
+    // Enable when platforms are active and at least one draft already has content to evaluate.
+    const hasContent = drafts.some((d) => String(d.text || "").trim().length > 0);
+    evalAutoButton.disabled = !(hasActivePlatforms && hasContent);
+  }
   const evaluateAllButton = document.querySelector("#detail-evaluate-all");
   if (evaluateAllButton) {
     evaluateAllButton.hidden = !hasActivePlatforms;
@@ -6125,6 +6132,7 @@ function renderDraftEvaluation(draft) {
   const hasBase = details.length || draft.riskFlags?.length || draft.qualityDetails?.length;
   const hasLlm = Boolean(llm?.summary);
   if (!hasBase && !hasLlm) return "";
+  const revisedText = draft.llmRevisedText;
   return `
     <div class="platform-evaluation">
       ${hasLlm ? `
@@ -6138,6 +6146,18 @@ function renderDraftEvaluation(draft) {
       ${details.map((detail) => `<span>${escapeHtml(detail)}</span>`).join("")}
       ${draft.riskFlags?.length ? `<span>Risk flags: ${escapeHtml(draft.riskFlags.join(", "))}</span>` : ""}
       ${draft.qualityDetails?.length ? `<p>${escapeHtml(draft.qualityDetails.slice(0, 2).join(" "))}</p>` : ""}
+      ${revisedText ? `
+        <div class="revised-draft">
+          <div class="revised-draft-header">
+            <strong>Suggested Revision</strong>
+            <span class="revised-draft-label">Recommendations applied automatically</span>
+          </div>
+          <textarea class="revised-textarea" rows="5">${escapeHtml(revisedText)}</textarea>
+          <button class="media-button use-revised-btn" type="button"
+            data-platform-action="use-revised"
+            data-platform-draft-id="${escapeHtml(draft.id)}">Use this version</button>
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -6164,6 +6184,20 @@ async function handlePlatformDraftAction(event) {
     } finally {
       button.disabled = false;
       button.textContent = "Evaluate";
+    }
+  }
+  if (action === "use-revised") {
+    // Read from the textarea in case the user edited the suggestion.
+    const panel = button.closest("[data-platform-panel]");
+    const revisedTextarea = panel?.querySelector(".revised-textarea");
+    const revisedText = revisedTextarea ? revisedTextarea.value : draft.llmRevisedText;
+    if (revisedText) {
+      draft.text = revisedText;
+      draft.textSource = "llm-revised";
+      draft.updatedAt = new Date().toISOString();
+      // Clear the suggestion panel — it's now the active draft text.
+      delete draft.llmRevisedText;
+      delete draft.llmRevisedAt;
     }
   }
   if (action === "approve") approvePlatformDraft(draft);
@@ -6480,6 +6514,28 @@ async function requestCampaignGeneration() {
   }
 }
 
+// Evaluation Automation — runs LLM evaluation + auto-rewrite on all active platform drafts.
+async function requestEvaluationAutomation() {
+  if (!activePostPackageId) return;
+  const drafts = prototypeModel.platformDrafts.filter(
+    (draft) => draft.postPackageId === activePostPackageId && String(draft.text || "").trim().length > 0
+  );
+  if (!drafts.length) return;
+  const btn = document.querySelector("#eval-auto-generate");
+  if (btn) { btn.disabled = true; btn.textContent = "Evaluating…"; }
+  try {
+    for (const draft of drafts) {
+      await llmEvaluatePlatformDraft(draft);
+    }
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Evaluation Automation"; }
+  }
+}
+
 function applyGenerationResult(drafts, result, postPackage, fallbackIdea = null) {
   const now = new Date().toISOString();
   // Missing writer key (drafts === null) or an error → renderer template fallback so the page stays usable.
@@ -6695,6 +6751,28 @@ async function llmEvaluatePlatformDraft(draft) {
   }
   draft.evaluatedAt = new Date().toISOString();
   draft.updatedAt = draft.evaluatedAt;
+
+  // Auto-rewrite: apply the evaluation's recommendations to produce a suggested revision.
+  // Skipped when the draft is blocked (no point revising unapprovable content).
+  if ((issues?.length || suggestions?.length) && draft.status !== "blocked") {
+    const rewritePayload = {
+      platform: draft.platform,
+      text: draft.text || "",
+      charLimit: draft.charLimit || null,
+      issues: issues || [],
+      suggestions: suggestions || [],
+      brand: { voice: payload.brand.voice || "" },
+    };
+    try {
+      const rewriteResult = await window.diamond?.rewriteDraft?.(rewritePayload);
+      if (rewriteResult?.ok && rewriteResult?.revisedText) {
+        draft.llmRevisedText = rewriteResult.revisedText;
+        draft.llmRevisedAt = new Date().toISOString();
+      }
+    } catch {
+      // Rewrite failure is non-fatal — evaluation result is still shown.
+    }
+  }
 }
 
 async function evaluateAllDrafts() {

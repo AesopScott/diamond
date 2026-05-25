@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
-const { generatePostDrafts, evaluateDraftWithLlm } = require("../content-generation-llm.cjs");
+const { generatePostDrafts, evaluateDraftWithLlm, rewriteDraftWithSuggestions } = require("../content-generation-llm.cjs");
 
 // Allowed protocols for shell.openExternal — keep attack surface minimal.
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
@@ -270,6 +270,19 @@ ipcMain.handle("diamond:evaluate-draft", async (_event, payload = {}) => {
   } catch (error) {
     console.error("[diamond:evaluate-draft] unexpected error:", error);
     return { ok: false, evaluation: null, error: "Evaluation failed. Check application logs." };
+  }
+});
+ipcMain.handle("diamond:rewrite-draft", async (_event, payload = {}) => {
+  try {
+    const result = await rewriteDraftWithSuggestions(payload);
+    if (result && !result.ok && result.error) {
+      console.error("[diamond:rewrite-draft] error:", result.error);
+      return { ok: false, revisedText: null, error: "Rewrite failed. Check your API keys." };
+    }
+    return result;
+  } catch (error) {
+    console.error("[diamond:rewrite-draft] unexpected error:", error);
+    return { ok: false, revisedText: null, error: "Rewrite failed. Check application logs." };
   }
 });
 ipcMain.handle("diamond:get-firebase-admin-status", () => {

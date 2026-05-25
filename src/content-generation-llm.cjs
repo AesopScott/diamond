@@ -292,14 +292,14 @@ function parseEvaluationContent(content) {
   }
 }
 
-async function callOpenAiWithPrompt(prompt, { key, model, fetchImpl }) {
+async function callOpenAiWithPrompt(prompt, { key, model, fetchImpl, maxTokens = EVALUATOR_MAX_TOKENS }) {
   const doFetch = fetchImpl || fetch;
   const response = await doFetch(OPENAI_URL, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model,
-      max_tokens: EVALUATOR_MAX_TOKENS,
+      max_tokens: maxTokens,
       messages: [
         { role: "system", content: "You are a precise social media content evaluator. Always reply with strict JSON." },
         { role: "user", content: prompt },
@@ -314,6 +314,54 @@ async function callOpenAiWithPrompt(prompt, { key, model, fetchImpl }) {
     : "";
 }
 
+// ─── LLM Draft Rewrite ───────────────────────────────────────────────────────
+//
+// rewriteDraftWithSuggestions takes the original draft + evaluation findings and
+// returns a revised version with all suggestions applied:
+//   { ok: true, revisedText: "..." }
+//   { ok: true, revisedText: null, degraded: "no-reviewer-key" }
+//   { ok: false, revisedText: null, error: "..." }
+
+const REWRITER_MAX_TOKENS = 1024;
+
+async function rewriteDraftWithSuggestions(payload = {}, deps = {}) {
+  const env = deps.env || process.env;
+  const reviewerKey = env.OPENAI_API_KEY;
+  const reviewerModel = env.DIAMOND_REVIEWER_MODEL || DEFAULT_REVIEWER_MODEL;
+
+  if (!reviewerKey && !deps.rewriter) {
+    return { ok: true, revisedText: null, degraded: "no-reviewer-key" };
+  }
+
+  const doRewrite = deps.rewriter
+    || ((prompt) => callOpenAiWithPrompt(prompt, { key: reviewerKey, model: reviewerModel, fetchImpl: deps.fetchImpl, maxTokens: REWRITER_MAX_TOKENS }));
+
+  const prompt = buildRewritePrompt(payload);
+  try {
+    const raw = await doRewrite(prompt);
+    const revisedText = String(raw || "").trim();
+    return { ok: true, revisedText: revisedText || null };
+  } catch (error) {
+    return { ok: false, revisedText: null, error: normalizeError(error) };
+  }
+}
+
+function buildRewritePrompt({ platform, text, issues = [], suggestions = [], brand = {}, charLimit = null }) {
+  const name = platformLabel(platform);
+  const fixList = [
+    ...issues.map((i) => `Fix: ${i}`),
+    ...suggestions.map((s) => `Apply: ${s}`),
+  ];
+  return [
+    `You are a social media copywriter. Revise this ${name} post draft to fix the listed issues and apply the suggestions.`,
+    fixList.length ? `Changes to make:\n${fixList.join("\n")}` : "",
+    brand.voice ? `Brand voice: ${brand.voice}` : "",
+    charLimit ? `Stay under ${charLimit} characters.` : "",
+    `Original draft:\n${text || "(empty)"}`,
+    "Return only the revised post text — no preamble, labels, or explanation.",
+  ].filter(Boolean).join("\n\n");
+}
+
 async function safeText(response) {
   try {
     return await response.text();
@@ -325,6 +373,7 @@ async function safeText(response) {
 module.exports = {
   generatePostDrafts,
   evaluateDraftWithLlm,
+  rewriteDraftWithSuggestions,
   buildWriterPrompt,
   buildReviewerPrompt,
   buildEvaluationPrompt,
