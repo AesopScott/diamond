@@ -332,7 +332,7 @@ wirePrototypeControls();
 async function loadProductionState() {
   const saved = await window.diamond?.getState?.();
   if (saved && typeof saved === "object") return hydrateSavedWorkspace(saved);
-  return buildSampleWorkspace();
+  return createSeedWorkspace();
 }
 
 async function loadOperatorManual() {
