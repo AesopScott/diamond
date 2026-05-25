@@ -288,6 +288,7 @@ const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
 let board = buildPostBoardView(prototypeModel);
 let activePostPackageId = null;
+let activePlatformTab = null; // currently visible platform tab inside the detail view
 let selectedAccountId = state.context?.socialAccountId || null;
 let activePrototypeView = "posts-view";
 let latestFirebaseStatus = null;
@@ -5597,20 +5598,49 @@ function renderPlatformButtons(drafts, postPackage) {
 
 function renderPlatformPreviews(drafts) {
   const target = document.querySelector("#platform-previews");
-  target.innerHTML = drafts.map(renderPlatformPreview).join("");
+  if (!drafts.length) {
+    target.innerHTML = "";
+    activePlatformTab = null;
+    return;
+  }
+  // Preserve the active tab across re-renders; fall back to the first platform.
+  if (!activePlatformTab || !drafts.find((d) => d.platform === activePlatformTab)) {
+    activePlatformTab = drafts[0].platform;
+  }
+  const tabStrip = `
+    <div class="platform-tab-strip" role="tablist" aria-label="Platform drafts">
+      ${drafts.map((draft) => {
+        const isActive = draft.platform === activePlatformTab;
+        const status = draft.status || "draft";
+        return `<button
+          class="platform-tab${isActive ? " active" : ""}"
+          role="tab"
+          aria-selected="${isActive}"
+          data-platform-tab="${escapeHtml(draft.platform)}"
+        >${escapeHtml(platformLabel(draft.platform))}<em class="tab-status ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em></button>`;
+      }).join("")}
+    </div>`;
+  const panels = drafts.map((draft) => {
+    const hidden = draft.platform !== activePlatformTab;
+    return renderPlatformPreview(draft, hidden);
+  }).join("");
+  target.innerHTML = tabStrip + panels;
 }
 
-function renderPlatformPreview(draft) {
+function renderPlatformPreview(draft, hidden = false) {
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
   const charCount = draft.charLimit ? `<span class="char-count">${draft.text.length}/${draft.charLimit}</span>` : "";
+  const status = draft.status || "draft";
+  // "Needs Review" is actionable — render as a button so the user can approve inline.
+  const statusBadge = status === "needs_review"
+    ? `<button class="session-pill needs_review status-action-btn" data-platform-action="approve" data-platform-draft-id="${escapeHtml(draft.id)}" title="Approve this draft">Needs Review ✓</button>`
+    : `<em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>`;
   return `
-    <article class="platform-preview" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}">
+    <article class="platform-preview${hidden ? " hidden" : ""}" data-preview-platform="${escapeHtml(draft.platform)}" data-platform-draft-id="${escapeHtml(draft.id)}" data-platform-panel="${escapeHtml(draft.platform)}">
       <header>
         <div>
-          <strong>${platformIcon(draft.platform)} ${escapeHtml(platformLabel(draft.platform))}</strong>
-          <em class="session-pill ${escapeHtml(draft.status || "draft")}">${escapeHtml(statusLabel(draft.status || "draft"))}</em>
-          <em class="session-pill ${preflight.ok ? "ready" : "needs_login"}">${escapeHtml(preflight.ok ? t("Ready") : t("Needs Attention"))}</em>
+          ${statusBadge}
         </div>
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
@@ -6101,6 +6131,14 @@ function renderDraftEvaluation(draft) {
 }
 
 async function handlePlatformDraftAction(event) {
+  // Tab switching — no async work, just re-render with the new active tab.
+  const tab = event.target.closest("[data-platform-tab]");
+  if (tab) {
+    activePlatformTab = tab.dataset.platformTab;
+    const drafts = prototypeModel.platformDrafts.filter((d) => d.postPackageId === activePostPackageId);
+    renderPlatformPreviews(drafts);
+    return;
+  }
   const button = event.target.closest("[data-platform-action]");
   if (!button) return;
   const draft = prototypeModel.platformDrafts.find((item) => item.id === button.dataset.platformDraftId);

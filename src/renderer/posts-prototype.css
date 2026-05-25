@@ -926,8 +926,75 @@ select.style-select {
 }
 
 .platform-previews {
-  display: grid;
-  gap: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Tab strip */
+.platform-tab-strip {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 0;
+}
+
+.platform-tab {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+  margin-bottom: -1px;
+  padding: 8px 16px 9px;
+  transition: color 0.15s;
+}
+
+.platform-tab:hover { color: var(--text); }
+
+.platform-tab.active {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.tab-status {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 7px;
+}
+
+/* Status-coloured tab badges mirror session-pill colours */
+.tab-status.draft         { background: #3a260b; color: #f0a33a; }
+.tab-status.needs_review  { background: #162640; color: #8bbcff; }
+.tab-status.approved      { background: #12301e; color: #53dc8d; }
+.tab-status.blocked       { background: #351414; color: #ff6969; }
+.tab-status.scheduled     { background: #162640; color: #8bbcff; }
+.tab-status.published     { background: #12301e; color: #53dc8d; }
+
+/* Tab panels — only the active one is shown */
+.platform-preview.hidden { display: none; }
+
+/* Inline approve button styled like the status pill */
+.status-action-btn {
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.status-action-btn:hover {
+  filter: brightness(1.2);
 }
 
 .post-detail h3 {
