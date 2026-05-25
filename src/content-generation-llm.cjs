@@ -353,12 +353,20 @@ function unwrapRewriteText(raw) {
   try {
     const parsed = JSON.parse(raw);
     if (typeof parsed === "string") return parsed.trim();
+    if (Array.isArray(parsed)) {
+      const first = parsed.find((v) => typeof v === "string");
+      return first ? first.trim() : raw;
+    }
     if (typeof parsed === "object" && parsed !== null) {
-      // Check common field names the model uses when it wraps the output.
-      const value = parsed.post || parsed.text || parsed.content || parsed.revised
-        || parsed.draft || parsed.output || parsed.result
-        || (Array.isArray(parsed) ? parsed[0] : null);
-      return typeof value === "string" ? value.trim() : raw;
+      // Try known field names first for speed.
+      const knownKeys = ["post", "text", "content", "revised", "draft", "output", "result",
+        "revisedText", "revisedPostText", "revision", "copy", "message"];
+      for (const key of knownKeys) {
+        if (typeof parsed[key] === "string") return parsed[key].trim();
+      }
+      // Fall back: if there's exactly one string value in the object, use it regardless of key name.
+      const stringValues = Object.values(parsed).filter((v) => typeof v === "string");
+      if (stringValues.length === 1) return stringValues[0].trim();
     }
   } catch {
     // Not valid JSON — return as-is.

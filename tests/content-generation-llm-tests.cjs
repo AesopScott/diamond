@@ -126,6 +126,14 @@ const payload = {
   assert.equal(rewriteAlt.ok, true);
   assert.equal(rewriteAlt.revisedText, "Punchier text.");
 
+  // 11b. Unknown single-key envelope (e.g. revisedPostText) is unwrapped via the single-value fallback.
+  const rewriteUnknownKey = await rewriteDraftWithSuggestions(
+    { platform: "linkedin", text: "Original.", issues: ["Too long"], suggestions: [] },
+    { env: { OPENAI_API_KEY: "k" }, rewriter: async () => JSON.stringify({ revisedPostText: "Shorter version." }) },
+  );
+  assert.equal(rewriteUnknownKey.ok, true);
+  assert.equal(rewriteUnknownKey.revisedText, "Shorter version.");
+
   // 12. rewriteDraftWithSuggestions: no API key → degraded, revisedText null.
   const rewriteNoKey = await rewriteDraftWithSuggestions(
     { platform: "x", text: "Original.", issues: ["Too short"], suggestions: [] },
