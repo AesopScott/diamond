@@ -6049,10 +6049,11 @@ function renderSocialPreview(draft, preflight) {
   const loginName = accountLoginName(account);
   const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "No account set";
   const initial = (loginName?.replace(/^@/, "")[0] || "?").toUpperCase();
-  const stageUrl = draft.stageUrl || "";
-  const openLink = stageUrl
-    ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
-    : "";
+  const openLink = draft.composeBrowserOpen
+    ? ""
+    : draft.stageUrl
+      ? `<button type="button" class="social-preview-open" data-platform-action="stage-browser" data-platform-draft-id="${escapeHtml(draft.id)}" title="Open compose browser">Open compose browser</button>`
+      : "";
   const media = draft.media || [];
   const inspections = mediaInspectionMap(draft);
   const mediaHtml = media.length
@@ -6424,7 +6425,7 @@ function workflowChecklistForDraft(draft, preflight, plan) {
       action: "stage-browser",
       complete: staged,
       detail: "Opens the platform composer with your post pre-filled. Review it, then click Post when ready.",
-      doneDetail: "The browser composer was opened. Use 'Open compose page' in the preview below to return to it.",
+      doneDetail: "The browser composer was opened. Use the 'Open compose browser' button in the preview below to reopen it.",
     },
     {
       label: "Publish manually",
