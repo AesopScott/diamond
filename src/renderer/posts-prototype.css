@@ -997,6 +997,11 @@ select.style-select {
   filter: brightness(1.2);
 }
 
+.draft-evaluate-btn {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
 .post-detail h3 {
   color: var(--muted);
   font-size: 15px;

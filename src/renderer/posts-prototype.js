@@ -5641,6 +5641,7 @@ function renderPlatformPreview(draft, hidden = false) {
       <header>
         <div>
           ${statusBadge}
+          <button class="media-button draft-evaluate-btn" type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
         </div>
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
