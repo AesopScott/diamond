@@ -763,7 +763,6 @@ function wirePrototypeControls() {
   document.querySelector("#posts-board").addEventListener("dragend", clearBoardDragState);
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
-  document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
   document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
   document.querySelector("#platform-buttons")?.addEventListener("click", handlePlatformToggle);
   document.querySelector("#detail-company")?.addEventListener("change", handleDetailCompanyChange);
