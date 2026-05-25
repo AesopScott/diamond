@@ -1422,17 +1422,6 @@ function renderAccountDetail(account) {
         <div>
           <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
-          <label class="account-handle-label">
-            <span>Handle</span>
-            <input
-              class="account-handle-input"
-              data-account-field="handle"
-              type="text"
-              value="${escapeHtml(account.handle || "")}"
-              placeholder="e.g. @25experts"
-              autocomplete="off"
-              spellcheck="false">
-          </label>
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</em>
       </header>
@@ -2657,6 +2646,22 @@ function dashlanePayloadForAccount(account) {
 }
 
 async function handleAccountDetailChange(event) {
+  // Inline account field editing (e.g. the Handle input in the browser pane header)
+  const accountField = event.target.closest("[data-account-field]");
+  if (accountField) {
+    const account = (state.socialAccounts || []).find((a) => a.id === selectedAccountId);
+    if (account) {
+      const key = accountField.dataset.accountField;
+      const val = accountField.value || "";
+      account[key] = val;
+      account.updatedAt = new Date().toISOString();
+      await saveProductionState();
+      renderAccounts(account.id);
+      renderOperatorDrawer();
+    }
+    return;
+  }
+
   const field = event.target.closest("[data-login-scope-field]");
   if (!field) return;
   if (field.dataset.loginScopeField === "companyId") {
