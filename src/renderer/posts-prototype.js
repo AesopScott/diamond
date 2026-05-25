@@ -552,11 +552,6 @@ function renderCard(post) {
       <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
       ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(statusLabel(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>${escapeHtml(t("Platform Not Set"))}</span></div>`}
       ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-      <div class="post-card-actions" aria-label="Move post">
-        ${boardMoveStatuses(post.status).map((status) => `
-          <button type="button" data-board-action="move" data-package-id="${escapeHtml(post.id)}" data-next-status="${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</button>
-        `).join("")}
-      </div>
     </article>
   `;
 }
