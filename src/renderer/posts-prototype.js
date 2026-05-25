@@ -5422,7 +5422,7 @@ async function openCreateDetail() {
     brandGuidanceSummary: guidance.summary,
     campaignGuidanceModules: guidance.campaignModules,
     campaignGuidanceSummary: guidance.campaignSummary,
-    tags: ["draft"],
+    tags: [],
     source: "diamond-shell",
     createdAt: now,
     updatedAt: now,
