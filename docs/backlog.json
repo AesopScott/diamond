@@ -1,136 +1,136 @@
 {
-  "tasks": [
-    {
-      "number": 1,
-      "title": "Build the 25 experts automation engine.",
-      "description": "Build the engine that will take the videos that have been synced to Aesop Academy courses and create new content for all social media platforms, and build a schedule to share them.",
-      "category": "feature",
-      "priority": 80,
-      "status": "backlog",
-      "created_at": "2026-05-19",
-      "completed_at": null,
-      "dependencies": []
-    },
-    {
-      "number": 2,
-      "title": "Complete repeated X staging proof across three separate app sessions",
-      "description": "Record three real X staging proof sessions from separate Diamond app launches. Each session must capture: session ID, timestamp, account, draft text, screenshot, URL, and result. This is a required gate before platform expansion.",
-      "category": "test",
-      "priority": 95,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        1
-      ]
-    },
-    {
-      "number": 3,
-      "title": "Complete Instagram, TikTok, Facebook, and LinkedIn routine automation",
-      "description": "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
-      "category": "feature",
-      "priority": 85,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        1
-      ],
-      "impact": "standard"
-    },
-    {
-      "number": 4,
-      "title": "Complete YouTube Shorts and Facebook routine automation",
-      "description": "Wire assisted composer and media upload proofs for YouTube Shorts and Facebook. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
-      "category": "feature",
-      "priority": 85,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        1
-      ]
-    },
-    {
-      "number": 5,
-      "title": "Complete repeated staging proof for each writable platform",
-      "description": "Run and record staging proofs for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook. Each platform must have successful staging records from separate app sessions before expanding automation further.",
-      "category": "test",
-      "priority": 85,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        3,
-        4
-      ]
-    },
-    {
-      "number": 6,
-      "title": "Complete user guide review after first full operator session",
-      "description": "In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. Conduct a full operator session with Diamond and review guide completeness, accuracy, and clarity.",
-      "category": "docs",
-      "priority": 80,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        1,
-        2
-      ]
-    },
-    {
-      "number": 7,
-      "title": "Scott workflow signoff on Diamond posting flow",
-      "description": "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
-      "category": "test",
-      "priority": 95,
-      "status": "build-started",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        2,
-        5,
-        6
-      ],
-      "impact": "standard"
-    },
-    {
-      "number": 8,
-      "title": "Finalize auto_publish policy and make go/no-go decision",
-      "description": "After repeated staging proof, expert checklist, and Scott workflow signoff are complete, make an explicit product decision on whether auto_publish should ever become enabled. Document the decision and any conditions that must be met before enablement.",
-      "category": "feature",
-      "priority": 80,
-      "status": "backlog",
-      "created_at": "2026-05-23",
-      "completed_at": null,
-      "dependencies": [
-        7
-      ]
-    },
-    {
-      "number": 9,
-      "title": "build image generation",
-      "description": "Connect to an image generation service and connect to Diamond.\nAdd ability to turn on automatic image creation for posts at campaign level and in new posts UI\nAdd image generation option per campaign per platform\nadd campaign guidance for image generation prompt",
-      "category": "feature",
-      "priority": 90,
-      "impact": "standard",
-      "status": "pr-reviewed",
-      "created_at": "2026-05-25",
-      "completed_at": null,
-      "dependencies": []
-    },
-    {
-      "number": 10,
-      "title": "build video generation feature",
-      "description": "Connect to an video generation service and connect to Diamond.\nAdd ability to turn on automatic video creation for posts at campaign level and in new posts UI\nAdd video generation option per campaign per platform\nadd campaign guidance for video generation prompt",
-      "category": "feature",
-      "priority": 90,
-      "impact": "standard",
-      "status": "cba-complete",
-      "created_at": "2026-05-25",
-      "completed_at": null,
-      "dependencies": []
-    }
-  ]
+    "tasks": [
+        {
+            "number": 1,
+            "title": "Build the 25 experts automation engine.",
+            "description": "Build the engine that will take the videos that have been synced to Aesop Academy courses and create new content for all social media platforms, and build a schedule to share them.",
+            "category": "feature",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-19",
+            "completed_at": null,
+            "dependencies": []
+        },
+        {
+            "number": 2,
+            "title": "Complete repeated X staging proof across three separate app sessions",
+            "description": "Record three real X staging proof sessions from separate Diamond app launches. Each session must capture: session ID, timestamp, account, draft text, screenshot, URL, and result. This is a required gate before platform expansion.",
+            "category": "test",
+            "priority": 95,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ]
+        },
+        {
+            "number": 3,
+            "title": "Complete Instagram, TikTok, Facebook, and LinkedIn routine automation",
+            "description": "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+            "category": "feature",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ],
+            "impact": "standard"
+        },
+        {
+            "number": 4,
+            "title": "Complete YouTube Shorts and Facebook routine automation",
+            "description": "Wire assisted composer and media upload proofs for YouTube Shorts and Facebook. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+            "category": "feature",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ]
+        },
+        {
+            "number": 5,
+            "title": "Complete repeated staging proof for each writable platform",
+            "description": "Run and record staging proofs for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook. Each platform must have successful staging records from separate app sessions before expanding automation further.",
+            "category": "test",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                3,
+                4
+            ]
+        },
+        {
+            "number": 6,
+            "title": "Complete user guide review after first full operator session",
+            "description": "In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. Conduct a full operator session with Diamond and review guide completeness, accuracy, and clarity.",
+            "category": "docs",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1,
+                2
+            ]
+        },
+        {
+            "number": 7,
+            "title": "Scott workflow signoff on Diamond posting flow",
+            "description": "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
+            "category": "test",
+            "priority": 95,
+            "status": "build-started",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                2,
+                5,
+                6
+            ],
+            "impact": "standard"
+        },
+        {
+            "number": 8,
+            "title": "Finalize auto_publish policy and make go/no-go decision",
+            "description": "After repeated staging proof, expert checklist, and Scott workflow signoff are complete, make an explicit product decision on whether auto_publish should ever become enabled. Document the decision and any conditions that must be met before enablement.",
+            "category": "feature",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                7
+            ]
+        },
+        {
+            "number": 9,
+            "title": "build image generation",
+            "description": "Connect to an image generation service and connect to Diamond.\nAdd ability to turn on automatic image creation for posts at campaign level and in new posts UI\nAdd image generation option per campaign per platform\nadd campaign guidance for image generation prompt",
+            "category": "feature",
+            "priority": 90,
+            "impact": "standard",
+            "status": "pr-reviewed",
+            "created_at": "2026-05-25",
+            "completed_at": null,
+            "dependencies": []
+        },
+        {
+            "number": 10,
+            "title": "build video generation feature",
+            "description": "Connect to an video generation service and connect to Diamond.\nAdd ability to turn on automatic video creation for posts at campaign level and in new posts UI\nAdd video generation option per campaign per platform\nadd campaign guidance for video generation prompt",
+            "category": "feature",
+            "priority": 90,
+            "impact": "standard",
+            "status": "production",
+            "created_at": "2026-05-25",
+            "completed_at": "2026-05-25",
+            "dependencies": []
+        }
+    ]
 }

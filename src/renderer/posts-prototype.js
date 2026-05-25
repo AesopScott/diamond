@@ -64,10 +64,6 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
-import {
-  VIDEO_SPECS_BY_PLATFORM,
-  VIDEO_QUALITY_LEVELS,
-} from "../constants.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -1276,7 +1272,7 @@ function accountsForScope(companyId, brandId) {
 }
 
 function renderAccountPlatformStatusBoard(companyId, brandId, accounts = [], selectedAccountId = "") {
-  const scopedLabel = `${companyName(companyId)} / ${brandName(brandId)}`;
+  const scopedLabel = companyName(companyId);
   return `
     <section class="account-platform-status-board" aria-label="Platform login status">
       <header>
@@ -1317,7 +1313,7 @@ function renderAccountCard(account, selectedAccountId) {
       <span>
         <strong>${escapeHtml(platformLabel(account.platform))}</strong>
         <small>${escapeHtml(account.handle || account.id)}</small>
-        <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
+        <small>${escapeHtml(company)}</small>
       </span>
       <em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>
     </button>
@@ -1426,7 +1422,6 @@ function renderAccountDetail(account) {
         <div>
           <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
-          <p>${escapeHtml(account.handle || "Add the username for this account")}</p>
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</em>
       </header>
@@ -1444,7 +1439,7 @@ function renderAccountDetail(account) {
         </div>
         <div>
           <span class="eyebrow">Public page</span>
-          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(account.handle || platformLabel(account.platform))}</a>` : "Not set"}</strong>
+          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(accountLoginName(account) || platformLabel(account.platform))}</a>` : "Not set"}</strong>
         </div>
       </section>
       <details class="account-advanced-panel">
@@ -1761,15 +1756,19 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       <header>
         <div>
           <span class="eyebrow">Logging into</span>
-          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
-          <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
-          <p class="account-login-safety-note">For brand-new social accounts, finish first login in normal Chrome when possible. Diamond rate-limits login controls so platforms do not see rapid repeated login checks.</p>
+          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))}</h3>
+          <label class="account-handle-label account-login-handle">
+            <span>Handle</span>
+            <input class="account-handle-input" data-account-field="handle" type="text"
+              value="${escapeHtml(account.handle || "")}" placeholder="e.g. @25experts"
+              autocomplete="off" spellcheck="false">
+          </label>
+          <p class="account-login-safety-note">Use this pane to confirm the account is actually logged in. For brand-new accounts, finish first login in normal Chrome when possible.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(statusMessage)}</span>
       </header>
       <section class="account-login-context" aria-label="Selected account context">
         <label><span>Company</span><select data-login-scope-field="companyId">${companyOptions(account.companyId)}</select></label>
-        <label><span>Brand</span><select data-login-scope-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></label>
         <label><span>Account</span><select data-login-scope-field="accountId">${accountOptions(account.companyId, account.brandId, account.id)}</select></label>
         <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
       </section>
@@ -2404,20 +2403,21 @@ async function createSocialAccountForScope(platform) {
     company,
     brand,
     platform,
-    desiredHandle: brand?.name || company?.name || platform,
+    desiredHandle: "",
   });
-  const handle = plan.desiredHandle || brand?.name || company?.name || platform;
-  const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
+  const handle = "";
+  const id = normalizeId(`${brandId}-${platform}-${Date.now()}`, "socialAccountId");
+  const defaultUrl = normalizeAccountUrl("", platform);
   const account = {
     id,
     companyId,
     brandId,
     platform,
     handle,
-    accountUrl: plan.accountUrl || normalizeAccountUrl(handle, platform),
+    accountUrl: plan.accountUrl || defaultUrl,
     loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
     composeUrl: plan.composeUrl || normalizeComposeUrl("", platform),
-    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || normalizeAccountUrl(handle, platform)),
+    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || defaultUrl),
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
@@ -2646,6 +2646,22 @@ function dashlanePayloadForAccount(account) {
 }
 
 async function handleAccountDetailChange(event) {
+  // Inline account field editing (e.g. the Handle input in the browser pane header)
+  const accountField = event.target.closest("[data-account-field]");
+  if (accountField) {
+    const account = (state.socialAccounts || []).find((a) => a.id === selectedAccountId);
+    if (account) {
+      const key = accountField.dataset.accountField;
+      const val = accountField.value || "";
+      account[key] = val;
+      account.updatedAt = new Date().toISOString();
+      await saveProductionState();
+      renderAccounts(account.id);
+      renderOperatorDrawer();
+    }
+    return;
+  }
+
   const field = event.target.closest("[data-login-scope-field]");
   if (!field) return;
   if (field.dataset.loginScopeField === "companyId") {
@@ -3207,31 +3223,7 @@ function renderCampaigns() {
           <div><dt>Campaign name</dt><dd><input data-campaign-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
           <div><dt>Status</dt><dd><input data-campaign-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
           <div><dt>Post tags</dt><dd><input data-campaign-field="campaignPostTags" type="text" placeholder="comma-separated, locked on posts" value="${escapeHtml((campaign.postTags || []).join(", "))}"></dd></div>
-          <div><dt>Video generation enabled</dt><dd><input data-campaign-field="videoGenerationEnabled" type="checkbox" ${campaign.videoGenerationEnabled ? "checked" : ""}></dd></div>
-          <div><dt>Video quality</dt><dd><select data-campaign-field="videoQualitySize">${["low", "medium", "high"].map((level) => `<option value="${level}" ${campaign.videoQualitySize === level ? "selected" : ""}>${level}</option>`).join("")}</select></dd></div>
-          <div><dt>Video prompt guidance</dt><dd><textarea data-campaign-field="videoPromptGuidance" rows="3" placeholder="Guidance for video generation prompts">${escapeHtml(campaign.videoPromptGuidance || "")}</textarea></dd></div>
         </dl>
-        ${campaign.videoGenerationEnabled ? `
-          <section style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ccc;">
-            <h4 style="margin: 0.5rem 0;">Platform Video Settings</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
-              ${Object.entries(VIDEO_SPECS_BY_PLATFORM).map(([platform, spec]) => {
-                const platformConfig = campaign.videoGenerationPlatforms?.[platform] || spec;
-                return `
-                  <div style="padding: 0.5rem; border: 1px solid #eee; border-radius: 4px;">
-                    <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
-                      <input type="checkbox" data-platform-video-field="${platform}" ${platformConfig.enabled ? "checked" : ""}>
-                      <span style="font-weight: 500;">${platform}</span>
-                    </label>
-                    <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
-                      ${spec.videoDurationSeconds}s • ${spec.aspectRatio}
-                    </div>
-                  </div>
-                `;
-              }).join("")}
-            </div>
-          </section>
-        ` : ""}
         <section class="account-actions" aria-label="Campaign actions">
           <button type="button" data-campaign-action="save">Save campaign</button>
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
@@ -3271,18 +3263,33 @@ function renderEditableCampaignPanel(title, field, items = [], placeholder = "")
 
 async function handleCampaignWorkspaceChange(event) {
   const field = event.target.closest("[data-campaign-field]");
-  if (!field || !["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
-  if (field.dataset.campaignField === "contextBrandId") {
-    const brandId = normalizeId(field.value, "brandId");
-    const brand = (state.brands || []).find((item) => item.id === brandId) || {};
-    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
-    state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+  if (field && ["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) {
+    if (field.dataset.campaignField === "contextBrandId") {
+      const brandId = normalizeId(field.value, "brandId");
+      const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+      const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
+      state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+    }
+    if (field.dataset.campaignField === "contextCampaignId") {
+      state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+    }
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  if (field.dataset.campaignField === "contextCampaignId") {
-    state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+  const platformToggle = event.target.closest("[data-platform-video-field]");
+  if (platformToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  await saveProductionState();
-  renderCampaigns();
+  if (field && ["videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
 }
 
 async function handleCampaignWorkspaceClick(event) {
@@ -3396,6 +3403,7 @@ async function deleteSelectedCampaign() {
 function saveCampaignWorkspace() {
   const workspace = document.querySelector("#campaign-workspace");
   const valueFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.value || "";
+  const checkedFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.checked || false;
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
   const brand = (state.brands || []).find((item) => item.id === brandId) || {};
   const companyId = brand.companyId || state.context?.companyId || "";
@@ -3407,6 +3415,19 @@ function saveCampaignWorkspace() {
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    campaign.videoGenerationEnabled = checkedFor("videoGenerationEnabled");
+    campaign.videoQualitySize = valueFor("videoQualitySize") || campaign.videoQualitySize || "high";
+    campaign.videoPromptGuidance = valueFor("videoPromptGuidance") || campaign.videoPromptGuidance || "";
+    campaign.videoGenerationPlatforms = campaign.videoGenerationPlatforms || { ...VIDEO_SPECS_BY_PLATFORM };
+    Object.keys(campaign.videoGenerationPlatforms).forEach((platform) => {
+      const checkbox = workspace?.querySelector(`[data-platform-video-field="${platform}"]`);
+      if (checkbox) {
+        campaign.videoGenerationPlatforms[platform] = {
+          ...campaign.videoGenerationPlatforms[platform],
+          enabled: checkbox.checked,
+        };
+      }
+    });
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
@@ -5885,14 +5906,46 @@ function renderPlatformPreview(draft, hidden = false) {
   `;
 }
 
+function accountLoginName(account) {
+  // Handle is explicitly set by the user in the Handle field.
+  // Do not extract from accountUrl — the URL changes as they browse
+  // and would produce wrong values (e.g. "home", "settings", or old
+  // brand-derived slugs that were stored there before v0.1.68).
+  return account?.handle || "";
+}
+
+function localFileUrl(filePath) {
+  // Convert a local filesystem path to a file:// URL for use in <img src>.
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  const withSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return `file://${withSlash}`;
+}
+
 function renderSocialPreview(draft, preflight) {
   const account = preflight.account || accountForDraft(draft);
-  const handle = account?.handle || account?.username || "";
-  const initial = (handle.replace(/^@/, "")[0] || "?").toUpperCase();
-  const displayHandle = handle ? (handle.startsWith("@") ? handle : `@${handle}`) : "No account";
+  const loginName = accountLoginName(account);
+  const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "No account set";
+  const initial = (loginName?.replace(/^@/, "")[0] || "?").toUpperCase();
   const stageUrl = draft.stageUrl || "";
   const openLink = stageUrl
     ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
+    : "";
+  const media = draft.media || [];
+  const inspections = mediaInspectionMap(draft);
+  const mediaHtml = media.length
+    ? `<div class="social-preview-media">
+        ${media.slice(0, 4).map((filePath) => {
+          const item = inspections.get(filePath) || mediaPathFallback(filePath);
+          if (item.kind === "image") {
+            return `<img class="social-preview-thumb" src="${escapeHtml(localFileUrl(filePath))}" alt="${escapeHtml(item.name)}" loading="lazy">`;
+          }
+          if (item.kind === "video") {
+            return `<div class="social-preview-thumb social-preview-video-thumb" title="${escapeHtml(item.name)}">▶ ${escapeHtml(item.name)}</div>`;
+          }
+          return `<div class="social-preview-thumb social-preview-file-thumb" title="${escapeHtml(item.name)}">📎 ${escapeHtml(item.name)}</div>`;
+        }).join("")}
+        ${media.length > 4 ? `<div class="social-preview-media-overflow">+${media.length - 4} more</div>` : ""}
+      </div>`
     : "";
   return `
     <section class="social-preview" aria-label="Post preview">
@@ -5904,10 +5957,10 @@ function renderSocialPreview(draft, preflight) {
         <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
         <div class="social-preview-body">
           <div class="social-preview-meta">
-            <strong>${escapeHtml(displayHandle)}</strong>
+            <strong class="social-preview-handle">${escapeHtml(displayHandle)}</strong>
           </div>
           <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
-          ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}
+          ${mediaHtml}
         </div>
       </div>
     </section>
@@ -6373,7 +6426,7 @@ function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)
   const account = accountForDraft(draft);
   const rows = [
     ["Platform", platformLabel(draft.platform)],
-    ["Account", account?.handle || account?.id || "Missing"],
+    ["Account", accountLoginName(account) || account?.id || "Missing"],
     ["Session", statusLabel(account?.sessionStatus || "unknown")],
     ["Approval", statusLabel(draft.status || "draft")],
     ["Schedule", draft.scheduledAt ? formatDateTime(draft.scheduledAt) : "Not scheduled"],

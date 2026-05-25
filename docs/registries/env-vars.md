@@ -108,7 +108,7 @@ Sender email for video generation failure notifications.
 **Default:** `noreply@diamond.local`
 
 **Consumers**
-- `src/video-notification-handler.js` — failure notifications
+- `src/video-error-handler.js` — failure notifications
 
 **Status:** ⚠ NEW — task #10
 
@@ -123,9 +123,25 @@ Email service provider.
 **Default:** `sendgrid`
 
 **Consumers**
-- `src/video-notification-handler.js` — routes to email service
+- `src/video-error-handler.js` — routes to email service
 
 **Status:** ⚠ NEW — task #10
+
+---
+
+### `SENDGRID_API_KEY`
+
+SendGrid API key for sending video error notification emails.
+
+**Type:** string (secret)  
+**Required:** yes (if `NOTIFICATION_EMAIL_SERVICE=sendgrid`)  
+**Default:** (none)  
+**Location:** .env.local or production secret manager
+
+**Consumers**
+- `src/video-error-handler.js` — Authorization header for SendGrid API calls
+
+**Status:** ✅ NEW — task #10
 
 ---
 

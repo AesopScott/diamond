@@ -575,12 +575,23 @@ ipcMain.handle("diamond:inspect-media", (_event, paths = []) => {
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();
   const { stagePostWithPlaywright } = await import(pathToFileURL(path.join(PROJECT_ROOT, "src", "playwright-worker.js")).href);
+  // Point Playwright at the same Electron partition directory so it reuses
+  // the existing login session — no second login prompt for the user.
+  const partitionId = sanitizePartitionPart(
+    input.account?.browserPartitionId ||
+    input.context?.browserProfileId ||
+    input.account?.browserProfileId
+  );
+  const electronPartitionDir = partitionId
+    ? path.join(APP_DIR, "Partitions", partitionId)
+    : null;
   return stagePostWithPlaywright({
     ...input,
     appDir: APP_DIR,
     screenshotsDir: path.join(APP_DIR, "screenshots"),
     headless: false,
     keepOpen: true,
+    ...(electronPartitionDir ? { profilePath: electronPartitionDir } : {}),
   });
 });
 
