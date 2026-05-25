@@ -5902,18 +5902,11 @@ function renderPlatformPreview(draft, hidden = false) {
 }
 
 function accountLoginName(account) {
-  // 1. Explicitly-set handle field — user typed this directly, most reliable.
-  if (account?.handle) return account.handle;
-  // 2. Extract username from accountUrl (e.g. https://x.com/25experts → 25experts).
-  const url = account?.accountUrl || "";
-  if (url) {
-    try {
-      const { pathname } = new URL(url);
-      const cleaned = pathname.replace(/^\/(company|in|user|profile)\//i, "/").replace(/^\//, "").split("/")[0];
-      if (cleaned) return cleaned;
-    } catch (_) { /* invalid URL — fall through */ }
-  }
-  return account?.username || "";
+  // Handle is explicitly set by the user in the Handle field.
+  // Do not extract from accountUrl — the URL changes as they browse
+  // and would produce wrong values (e.g. "home", "settings", or old
+  // brand-derived slugs that were stored there before v0.1.68).
+  return account?.handle || "";
 }
 
 function renderSocialPreview(draft, preflight) {
