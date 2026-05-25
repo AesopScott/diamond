@@ -2584,6 +2584,23 @@ select.style-select {
   font-weight: 900;
   min-height: 42px;
   padding: 8px 10px;
+  transition: background 0.1s, border-color 0.1s, box-shadow 0.07s, transform 0.07s;
+}
+
+.account-actions button:hover {
+  background: color-mix(in srgb, var(--surface-2) 75%, #ffffff 25%);
+  border-color: color-mix(in srgb, var(--line) 50%, #ffffff 50%);
+}
+
+.account-actions button:active {
+  background: color-mix(in srgb, var(--surface-2) 85%, #000000 15%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  transform: translateY(1px);
+}
+
+.account-actions button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .account-login-actions {
@@ -2858,6 +2875,12 @@ select.style-select {
 .danger-action:focus-visible {
   background: rgba(239, 80, 72, 0.16);
   border-color: rgba(239, 80, 72, 0.8);
+}
+
+.danger-action:active {
+  background: rgba(239, 80, 72, 0.28);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+  transform: translateY(1px);
 }
 
 .strategy-card h3 {
