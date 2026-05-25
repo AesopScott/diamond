@@ -42,14 +42,30 @@ Per-campaign video generation configuration.
 
 ## `postVideoOverrides` (NEW for Task #10)
 
-Per-post overrides to campaign video defaults (at post level, not campaign level).
+Per-post overrides to campaign video generation defaults. Stored at post level (in `postDrafts` collection).
 
-**Semantics:**
-- `null` = use campaign default
-- `true` = force enable
-- `false` = force disable
+**Type:** object (optional, default: all fields null = use campaign defaults)
 
-**Type:** object (optional)
+**Schema:**
+```typescript
+{
+  videoGenerationOverride: boolean | null          // null = use campaign default, true = force on, false = force off
+  videoGenerationPlatforms?: {
+    [platformName: string]: {
+      enabled: boolean | null                      // null = use campaign default
+      videoDurationSeconds?: number                // Override duration if non-null
+      promptOverride?: string                      // Custom prompt per platform
+    }
+  }
+  videoQualitySizeOverride?: 'low' | 'medium' | 'high' | null
+  videoPromptOverride?: string                     // Custom prompt for entire post
+}
+```
+
+**Constraints:**
+- Platform keys must match `PLATFORMS` constant
+- `null` in any field means "inherit campaign value"
+- `true`/`false` explicitly overrides campaign setting
 
 **Producers**
 - `src/renderer/posts-prototype.js` — post creation form
