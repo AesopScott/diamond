@@ -294,10 +294,11 @@ const DRAFT_BOARD_COLUMNS = [
   { id: "published",    label: "Published" },
   { id: "failed",       label: "Failed" },
 ];
-let board = buildPlatformDraftBoardView(prototypeModel, "all");
+let activeBoardPlatformFilter = new Set(); // empty = all platforms
+let activeBoardCompanyFilter  = new Set(); // empty = all companies
+let board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
 let activePostPackageId = null;
 let activePlatformTab = null; // currently visible platform tab inside the detail view
-let activeBoardPlatformFilter = "all"; // "all" | platform string
 let selectedAccountId = state.context?.socialAccountId || null;
 let activePrototypeView = "posts-view";
 let latestFirebaseStatus = null;
@@ -334,11 +335,16 @@ function draftColumnForStatus(status) {
   return DRAFT_BOARD_COLUMNS.some((c) => c.id === s) ? s : "draft";
 }
 
-function buildPlatformDraftBoardView(model, platformFilter = "all") {
-  const drafts = (model.platformDrafts || []).filter((d) =>
-    platformFilter === "all" || d.platform === platformFilter
-  );
+function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyFilter = new Set()) {
   const packageMap = new Map((model.postPackages || []).map((p) => [p.id, p]));
+  const drafts = (model.platformDrafts || []).filter((d) => {
+    if (platformFilter.size > 0 && !platformFilter.has(d.platform)) return false;
+    if (companyFilter.size > 0) {
+      const pkg = packageMap.get(d.postPackageId);
+      if (!pkg || !companyFilter.has(pkg.context?.companyId)) return false;
+    }
+    return true;
+  });
   const columns = DRAFT_BOARD_COLUMNS.map((col) => ({ ...col, posts: [] }));
   const columnMap = new Map(columns.map((col) => [col.id, col]));
   drafts.forEach((draft) => {
@@ -444,13 +450,13 @@ function buildProductionPostModel(workspace) {
 async function saveProductionState() {
   state.postPackages = prototypeModel.postPackages;
   state.platformDrafts = prototypeModel.platformDrafts;
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await window.diamond?.saveState?.(state);
 }
 
 async function refreshProductionBoard() {
   prototypeModel = buildProductionPostModel(state);
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   renderBoard(board);
 }
 
@@ -580,7 +586,7 @@ function renderBoard(columns) {
   document.querySelector("#posts-board").classList.remove("hidden");
   document.querySelector(".prototype-toolbar").classList.remove("hidden");
   document.querySelector("#post-detail").classList.add("hidden");
-  renderBoardPlatformFilter();
+  renderBoardFilters();
   const target = document.querySelector("#posts-board");
   target.innerHTML = columns.map((column) => `
     <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}" data-board-status="${escapeHtml(column.id)}">
@@ -595,18 +601,53 @@ function renderBoard(columns) {
   `).join("");
 }
 
-function renderBoardPlatformFilter() {
+function renderBoardFilters() {
   const toolbar = document.querySelector(".prototype-toolbar");
   if (!toolbar) return;
+
+  // Derive companies and platforms present in current drafts
+  const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
+  const companyIds = [...new Set(
+    (prototypeModel.platformDrafts || [])
+      .map((d) => pkgMap.get(d.postPackageId)?.context?.companyId)
+      .filter(Boolean)
+  )];
   const platforms = [...new Set(
-    prototypeModel.platformDrafts.map((d) => d.platform).filter(Boolean)
+    (prototypeModel.platformDrafts || []).map((d) => d.platform).filter(Boolean)
   )].sort();
-  toolbar.innerHTML = [
-    `<button type="button" class="filter-pill${activeBoardPlatformFilter === "all" ? " active" : ""}" data-platform-filter="all">All</button>`,
-    ...platforms.map((p) =>
-      `<button type="button" class="filter-pill${activeBoardPlatformFilter === p ? " active" : ""}" data-platform-filter="${escapeHtml(p)}">${escapeHtml(platformLabel(p))}</button>`
-    ),
-  ].join("");
+
+  const parts = [];
+
+  // Company row — only shown when there are 2+ distinct companies
+  if (companyIds.length >= 2) {
+    parts.push(`<span class="filter-group-label">Companies</span>`);
+    parts.push(
+      `<button type="button" class="filter-pill${activeBoardCompanyFilter.size === 0 ? " active" : ""}" data-company-filter="all">All</button>`
+    );
+    for (const id of companyIds) {
+      const co = (state.companies || []).find((c) => c.id === id);
+      const name = co?.name || id;
+      const isActive = activeBoardCompanyFilter.has(id);
+      parts.push(
+        `<button type="button" class="filter-pill${isActive ? " active" : ""}" data-company-filter="${escapeHtml(id)}">${escapeHtml(name)}</button>`
+      );
+    }
+    parts.push(`<div class="filter-break"></div>`);
+  }
+
+  // Platform row
+  parts.push(`<span class="filter-group-label">Platforms</span>`);
+  parts.push(
+    `<button type="button" class="filter-pill${activeBoardPlatformFilter.size === 0 ? " active" : ""}" data-platform-filter="all">All</button>`
+  );
+  for (const p of platforms) {
+    const isActive = activeBoardPlatformFilter.has(p);
+    parts.push(
+      `<button type="button" class="filter-pill${isActive ? " active" : ""}" data-platform-filter="${escapeHtml(p)}">${escapeHtml(platformLabel(p))}</button>`
+    );
+  }
+
+  toolbar.innerHTML = parts.join("");
 }
 
 function renderCard(card) {
@@ -658,10 +699,28 @@ function wirePrototypeControls() {
   document.querySelector("#add-template-record")?.addEventListener("click", addTemplateRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
   document.querySelector(".prototype-toolbar")?.addEventListener("click", (event) => {
-    const pill = event.target.closest("[data-platform-filter]");
+    const pill = event.target.closest("[data-platform-filter], [data-company-filter]");
     if (!pill) return;
-    activeBoardPlatformFilter = pill.dataset.platformFilter;
-    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+    if (pill.dataset.platformFilter !== undefined) {
+      const val = pill.dataset.platformFilter;
+      if (val === "all") {
+        activeBoardPlatformFilter = new Set();
+      } else {
+        const next = new Set(activeBoardPlatformFilter);
+        if (next.has(val)) { next.delete(val); } else { next.add(val); }
+        activeBoardPlatformFilter = next;
+      }
+    } else if (pill.dataset.companyFilter !== undefined) {
+      const val = pill.dataset.companyFilter;
+      if (val === "all") {
+        activeBoardCompanyFilter = new Set();
+      } else {
+        const next = new Set(activeBoardCompanyFilter);
+        if (next.has(val)) { next.delete(val); } else { next.add(val); }
+        activeBoardCompanyFilter = next;
+      }
+    }
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
     renderBoard(board);
   });
   document.querySelector("#posts-board").addEventListener("click", (event) => {
@@ -802,7 +861,7 @@ function destroyAccountLoginWebview() {
 }
 
 async function refreshProductionViews() {
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   renderAccounts(selectedAccountId);
   renderCompanies();
   renderBrands();
@@ -907,7 +966,7 @@ async function movePostPackageToStatus(packageId, nextStatus) {
     run.updatedAt = now;
   });
   prototypeModel = buildProductionPostModel(state);
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
@@ -929,7 +988,7 @@ async function movePlatformDraftToStatus(packageId, platform, nextStatus) {
     stateDraft.updatedAt = now;
   }
   updatePostPackageFromDrafts(packageId);
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await saveProductionState();
   renderBoard(board);
 }
@@ -947,7 +1006,7 @@ async function deletePostPackage(packageId) {
   state.scheduledPosts = (state.scheduledPosts || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   state.postRuns = (state.postRuns || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   prototypeModel = buildProductionPostModel(state);
-  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
@@ -3878,7 +3937,7 @@ async function handleSettingsChange(event) {
     state.operatorLanguage = normalizeOperatorLanguage(field.value);
     applyOperatorLanguage();
     await saveProductionState();
-    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter, activeBoardCompanyFilter));
     renderCalendar();
     renderAnalytics();
     renderTemplates();
@@ -3891,7 +3950,7 @@ async function handleSettingsChange(event) {
     state.beginnerMode = field.checked;
     applyBeginnerMode();
     await saveProductionState();
-    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter, activeBoardCompanyFilter));
     renderCalendar();
     renderSettings();
     reopenActiveDetail();
@@ -6577,7 +6636,7 @@ async function requestPlatformGeneration() {
     applyGenerationResult(drafts, result, postPackage);
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
-    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
     renderBoard(board);
     reopenActiveDetail();
   } finally {
@@ -6631,7 +6690,7 @@ async function requestCampaignGeneration() {
     updatePostPackageFromDrafts(activePostPackageId);
     // Rebuild board variable so clicking Back shows updated cards — no renderBoard call here
     // because the user is still in detail view; Back button will call renderBoard(board).
-    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
     await saveProductionState();
     reopenActiveDetail();
   } finally {
