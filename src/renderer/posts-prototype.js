@@ -5517,7 +5517,14 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#detail-status").textContent = statusLabel(postPackage.status);
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
-  document.querySelector("#post-tags").value = (postPackage.tags || []).join(", ");
+  const autoTagNames = [
+    postPackage.brandId ? (state.brands || []).find((b) => b.id === postPackage.brandId)?.name : null,
+    postPackage.campaignId ? (state.campaigns || []).find((c) => c.id === postPackage.campaignId)?.name : null,
+  ].filter(Boolean);
+  const existingTags = postPackage.tags || [];
+  const existingLower = new Set(existingTags.map((t) => t.toLowerCase()));
+  const newAutoTags = autoTagNames.filter((t) => !existingLower.has(t.toLowerCase()));
+  document.querySelector("#post-tags").value = [...newAutoTags, ...existingTags].join(", ");
   const styleSelect = document.querySelector("#generation-style");
   if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
   // Seed Company/Brand/Campaign scope selects from the post package context.

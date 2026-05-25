@@ -892,6 +892,7 @@ select.style-select {
 
 .tag-input {
   min-width: 180px;
+  width: 100%;
 }
 
 .platform-previews {
