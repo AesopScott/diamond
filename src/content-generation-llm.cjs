@@ -224,6 +224,96 @@ function normalizeError(error) {
   return error && error.message ? error.message : String(error);
 }
 
+// ─── LLM Draft Evaluation ────────────────────────────────────────────────────
+//
+// evaluateDraftWithLlm sends the draft text + brand/campaign context to OpenAI
+// and returns a structured quality assessment:
+//   { ok: true, evaluation: { score, status, summary, issues, suggestions } }
+//   { ok: true, evaluation: null, degraded: "no-reviewer-key" }
+//   { ok: false, evaluation: null, error: "..." }
+
+const EVALUATOR_MAX_TOKENS = 512;
+
+async function evaluateDraftWithLlm(payload = {}, deps = {}) {
+  const env = deps.env || process.env;
+  const reviewerKey = env.OPENAI_API_KEY;
+  const reviewerModel = env.DIAMOND_REVIEWER_MODEL || DEFAULT_REVIEWER_MODEL;
+
+  if (!reviewerKey && !deps.evaluator) {
+    return { ok: true, evaluation: null, degraded: "no-reviewer-key" };
+  }
+
+  const doEvaluate = deps.evaluator
+    || ((prompt) => callOpenAiWithPrompt(prompt, { key: reviewerKey, model: reviewerModel, fetchImpl: deps.fetchImpl }));
+
+  const prompt = buildEvaluationPrompt(payload);
+  try {
+    const raw = await doEvaluate(prompt);
+    return { ok: true, evaluation: parseEvaluationContent(raw) };
+  } catch (error) {
+    return { ok: false, evaluation: null, error: normalizeError(error) };
+  }
+}
+
+function buildEvaluationPrompt({ platform, text, brand = {}, campaign = {}, claims = {}, charLimit = null }) {
+  const name = platformLabel(platform);
+  const rules = [];
+  if (brand.voice) rules.push(`Brand voice: ${brand.voice}`);
+  if (hasItems(brand.bannedPhrases)) rules.push(`Banned phrases (must not appear): ${joinList(brand.bannedPhrases)}`);
+  if (hasItems(claims.blockedClaims)) rules.push(`Blocked claims: ${joinList(claims.blockedClaims)}`);
+  if (hasItems(campaign.goals)) rules.push(`Campaign goals: ${joinList(campaign.goals)}`);
+  if (campaign.offer) rules.push(`Offer: ${campaign.offer}`);
+  if (campaign.cta) rules.push(`Expected CTA: ${campaign.cta}`);
+  if (charLimit) rules.push(`Character limit: ${charLimit} (this draft is ${String(text || "").length} chars)`);
+  return [
+    `You are a social media content evaluator. Evaluate this ${name} post draft.`,
+    rules.length ? `Rules to check against:\n${rules.join("\n")}` : "",
+    `Draft:\n${text || "(empty)"}`,
+    "Assess: clarity, platform fit, brand voice, campaign alignment, CTA presence, and any problems.",
+    'Respond with strict JSON only — no preamble:\n{"score":<0-100>,"status":"<approved|needs_review|blocked>","summary":"<1-2 sentences>","issues":["<issue>"],"suggestions":["<suggestion>"]}',
+    "Use approved if score >= 75 and no blockers. Use blocked if score < 40 or a critical rule is violated. Otherwise needs_review.",
+  ].filter(Boolean).join("\n\n");
+}
+
+function parseEvaluationContent(content) {
+  try {
+    const json = JSON.parse(stripCodeFence(String(content || "").trim()));
+    const score = typeof json.score === "number" ? Math.max(0, Math.min(100, json.score)) : 50;
+    const status = ["approved", "needs_review", "blocked"].includes(json.status) ? json.status : "needs_review";
+    return {
+      score,
+      status,
+      summary: String(json.summary || "").trim(),
+      issues: Array.isArray(json.issues) ? json.issues.map(String).filter(Boolean) : [],
+      suggestions: Array.isArray(json.suggestions) ? json.suggestions.map(String).filter(Boolean) : [],
+    };
+  } catch (_err) {
+    return { score: 50, status: "needs_review", summary: "Could not parse evaluation response.", issues: [], suggestions: [] };
+  }
+}
+
+async function callOpenAiWithPrompt(prompt, { key, model, fetchImpl }) {
+  const doFetch = fetchImpl || fetch;
+  const response = await doFetch(OPENAI_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model,
+      max_tokens: EVALUATOR_MAX_TOKENS,
+      messages: [
+        { role: "system", content: "You are a precise social media content evaluator. Always reply with strict JSON." },
+        { role: "user", content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(STAGE_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`OpenAI ${response.status} ${await safeText(response)}`);
+  const data = await response.json();
+  return data.choices && data.choices[0] && data.choices[0].message
+    ? data.choices[0].message.content
+    : "";
+}
+
 async function safeText(response) {
   try {
     return await response.text();
@@ -234,8 +324,11 @@ async function safeText(response) {
 
 module.exports = {
   generatePostDrafts,
+  evaluateDraftWithLlm,
   buildWriterPrompt,
   buildReviewerPrompt,
+  buildEvaluationPrompt,
+  parseEvaluationContent,
   parseReviewerContent,
   DEFAULT_WRITER_MODEL,
   DEFAULT_REVIEWER_MODEL,

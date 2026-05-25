@@ -6114,18 +6114,29 @@ function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)
 }
 
 function renderDraftEvaluation(draft) {
+  const llm = draft.llmEvaluation;
   const details = [
     draft.approvalLevel ? `Approval: ${titleCase(draft.approvalLevel)}` : "",
-    Number.isFinite(Number(draft.qualityScore)) ? `Quality: ${draft.qualityScore}/${draft.qualityGate || "unknown"}` : "",
+    Number.isFinite(Number(draft.qualityScore)) ? `Quality score: ${draft.qualityScore}/100` : "",
     draft.scheduledAt ? `Scheduled: ${formatDateTime(draft.scheduledAt)}` : "",
     draft.publishedAt ? `Posted: ${formatDateTime(draft.publishedAt)}` : "",
     draft.stageNote || "",
   ].filter(Boolean);
-  if (!details.length && !draft.riskFlags?.length && !draft.qualityDetails?.length) return "";
+  const hasBase = details.length || draft.riskFlags?.length || draft.qualityDetails?.length;
+  const hasLlm = Boolean(llm?.summary);
+  if (!hasBase && !hasLlm) return "";
   return `
     <div class="platform-evaluation">
+      ${hasLlm ? `
+        <div class="llm-evaluation">
+          <strong>AI Evaluation</strong>
+          <p>${escapeHtml(llm.summary)}</p>
+          ${llm.issues?.length ? `<ul class="eval-list eval-issues">${llm.issues.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>` : ""}
+          ${llm.suggestions?.length ? `<ul class="eval-list eval-suggestions">${llm.suggestions.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : ""}
+        </div>
+      ` : ""}
       ${details.map((detail) => `<span>${escapeHtml(detail)}</span>`).join("")}
-      ${draft.riskFlags?.length ? `<span>Risk: ${escapeHtml(draft.riskFlags.join(", "))}</span>` : ""}
+      ${draft.riskFlags?.length ? `<span>Risk flags: ${escapeHtml(draft.riskFlags.join(", "))}</span>` : ""}
       ${draft.qualityDetails?.length ? `<p>${escapeHtml(draft.qualityDetails.slice(0, 2).join(" "))}</p>` : ""}
     </div>
   `;
@@ -6145,7 +6156,7 @@ async function handlePlatformDraftAction(event) {
   const draft = prototypeModel.platformDrafts.find((item) => item.id === button.dataset.platformDraftId);
   if (!draft) return;
   const action = button.dataset.platformAction;
-  if (action === "evaluate") evaluatePlatformDraft(draft);
+  if (action === "evaluate") await llmEvaluatePlatformDraft(draft);
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "add-media") await attachMediaToDraft(draft);
@@ -6601,6 +6612,49 @@ function evaluatePlatformDraft(draft) {
   draft.status = risk.level === "blocked" || quality.level === "hold"
     ? "blocked"
     : risk.level === "review_required" || quality.level === "review" ? "needs_review" : "draft";
+  draft.evaluatedAt = new Date().toISOString();
+  draft.updatedAt = draft.evaluatedAt;
+}
+
+// LLM-powered evaluation — calls OpenAI, overlays result onto the draft.
+// Falls back gracefully when no API key is configured (deterministic result kept).
+async function llmEvaluatePlatformDraft(draft) {
+  // Deterministic checks run first so there's immediate feedback while the API call is in flight.
+  evaluatePlatformDraft(draft);
+
+  const brand = brandLibraryFor(draft);
+  const claims = claimLibraryFor(draft);
+  const strategy = strategyFor(draft);
+  const payload = {
+    platform: draft.platform,
+    text: draft.text || "",
+    charLimit: draft.charLimit || null,
+    brand: {
+      voice: brand.brandVoice || "",
+      bannedPhrases: brand.bannedPhrases || [],
+    },
+    campaign: {
+      goals: strategy.goals || [],
+      audience: strategy.audience || [],
+      pillars: strategy.pillars || [],
+      offer: strategy.offer || "",
+      cta: strategy.cta || "",
+    },
+    claims: {
+      blockedClaims: claims.blockedClaims || [],
+    },
+  };
+
+  const result = await window.diamond?.evaluateDraft?.(payload);
+  if (!result || !result.ok || !result.evaluation) return; // degraded or error — keep deterministic result
+
+  const { score, status, summary, issues, suggestions } = result.evaluation;
+  draft.llmEvaluation = { score, status, summary, issues, suggestions, evaluatedAt: new Date().toISOString() };
+  draft.qualityScore = score;
+  // Take the more cautious status: blocked always wins, then needs_review, then LLM result.
+  if (draft.status !== "blocked") {
+    draft.status = status === "blocked" ? "blocked" : (status === "needs_review" || draft.status === "needs_review") ? "needs_review" : status;
+  }
   draft.evaluatedAt = new Date().toISOString();
   draft.updatedAt = draft.evaluatedAt;
 }

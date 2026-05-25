@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
-const { generatePostDrafts } = require("../content-generation-llm.cjs");
+const { generatePostDrafts, evaluateDraftWithLlm } = require("../content-generation-llm.cjs");
 
 // Allowed writable platforms — must match SUPPORTED_SOCIAL_PLATFORMS in renderer.
 const GENERATION_ALLOWED_PLATFORMS = new Set([
@@ -240,6 +240,19 @@ ipcMain.handle("diamond:generate-post-drafts", async (_event, payload = {}) => {
   } catch (error) {
     console.error("[diamond:generate-post-drafts] unexpected error:", error);
     return { ok: false, drafts: null, error: "Generation failed. Check application logs." };
+  }
+});
+ipcMain.handle("diamond:evaluate-draft", async (_event, payload = {}) => {
+  try {
+    const result = await evaluateDraftWithLlm(payload);
+    if (result && !result.ok && result.error) {
+      console.error("[diamond:evaluate-draft] error:", result.error);
+      return { ok: false, evaluation: null, error: "Evaluation failed. Check your API keys." };
+    }
+    return result;
+  } catch (error) {
+    console.error("[diamond:evaluate-draft] unexpected error:", error);
+    return { ok: false, evaluation: null, error: "Evaluation failed. Check application logs." };
   }
 });
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
