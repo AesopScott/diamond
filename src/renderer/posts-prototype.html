@@ -74,16 +74,13 @@
                 <label class="scope-select">Brand <select id="detail-brand"></select></label>
                 <label class="scope-select">Campaign <select id="detail-campaign"></select></label>
               </div>
-              <label class="style-select">
-                Generation style
-                <select id="generation-style">
-                  <option value="Default">Default</option>
-                  <option value="Brand voice">Brand voice</option>
-                  <option value="Punchy">Punchy</option>
-                  <option value="Professional">Professional</option>
-                  <option value="Storytelling">Storytelling</option>
-                </select>
-              </label>
+              <select id="generation-style" class="style-select" aria-label="Generation style">
+                <option value="Default">Default</option>
+                <option value="Brand voice">Brand voice</option>
+                <option value="Punchy">Punchy</option>
+                <option value="Professional">Professional</option>
+                <option value="Storytelling">Storytelling</option>
+              </select>
               <button id="detail-generate" class="generate-button" type="button" hidden>Content Automation</button>
               <button id="detail-add-media" class="media-button" type="button">+ Media</button>
               <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>

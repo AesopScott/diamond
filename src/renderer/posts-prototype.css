@@ -814,7 +814,13 @@ textarea {
   opacity: 0.6;
 }
 
-.media-button {
+select.style-select {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.media-button,
+select.style-select {
   border-radius: 8px;
 }
 
