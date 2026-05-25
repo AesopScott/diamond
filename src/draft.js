@@ -33,6 +33,18 @@ export function createPostDraft(input) {
     firestorePath: companyPath(context, "postDrafts", draftId).join("/"),
     createdAt: now,
     updatedAt: now,
+    videoGenerationRequested: false,
+    videoGenerationOverride: null,
+    generatedVideoUrl: null,
+    generatedVideoPrompt: null,
+    videoGenerationStatus: null,
+    videoGenerationError: null,
+    videoGenerationRetryable: false,
+    videoGenerationAttempts: 0,
+    operatorNotificationStatus: null,
+    manualQualityValidation: null,
+    videoDurationSeconds: 0,
+    videoGenerationCost: null,
   };
 }
 
