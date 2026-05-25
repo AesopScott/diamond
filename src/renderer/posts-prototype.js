@@ -5537,7 +5537,9 @@ function openDetail(postPackage, drafts) {
   const newAutoTags = autoTagNames.filter((t) => !existingLower.has(t.toLowerCase()));
   document.querySelector("#post-tags").value = [...newAutoTags, ...existingTags].join(", ");
   const styleSelect = document.querySelector("#generation-style");
-  if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
+  // Map "Default" (and absent) to "" so the "Select Voice" placeholder shows.
+  const savedStyle = postPackage.generationStyle;
+  if (styleSelect) styleSelect.value = (savedStyle && savedStyle !== "Default") ? savedStyle : "";
   // Seed Company/Brand/Campaign scope selects from the post package context.
   const detailCompany = document.querySelector("#detail-company");
   const detailBrand = document.querySelector("#detail-brand");
