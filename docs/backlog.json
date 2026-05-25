@@ -138,7 +138,7 @@
       "description": "Open design is a publicly available Claude design that needs to run against a local model",
       "category": "feature",
       "priority": 75,
-      "impact": "standard",
+      "impact": "minor",
       "status": "backlog",
       "created_at": "2026-05-25",
       "completed_at": null,
