@@ -5,6 +5,7 @@ const {
   generatePostDrafts,
   buildWriterPrompt,
   parseReviewerContent,
+  rewriteDraftWithSuggestions,
 } = require("../src/content-generation-llm.cjs");
 
 const payload = {
@@ -100,6 +101,39 @@ const payload = {
   const refusal = parseReviewerContent("I cannot comply with this request.", "safe original");
   assert.equal(refusal.text, "safe original");
   assert.equal(refusal.changeNote, "reviewer parse error");
+
+  // 9. rewriteDraftWithSuggestions: plain text response is returned as-is.
+  const rewritePlain = await rewriteDraftWithSuggestions(
+    { platform: "x", text: "Original draft.", issues: ["Too vague"], suggestions: [] },
+    { env: { OPENAI_API_KEY: "k" }, rewriter: async () => "Revised draft." },
+  );
+  assert.equal(rewritePlain.ok, true);
+  assert.equal(rewritePlain.revisedText, "Revised draft.");
+
+  // 10. rewriteDraftWithSuggestions: JSON-wrapped response is unwrapped automatically.
+  const rewriteWrapped = await rewriteDraftWithSuggestions(
+    { platform: "linkedin", text: "Original.", issues: ["Too short"], suggestions: [] },
+    { env: { OPENAI_API_KEY: "k" }, rewriter: async () => JSON.stringify({ post: "Unwrapped revision." }) },
+  );
+  assert.equal(rewriteWrapped.ok, true);
+  assert.equal(rewriteWrapped.revisedText, "Unwrapped revision.");
+
+  // 11. rewriteDraftWithSuggestions: JSON with alternate keys (text, content) are also unwrapped.
+  const rewriteAlt = await rewriteDraftWithSuggestions(
+    { platform: "x", text: "Original.", issues: [], suggestions: ["Be punchier"] },
+    { env: { OPENAI_API_KEY: "k" }, rewriter: async () => JSON.stringify({ content: "Punchier text." }) },
+  );
+  assert.equal(rewriteAlt.ok, true);
+  assert.equal(rewriteAlt.revisedText, "Punchier text.");
+
+  // 12. rewriteDraftWithSuggestions: no API key → degraded, revisedText null.
+  const rewriteNoKey = await rewriteDraftWithSuggestions(
+    { platform: "x", text: "Original.", issues: ["Too short"], suggestions: [] },
+    { env: {} },
+  );
+  assert.equal(rewriteNoKey.ok, true);
+  assert.equal(rewriteNoKey.revisedText, null);
+  assert.equal(rewriteNoKey.degraded, "no-reviewer-key");
 
   console.log("All Diamond content-generation-llm tests passed.");
 })().catch((error) => {

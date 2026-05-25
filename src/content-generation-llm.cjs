@@ -339,11 +339,31 @@ async function rewriteDraftWithSuggestions(payload = {}, deps = {}) {
   const prompt = buildRewritePrompt(payload);
   try {
     const raw = await doRewrite(prompt);
-    const revisedText = String(raw || "").trim();
+    const revisedText = unwrapRewriteText(String(raw || "").trim());
     return { ok: true, revisedText: revisedText || null };
   } catch (error) {
     return { ok: false, revisedText: null, error: normalizeError(error) };
   }
+}
+
+// Some models ignore "no JSON" instructions and wrap the response anyway.
+// Extract the string value from common envelope shapes before storing.
+function unwrapRewriteText(raw) {
+  if (!raw.startsWith("{") && !raw.startsWith("[")) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "string") return parsed.trim();
+    if (typeof parsed === "object" && parsed !== null) {
+      // Check common field names the model uses when it wraps the output.
+      const value = parsed.post || parsed.text || parsed.content || parsed.revised
+        || parsed.draft || parsed.output || parsed.result
+        || (Array.isArray(parsed) ? parsed[0] : null);
+      return typeof value === "string" ? value.trim() : raw;
+    }
+  } catch {
+    // Not valid JSON — return as-is.
+  }
+  return raw;
 }
 
 function buildRewritePrompt({ platform, text, issues = [], suggestions = [], brand = {}, charLimit = null }) {
@@ -353,12 +373,12 @@ function buildRewritePrompt({ platform, text, issues = [], suggestions = [], bra
     ...suggestions.map((s) => `Apply: ${s}`),
   ];
   return [
-    `You are a social media copywriter. Revise this ${name} post draft to fix the listed issues and apply the suggestions.`,
+    `You are a social media copywriter. Revise the ${name} post draft below to fix the listed issues and apply the suggestions.`,
     fixList.length ? `Changes to make:\n${fixList.join("\n")}` : "",
     brand.voice ? `Brand voice: ${brand.voice}` : "",
     charLimit ? `Stay under ${charLimit} characters.` : "",
     `Original draft:\n${text || "(empty)"}`,
-    "Return only the revised post text — no preamble, labels, or explanation.",
+    "Output ONLY the revised post text. Do not wrap it in JSON, do not add a label or key, do not include any explanation. Plain text only.",
   ].filter(Boolean).join("\n\n");
 }
 
