@@ -26,7 +26,7 @@
     },
     {
       "number": 3,
-      "title": "Complete Instagram, TikTok, and LinkedIn routine automation",
+      "title": "Complete Instagram, TikTok, Facebook, and LinkedIn routine automation",
       "description": "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
       "category": "feature",
       "priority": 85,
@@ -35,7 +35,8 @@
       "completed_at": null,
       "dependencies": [
         1
-      ]
+      ],
+      "impact": "standard"
     },
     {
       "number": 4,
