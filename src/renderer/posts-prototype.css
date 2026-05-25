@@ -5114,6 +5114,45 @@ select.style-select {
   padding: 20px;
 }
 
+.archive-filter-bar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.archive-filter-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.archive-filter-chip.active,
+.archive-filter-chip:hover {
+  background: var(--accent, #d84f45);
+  border-color: transparent;
+  color: #fff;
+}
+
+.archive-filter-clear {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: auto;
+  padding: 4px 8px;
+  text-decoration: underline;
+}
+
 .archive-empty {
   color: var(--muted);
   font-size: 14px;
@@ -5134,7 +5173,30 @@ select.style-select {
   border-radius: 12px;
   cursor: pointer;
   overflow: hidden;
+  position: relative;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.archive-card-delete {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  height: 28px;
+  line-height: 1;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+  z-index: 2;
+}
+
+.archive-card-delete:hover {
+  background: #c0392b;
+  border-color: transparent;
+  color: #fff;
 }
 
 .archive-card:hover {

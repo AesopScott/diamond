@@ -296,6 +296,8 @@ const DRAFT_BOARD_COLUMNS = [
 ];
 let activeBoardPlatformFilter = new Set(); // empty = all platforms
 let activeBoardCompanyFilter  = new Set(); // empty = all companies
+let activeArchivePlatformFilter = new Set(); // empty = all platforms
+let activeArchiveCompanyFilter  = new Set(); // empty = all companies
 let board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
 let activePostPackageId = null;
 let activePlatformTab = null; // currently visible platform tab inside the detail view
@@ -818,7 +820,40 @@ function wirePrototypeControls() {
   document.querySelector("#settings-shortcuts")?.addEventListener("click", handleSettingsShortcut);
   document.querySelector("#settings-sync")?.addEventListener("click", () => runSettingsAction("sync-license"));
   document.querySelector("#operator-workspace")?.addEventListener("click", handleOperatorAction);
-  document.querySelector("#archive-workspace")?.addEventListener("click", (event) => {
+  document.querySelector("#archive-workspace")?.addEventListener("click", async (event) => {
+    // Delete button — must check before card open so click doesn't bubble to card.
+    const deleteBtn = event.target.closest("[data-archive-delete]");
+    if (deleteBtn) {
+      await deletePostPackage(deleteBtn.dataset.archiveDelete);
+      renderArchive();
+      return;
+    }
+    // Platform filter chip.
+    const platformChip = event.target.closest("[data-archive-platform-filter]");
+    if (platformChip) {
+      const p = platformChip.dataset.archivePlatformFilter;
+      if (activeArchivePlatformFilter.has(p)) activeArchivePlatformFilter.delete(p);
+      else activeArchivePlatformFilter.add(p);
+      renderArchive();
+      return;
+    }
+    // Company filter chip.
+    const companyChip = event.target.closest("[data-archive-company-filter]");
+    if (companyChip) {
+      const cid = companyChip.dataset.archiveCompanyFilter;
+      if (activeArchiveCompanyFilter.has(cid)) activeArchiveCompanyFilter.delete(cid);
+      else activeArchiveCompanyFilter.add(cid);
+      renderArchive();
+      return;
+    }
+    // Clear filters.
+    if (event.target.closest("[data-archive-clear-filters]")) {
+      activeArchivePlatformFilter = new Set();
+      activeArchiveCompanyFilter = new Set();
+      renderArchive();
+      return;
+    }
+    // Open card detail.
     const card = event.target.closest("[data-archive-open]");
     if (!card) return;
     showPrototypeView("posts-view");
@@ -5000,43 +5035,82 @@ function renderAccessibilitySettingsPanel() {
 function renderArchive() {
   const target = document.querySelector("#archive-workspace");
   if (!target) return;
-  // Collect published platform drafts, newest first.
-  const publishedDrafts = (prototypeModel.platformDrafts || [])
-    .filter((d) => ["published", "posted"].includes(d.status))
-    .sort((a, b) => (b.publishedAt || b.updatedAt || "").localeCompare(a.publishedAt || a.updatedAt || ""));
   const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
-  if (!publishedDrafts.length) {
-    target.innerHTML = `<p class="archive-empty">No published posts yet. Published posts will appear here with their proof screenshots.</p>`;
-    return;
-  }
-  target.innerHTML = `
-    <div class="archive-grid">
-      ${publishedDrafts.map((draft) => {
-        const pkg = pkgMap.get(draft.postPackageId);
-        const account = accountForDraft(draft);
-        const screenshot = draft.screenshotPath || "";
-        const publishedAt = draft.publishedAt || draft.updatedAt || "";
-        const handle = account?.handle ? (account.handle.startsWith("@") ? account.handle : `@${account.handle}`) : "";
-        return `
-          <article class="archive-card" data-package-id="${escapeHtml(draft.postPackageId || "")}" data-archive-open="${escapeHtml(draft.postPackageId || "")}">
-            ${screenshot
-              ? `<div class="archive-card-screenshot"><img src="${escapeHtml(localFileUrl(screenshot))}" alt="Proof screenshot" loading="lazy"></div>`
-              : `<div class="archive-card-screenshot archive-card-no-screenshot"><span>${escapeHtml(platformLabel(draft.platform))}</span></div>`
-            }
-            <div class="archive-card-body">
-              <strong class="archive-card-title">${escapeHtml(pkg?.title || draft.text?.slice(0, 60) || "Untitled")}</strong>
-              <div class="archive-card-meta">
-                <span class="archive-card-platform">${escapeHtml(platformLabel(draft.platform))}</span>
-                ${handle ? `<span class="archive-card-handle">${escapeHtml(handle)}</span>` : ""}
-                ${publishedAt ? `<span class="archive-card-date">${escapeHtml(formatDateTime(publishedAt))}</span>` : ""}
-              </div>
-              <p class="archive-card-text">${escapeHtml((draft.text || "").slice(0, 120))}${(draft.text || "").length > 120 ? "…" : ""}</p>
-            </div>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
+
+  // All published drafts for filter chip derivation.
+  const allPublished = (prototypeModel.platformDrafts || [])
+    .filter((d) => ["published", "posted"].includes(d.status));
+
+  // Derive available filter options from what's actually in the archive.
+  const availablePlatforms = [...new Set(allPublished.map((d) => d.platform).filter(Boolean))].sort();
+  const availableCompanyIds = [...new Set(allPublished.map((d) => {
+    const pkg = pkgMap.get(d.postPackageId);
+    return d.companyId || pkg?.companyId || pkg?.context?.companyId || "";
+  }).filter(Boolean))];
+
+  // Apply filters.
+  const filtered = allPublished
+    .filter((d) => !activeArchivePlatformFilter.size || activeArchivePlatformFilter.has(d.platform))
+    .filter((d) => {
+      if (!activeArchiveCompanyFilter.size) return true;
+      const pkg = pkgMap.get(d.postPackageId);
+      const cid = d.companyId || pkg?.companyId || pkg?.context?.companyId || "";
+      return activeArchiveCompanyFilter.has(cid);
+    })
+    .sort((a, b) => (b.publishedAt || b.updatedAt || "").localeCompare(a.publishedAt || a.updatedAt || ""));
+
+  const platformChips = availablePlatforms.map((p) => {
+    const active = activeArchivePlatformFilter.has(p);
+    return `<button type="button" class="archive-filter-chip${active ? " active" : ""}" data-archive-platform-filter="${escapeHtml(p)}">${escapeHtml(platformLabel(p))}</button>`;
+  }).join("");
+
+  const companyChips = availableCompanyIds.map((cid) => {
+    const active = activeArchiveCompanyFilter.has(cid);
+    const label = companyName(cid) || cid;
+    return `<button type="button" class="archive-filter-chip${active ? " active" : ""}" data-archive-company-filter="${escapeHtml(cid)}">${escapeHtml(label)}</button>`;
+  }).join("");
+
+  const hasFilters = activeArchivePlatformFilter.size || activeArchiveCompanyFilter.size;
+  const filterBar = (platformChips || companyChips) ? `
+    <div class="archive-filter-bar">
+      ${platformChips}
+      ${companyChips}
+      ${hasFilters ? `<button type="button" class="archive-filter-clear" data-archive-clear-filters>Clear filters</button>` : ""}
+    </div>` : "";
+
+  const cards = filtered.map((draft) => {
+    const pkg = pkgMap.get(draft.postPackageId);
+    const account = accountForDraft(draft);
+    const screenshot = draft.screenshotPath || "";
+    const publishedAt = draft.publishedAt || draft.updatedAt || "";
+    const handle = account?.handle ? (account.handle.startsWith("@") ? account.handle : `@${account.handle}`) : "";
+    return `
+      <article class="archive-card" data-archive-open="${escapeHtml(draft.postPackageId || "")}">
+        <button type="button" class="archive-card-delete" data-archive-delete="${escapeHtml(draft.postPackageId || "")}" title="Delete this post" aria-label="Delete post">×</button>
+        ${screenshot
+          ? `<div class="archive-card-screenshot"><img src="${escapeHtml(localFileUrl(screenshot))}" alt="Proof screenshot" loading="lazy"></div>`
+          : `<div class="archive-card-screenshot archive-card-no-screenshot"><span>${escapeHtml(platformLabel(draft.platform))}</span></div>`
+        }
+        <div class="archive-card-body">
+          <strong class="archive-card-title">${escapeHtml(pkg?.title || draft.text?.slice(0, 60) || "Untitled")}</strong>
+          <div class="archive-card-meta">
+            <span class="archive-card-platform">${escapeHtml(platformLabel(draft.platform))}</span>
+            ${handle ? `<span class="archive-card-handle">${escapeHtml(handle)}</span>` : ""}
+            ${publishedAt ? `<span class="archive-card-date">${escapeHtml(formatDateTime(publishedAt))}</span>` : ""}
+          </div>
+          <p class="archive-card-text">${escapeHtml((draft.text || "").slice(0, 120))}${(draft.text || "").length > 120 ? "…" : ""}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  const emptyMsg = !allPublished.length
+    ? `<p class="archive-empty">No published posts yet. Published posts will appear here with their proof screenshots.</p>`
+    : !filtered.length
+      ? `<p class="archive-empty">No posts match the active filters.</p>`
+      : "";
+
+  target.innerHTML = `${filterBar}<div class="archive-grid">${cards}</div>${emptyMsg}`;
 }
 
 function renderAnalytics() {
