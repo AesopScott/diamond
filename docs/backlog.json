@@ -1,362 +1,136 @@
-﻿{
-    "tasks":  [
-                  {
-                      "number":  1,
-                      "title":  "Build the 25 experts automation engine.",
-                      "description":  "Build the engine that will take the videos that have been synced to Aesop Academy courses and create new content for all social media platforms, and build a schedule to share them.",
-                      "category":  "feature",
-                      "priority":  80,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-19",
-                      "completed_at":  null,
-                      "dependencies":  [
-
-                                       ]
-                  },
-                  {
-                      "number":  2,
-                      "title":  "Complete repeated X staging proof across three separate app sessions",
-                      "description":  "Record three real X staging proof sessions from separate Diamond app launches. Each session must capture: session ID, timestamp, account, draft text, screenshot, URL, and result. This is a required gate before platform expansion.",
-                      "category":  "test",
-                      "priority":  95,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           1
-                                       ]
-                  },
-                  {
-                      "number":  3,
-                      "title":  "Complete Instagram, TikTok, Facebook, and LinkedIn routine automation",
-                      "description":  "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
-                      "category":  "feature",
-                      "priority":  85,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           1
-                                       ],
-                      "impact":  "standard"
-                  },
-                  {
-                      "number":  4,
-                      "title":  "Complete YouTube Shorts and Facebook routine automation",
-                      "description":  "Wire assisted composer and media upload proofs for YouTube Shorts and Facebook. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
-                      "category":  "feature",
-                      "priority":  85,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           1
-                                       ]
-                  },
-                  {
-                      "number":  5,
-                      "title":  "Complete repeated staging proof for each writable platform",
-                      "description":  "Run and record staging proofs for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook. Each platform must have successful staging records from separate app sessions before expanding automation further.",
-                      "category":  "test",
-                      "priority":  85,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           3,
-                                           4
-                                       ]
-                  },
-                  {
-                      "number":  6,
-                      "title":  "Complete user guide review after first full operator session",
-                      "description":  "In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. Conduct a full operator session with Diamond and review guide completeness, accuracy, and clarity.",
-                      "category":  "docs",
-                      "priority":  80,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           1,
-                                           2
-                                       ]
-                  },
-                  {
-                      "number":  7,
-                      "title":  "Scott workflow signoff on Diamond posting flow",
-                      "description":  "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
-                      "category":  "test",
-                      "priority":  95,
-                      "status":  "build-started",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           2,
-                                           5,
-                                           6
-                                       ],
-                      "impact":  "standard"
-                  },
-                  {
-                      "number":  8,
-                      "title":  "Finalize auto_publish policy and make go/no-go decision",
-                      "description":  "After repeated staging proof, expert checklist, and Scott workflow signoff are complete, make an explicit product decision on whether auto_publish should ever become enabled. Document the decision and any conditions that must be met before enablement.",
-                      "category":  "feature",
-                      "priority":  80,
-                      "status":  "backlog",
-                      "created_at":  "2026-05-23",
-                      "completed_at":  null,
-                      "dependencies":  [
-                                           7
-                                       ]
-                  },
-                  {
-                      "number":  9,
-                      "title":  "build image generation",
-                      "description":  "Connect to an image generation service and connect to Diamond.\nAdd ability to turn on automatic image creation for posts at campaign level and in new posts UI\nAdd image generation option per campaign per platform\nadd campaign guidance for image generation prompt",
-                      "category":  "feature",
-                      "priority":  90,
-                      "impact":  "standard",
-                      "status":  "build-finished",
-                      "created_at":  "2026-05-25",
-                      "completed_at":  null,
-                      "dependencies":  [
-
-                                       ],
-                      "branch":  "task/9-build-image-generation",
-                      "pr_url":  "https://github.com/AesopScott/diamond/pull/4",
-                      "plan":  "## Overview\n\nBuild image generation feature for Diamond social platform. Connect to Replicate API + Flux Pro for automated image creation. Campaign operators can enable/disable image generation per campaign and per platform (X optional, Instagram required, others optional). Images generated via Replicate, stored in Firestore, with error handling and cost tracking.\n\n## Design Summary\n\n**User Problem**: Campaign operators need to automatically generate image assets instead of manually sourcing them. Images are essential for social engagement across all platforms.\n\n**Service Selection**: Replicate API + Flux Pro (~$0.06/image pay-as-you-go) provides high-quality image generation with flexible pay-per-use pricing.\n\n**Platform Requirements**:\n- Instagram: REQUIRES images\n- X, TikTok, LinkedIn, YouTube, Facebook, Reddit: OPTIONAL (per-platform toggles)\n\n## Implementation Phases\n\n1. **Service Setup & Platform Specs** – Create Replicate wrapper module, define per-platform image format/size specs\n2. **Backend Foundation** – Extend Firestore schema (images collection, campaign settings, post toggles), implement Replicate API integration layer\n3. **Campaign UI** – Add image generation toggle and prompt template to campaign settings\n4. **Post UI** – Add image preview, regenerate, adjust prompt controls to post dialog\n5. **Platform Adapters** – Implement image upload logic for all 7 platforms with format/sizing\n6. **Error Handling & Notifications** – UI toasts, logging, prepare email hooks for automated failures\n7. **Testing & Validation** – Manual end-to-end testing with operators, prompt iteration, quality validation\n\n## Key Assumptions\n\n- Replicate API stable and responsive (~10-15 seconds per image)\n- Flux Pro quality sufficient for campaign assets without heavy editing\n- Manual validation phase validates quality before scaling automation\n- Platform image specs are configurable and validated\n\n## Estimated Effort\n\n~11 days solo (1.5 + 2.5 + 1 + 2 + 2 + 1 + 1 day per phase)\n\n## Success Criteria\n\n- Replicate + Flux Pro API integrated and tested\n- Campaign operators can enable/disable image generation per platform\n- Per-post toggle overrides campaign default\n- Images generated and stored in Firestore with metadata (cost, prompt, service)\n- Platform-specific upload works for all 7 platforms\n- Error handling notifies operators on failures\n- Manual validation confirms image quality meets standards\n- Cost tracking functional (~$0.06/image logged)",
-                      "proofUnits":  [
-                                         {
-                                             "number":  1,
-                                             "title":  "Firestore schema registry updated with images collection",
-                                             "expectedBehavior":  "Firestore schema registry documents the new images collection with fields for service, prompt, cost, approval status, and image metadata.",
-                                             "proofType":  "registry-diff",
-                                             "exactCommand":  "git diff docs/registries/firestore-schema.md",
-                                             "expectedInitialFailure":  "File does not mention images collection or related fields.",
-                                             "expectedPassingEvidence":  "Diff shows new images collection entry with documented fields: service, prompt, generationCost, approvalStatus, imageUrl, dimensions, uploadedAt, regenerationCount.",
-                                             "waiverGuidance":  "N/A"
-                                         },
-                                         {
-                                             "number":  2,
-                                             "title":  "Replicate service wrapper module passes unit tests",
-                                             "expectedBehavior":  "Replicate service wrapper correctly handles API authentication, request/response formatting, error handling, and cost tracking. All unit tests pass.",
-                                             "proofType":  "failing-test",
-                                             "exactCommand":  "npm test -- src/replicate-image-service.test.js",
-                                             "expectedInitialFailure":  "Module src/replicate-image-service.js does not exist. Tests fail with module not found.",
-                                             "expectedPassingEvidence":  "Test output shows 8+ tests passing (auth, request shape, response parsing, error handling, cost tracking, rate limit handling).",
-                                             "waiverGuidance":  "N/A"
-                                         },
-                                         {
-                                             "number":  3,
-                                             "title":  "Campaign imageGenerationSettings persists to/from Firestore",
-                                             "expectedBehavior":  "Campaign settings screen allows setting per-platform image generation toggle, prompt template, and service choice. Values save to Firestore and load on refresh.",
-                                             "proofType":  "ui-check",
-                                             "exactCommand":  "Launch Diamond app; select company → brand → campaign; open campaign settings; find Image Generation section; toggle Generate images for Instagram (on); enter prompt template; click Save; refresh page (Ctrl+R); verify toggle is still on and prompt template still visible",
-                                             "expectedInitialFailure":  "Campaign settings screen has no Image Generation section. No image toggles or prompt editor visible.",
-                                             "expectedPassingEvidence":  "Image Generation section visible with per-platform toggles (X, Instagram, TikTok, LinkedIn, YouTube, Facebook, Reddit), prompt template text area, and service choice display. Values persist after page refresh.",
-                                             "waiverGuidance":  "N/A"
-                                         },
-                                         {
-                                             "number":  4,
-                                             "title":  "Post dialog image generation flow end-to-end",
-                                             "expectedBehavior":  "User creates new post with image generation enabled. Post text generated, image generated via Replicate + Flux Pro, preview appears. User can regenerate or adjust prompt. Post saves with image metadata.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Launch Diamond; create new company → brand → campaign with image generation enabled for X and Instagram; click New Post; observe campaign defaults apply; enter post text or use generated text; observe image generation loading state; verify image preview appears (~10-15 seconds); click Regenerate Image; observe new image; click Adjust Prompt and modify text; regenerate again; click Save Post; verify post document in Firestore contains images collection entry with URL, prompt, cost, approval status",
-                                             "expectedInitialFailure":  "Post dialog has no image preview area. No Regenerate or Adjust Prompt buttons. Image generation does not happen. No image metadata in saved post.",
-                                             "expectedPassingEvidence":  "Image preview appears after generation. Regenerate button produces new image without saving. Adjust prompt interface allows editing and regenerating. Post saves with image URL, service choice, prompt, cost, and approval status in Firestore.",
-                                             "waiverGuidance":  "N/A"
-                                         },
-                                         {
-                                             "number":  5,
-                                             "title":  "Platform image upload adapters handle all 7 platforms",
-                                             "expectedBehavior":  "Image staging/publishing works for each platform with correct format, size, and metadata. Platform adapters convert generated image to platform-specific format and upload successfully.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Stage post with image to each platform: X (observe image upload in Network tab), Instagram (observe image attachment), TikTok (verify upload in mobile), LinkedIn (verify image attaches), YouTube (verify thumbnail), Facebook (verify image in composer), Reddit (verify upload). For each, screenshot Network tab showing HTTP 200/201. Verify image appears correctly formatted.",
-                                             "expectedInitialFailure":  "Platform adapters do not handle image attachment. Images fail to upload (HTTP 4xx/5xx). Image dimensions incorrect.",
-                                             "expectedPassingEvidence":  "All 7 platforms show successful image upload (HTTP 200/201 responses). Images appear correctly sized and formatted per platform specs. No console errors.",
-                                             "waiverGuidance":  "If automated tests cannot cover all platform interactions, document manual testing steps and screenshot evidence of successful image upload for each platform."
-                                         },
-                                         {
-                                             "number":  6,
-                                             "title":  "Error handling notifies user on image generation failure",
-                                             "expectedBehavior":  "When image generation fails (Replicate API error, rate limit, timeout), user receives immediate UI notification with error message and option to retry or adjust prompt. Error is logged with context.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Temporarily disable Replicate API key; open Diamond and create new post with image generation enabled; click Generate Post; observe error toast notification appears with message like Image generation failed: API error. Try again?; check browser console (F12 → Console) for logged error with details (timestamp, error code, request context); click Retry button; re-enable API; verify retry succeeds",
-                                             "expectedInitialFailure":  "No error notification on failed image generation. User doesn't know image generation failed. No logging of error details.",
-                                             "expectedPassingEvidence":  "Error toast appears within 2 seconds of failure. Toast message explains issue. Console log shows error with timestamp, service, error code. User can retry or adjust prompt. Retry succeeds if service recovers.",
-                                             "waiverGuidance":  "N/A"
-                                         },
-                                         {
-                                             "number":  7,
-                                             "title":  "Image generation costs tracked and logged",
-                                             "expectedBehavior":  "Each image generation request logs the Replicate API cost (~$0.06 per Flux Pro image). Costs tracked per post, per campaign, and aggregated for reporting.",
-                                             "proofType":  "failing-test",
-                                             "exactCommand":  "npm test -- src/replicate-image-service.test.js --grep cost",
-                                             "expectedInitialFailure":  "No generationCost field in image metadata. Cost not extracted from Replicate API response. Costs not logged or aggregated.",
-                                             "expectedPassingEvidence":  "Unit tests for cost tracking pass. Image documents in Firestore include generationCost field. Campaign dashboard displays total image generation spend. Logs show cost per request and cumulative spend.",
-                                             "waiverGuidance":  "N/A"
-                                         }
-                                     ]
-                  },
-                  {
-                      "number":  10,
-                      "title":  "build video generation feature",
-                      "description":  "Connect to an video generation service and connect to Diamond.\nAdd ability to turn on automatic video creation for posts at campaign level and in new posts UI\nAdd video generation option per campaign per platform\nadd campaign guidance for video generation prompt",
-                      "category":  "feature",
-                      "priority":  90,
-                      "impact":  "standard",
-                      "status":  "build-finished",
-                      "created_at":  "2026-05-25",
-                      "completed_at":  null,
-                      "dependencies":  [
-
-                                       ],
-                      "branch":  "task/10-build-video-generation-feature",
-                      "pr_url":  "https://github.com/AesopScott/diamond/pull/3",
-                      "plan":  "## Overview\n\nBuild video generation feature for Diamond social platform. Connect HeyGen Creator ($29/month) for automated video creation. Campaign operators can enable/disable video generation per campaign, with per-post overrides. Videos are generated via HeyGen API, stored in Firestore, with error handling for interactive posts (UI feedback) and automated posts (email notifications).\n\n## Design Summary\n\n**User Problem**: Campaign operators need to automatically generate video assets instead of creating them manually. Videos are essential for social engagement (TikTok requires 15-second videos daily; YouTube uses 60-second videos twice monthly).\n\n**Service Selection**: HeyGen Creator ($29/month, 600 credits/month) provides quality video generation at $0.97/video estimated cost.\n\n**Platform Requirements**:\n- TikTok: REQUIRES videos\n- YouTube: PRIORITIZES videos\n- X, Instagram, LinkedIn, Facebook, Reddit: OPTIONAL\n\n## Implementation Phases\n\n1. **Video Generation Service Selection \u0026 Research** â€” Document HeyGen API, authentication, credit system, rate limits\n2. **Firestore Schema \u0026 Configuration** â€” Extend campaign/post documents with video settings; define platform specs\n3. **Campaign UI â€” Video Generation Toggle** â€” Add toggle to campaign settings with platform-specific format configuration\n4. **Post UI â€” Per-Post Video Generation Toggle** â€” Add per-post toggle with override logic\n5. **Video Generation Module \u0026 Integration** â€” Create worker module, wire HeyGen API, integrate into post flow\n6. **Error Handling \u0026 Notifications** â€” Surface errors in interactive posts; email notifications for automated failures\n7. **Manual Validation \u0026 Testing** â€” End-to-end testing with human review of video quality\n\n## Key Assumptions\n\n- HeyGen API availability and response quality\n- Manual validation phase catches unusable outputs before scaling\n- Credit usage ~15-20 per 15-second video, 20-30 per 60-second video\n- Platform-specific format/size specs are configurable\n- Email notification service available for automated post failures\n\n## Estimated Effort\n\n5 Small + 8 Medium + 2 Large â‰ˆ 6-8 days solo\n\n## Success Criteria\n\n- Campaign operators can enable/disable video generation per campaign\n- Per-post toggle overrides campaign default\n- Videos generated via HeyGen API and stored in Firestore\n- Interactive post errors show in UI; automated failures trigger email\n- Manual validation confirms video quality meets campaign standards\n- Daily TikTok (15-sec) and twice-monthly YouTube (60-sec) within Creator plan limits",
-                      "objective":  {
-                                        "statement":  "Build automated video generation for Diamond social posts, using HeyGen Creator for quality video assets at scalable cost.",
-                                        "successCriteria":  [
-                                                                "Campaign operators can enable/disable video generation per campaign",
-                                                                "Per-post video generation toggle overrides campaign default setting",
-                                                                "HeyGen API integration generates videos and stores URLs in Firestore",
-                                                                "Interactive post errors display in UI with retry option",
-                                                                "Automated post failures trigger email notification to operator",
-                                                                "Manual validation confirms video quality meets campaign standards",
-                                                                "Daily TikTok videos (15-sec) and twice-monthly YouTube videos (60-sec) can be generated within $29/month Creator plan budget"
-                                                            ],
-                                        "nonGoals":  [
-                                                         "Automatic video editing or refinement",
-                                                         "Direct Polaris integration for video generation",
-                                                         "Advanced prompt engineering optimization (handled manually)",
-                                                         "Multi-language video variants",
-                                                         "Performance analytics on generation success rates"
-                                                     ],
-                                        "proofMap":  {
-                                                         "Campaign operators can enable/disable video generation per campaign":  4,
-                                                         "Per-post video generation toggle overrides campaign default setting":  6,
-                                                         "HeyGen API integration generates videos and stores URLs in Firestore":  8,
-                                                         "Interactive post errors display in UI with retry option":  9,
-                                                         "Automated post failures trigger email notification to operator":  10,
-                                                         "Manual validation confirms video quality meets campaign standards":  11
-                                                     },
-                                        "stopConditions":  [
-
-                                                           ]
-                                    },
-                      "proofUnits":  [
-                                         {
-                                             "number":  1,
-                                             "title":  "HeyGen Configuration Documented",
-                                             "expectedBehavior":  "Documentation clearly explains HeyGen API authentication, credit system, rate limits, and video generation request/response workflow.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Read docs/video-generation-approach.md; verify sections: API auth (key location, headers), Credit system (costs per video length), Rate limits, Request shape (prompt, duration, platform specs), Response shape (video URL, job status), Polling strategy",
-                                             "expectedInitialFailure":  "File does not exist.",
-                                             "expectedPassingEvidence":  "File exists with complete sections on HeyGen API design and integration approach. Example cURL request succeeds.",
-                                             "waiverGuidance":  "N/A â€” documentation is manually verified."
-                                         },
-                                         {
-                                             "number":  2,
-                                             "title":  "Campaign Schema Extended with Video Settings",
-                                             "expectedBehavior":  "Campaign documents in Firestore now have videoGenerationEnabled, videoGenerationPlatforms, and videoQualitySize fields; constants define schema shape.",
-                                             "proofType":  "registry-diff",
-                                             "exactCommand":  "git diff src/constants.js | grep -A 5 \u0027CAMPAIGN_SCHEMA\\|VIDEO_GENERATION\u0027",
-                                             "expectedInitialFailure":  "Constants do not include video generation fields; Firestore schema does not enforce them.",
-                                             "expectedPassingEvidence":  "Diff shows new constants: CAMPAIGN_VIDEO_GENERATION_FIELDS, VIDEO_SPECS_BY_PLATFORM with platform keys.",
-                                             "waiverGuidance":  "If Firestore rules not enforced, manual verification: create test campaign in Firestore UI, confirm fields present."
-                                         },
-                                         {
-                                             "number":  3,
-                                             "title":  "Post Schema Extended with Video References",
-                                             "expectedBehavior":  "Post documents now have videoGenerationRequested, generatedVideoUrl, generatedVideoPrompt, and videoGenerationStatus fields.",
-                                             "proofType":  "registry-diff",
-                                             "exactCommand":  "git diff src/constants.js | grep -A 5 \u0027POST_SCHEMA\\|VIDEO_GENERATION\u0027",
-                                             "expectedInitialFailure":  "Constants do not include video fields on post schema.",
-                                             "expectedPassingEvidence":  "Diff shows new post video fields in constants. Sample post document created with fields present.",
-                                             "waiverGuidance":  "Manual: open Firebase Console, create test post, verify fields appear."
-                                         },
-                                         {
-                                             "number":  4,
-                                             "title":  "Campaign UI Renders Video Generation Controls",
-                                             "expectedBehavior":  "Campaign settings page shows video generation toggle (on/off) and platform-specific format dropdowns (TikTok, YouTube, etc.).",
-                                             "proofType":  "ui-check",
-                                             "exactCommand":  "Launch Diamond app (npm start); navigate to campaign settings; look for video generation toggle switch and platform video specs dropdown; inspect element for data-testid=\u0027video-toggle\u0027 and data-testid=\u0027platform-video-size\u0027",
-                                             "expectedInitialFailure":  "Campaign settings page has no video controls; elements don\u0027t exist.",
-                                             "expectedPassingEvidence":  "Toggle switch visible and clickable; format dropdown selects platform-specific sizes (e.g., \u0027TikTok 9:16 1080p\u0027, \u0027YouTube 16:9 1080p\u0027).",
-                                             "waiverGuidance":  "N/A â€” UI is manually verified in browser."
-                                         },
-                                         {
-                                             "number":  5,
-                                             "title":  "Campaign Video Settings Persist to Firestore",
-                                             "expectedBehavior":  "Toggling video generation on/off in campaign settings saves to Firestore under campaign document; reload confirms persistence.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Launch Diamond, open campaign settings; toggle video generation ON; click Save; in Firebase Console, navigate to campaign document; confirm videoGenerationEnabled = true; close and reopen campaign settings in Diamond; confirm toggle still ON",
-                                             "expectedInitialFailure":  "Toggle has no effect; Firestore document unchanged.",
-                                             "expectedPassingEvidence":  "Firestore document updated after Save; toggle state persists across app reload.",
-                                             "waiverGuidance":  "N/A â€” manual verification with Firebase Console."
-                                         },
-                                         {
-                                             "number":  6,
-                                             "title":  "Post UI Shows Video Toggle with Campaign Default",
-                                             "expectedBehavior":  "Post creation page shows video generation toggle. When campaign has video enabled, toggle starts checked. Per-post changes override campaign setting.",
-                                             "proofType":  "ui-check",
-                                             "exactCommand":  "Launch Diamond, select campaign with video generation enabled; create new post; inspect element for data-testid=\u0027post-video-toggle\u0027; confirm toggle is checked (campaign default); uncheck toggle (per-post override); save post, reload; confirm toggle remains unchecked (per-post override persisted)",
-                                             "expectedInitialFailure":  "Post page has no video toggle.",
-                                             "expectedPassingEvidence":  "Toggle exists, respects campaign default on first view, per-post override persists across reload.",
-                                             "waiverGuidance":  "N/A â€” UI verified in browser."
-                                         },
-                                         {
-                                             "number":  7,
-                                             "title":  "Video Generation Worker Makes HeyGen API Calls",
-                                             "expectedBehavior":  "src/video-generation-worker.js successfully calls HeyGen API with authenticated request, receives video URL in response, stores URL in Firestore post document.",
-                                             "proofType":  "failing-test",
-                                             "exactCommand":  "npm test -- src/video-generation-worker.test.js",
-                                             "expectedInitialFailure":  "File does not exist; test fails \u0027module not found\u0027.",
-                                             "expectedPassingEvidence":  "Test file exists with passing tests: authenticateHeyGenRequest() constructs Authorization header, generateVideo() POSTs to HeyGen endpoint and polls for completion, storeVideoUrl() writes URL to Firestore post document",
-                                             "waiverGuidance":  "If HeyGen API cannot be mocked reliably, use manual smoke test: generate one video, confirm URL in Firestore."
-                                         },
-                                         {
-                                             "number":  8,
-                                             "title":  "Video Generation Integrated into Post Creation Flow",
-                                             "expectedBehavior":  "When post is created with videoGenerationRequested = true, video generation worker is called; post document receives generatedVideoUrl after completion.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Launch Diamond; create new post with video generation toggle enabled; save post; wait for video generation (monitor Firestore in real-time); after ~30 seconds, check post document for generatedVideoUrl field; confirm URL points to valid video file",
-                                             "expectedInitialFailure":  "Post saved but no video generation triggered; generatedVideoUrl remains empty.",
-                                             "expectedPassingEvidence":  "Post document populates generatedVideoUrl with HeyGen video link within reasonable timeout.",
-                                             "waiverGuidance":  "Manual verification with Firestore Console; no automated test due to async external service."
-                                         },
-                                         {
-                                             "number":  9,
-                                             "title":  "Video Generation Errors Surface in Interactive Posts",
-                                             "expectedBehavior":  "When video generation fails for an interactive (non-automated) post, error message displays in UI allowing user to adjust prompt and retry.",
-                                             "proofType":  "ui-check",
-                                             "exactCommand":  "Intentionally trigger generation failure (use invalid HeyGen key or mock API error); create post with video toggle enabled; save post; confirm error message appears in UI: \u0027Video generation failed: {reason}\u0027; confirm retry button present",
-                                             "expectedInitialFailure":  "No error feedback; post fails silently or crashes.",
-                                             "expectedPassingEvidence":  "Error message displays, retry button works, user can edit prompt and retry generation.",
-                                             "waiverGuidance":  "N/A â€” UI error handling verified manually."
-                                         },
-                                         {
-                                             "number":  10,
-                                             "title":  "Automated Post Failure Triggers Email Notification",
-                                             "expectedBehavior":  "When automated post fails due to video generation error, email notification sent to operator with campaign name, post details, and remediation steps. Post document marked with videoGenerationStatus = \u0027failed\u0027.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Set up test automated post with video generation enabled; trigger video generation failure (mock API error); simulate automated posting; confirm email received in operator inbox with subject \u0027Diamond: Video generation failed for [campaign]\u0027; confirm Firestore post document has videoGenerationStatus = \u0027failed\u0027",
-                                             "expectedInitialFailure":  "No email sent; post status unchanged on failure.",
-                                             "expectedPassingEvidence":  "Email notification received; post document marks failure; no publish attempt occurs.",
-                                             "waiverGuidance":  "If email service not configured, document manual notification process (Slack, in-app alert) instead."
-                                         },
-                                         {
-                                             "number":  11,
-                                             "title":  "End-to-End Manual Validation Checklist Complete",
-                                             "expectedBehavior":  "Manual test plan executed across TikTok (15-second), YouTube (60-second), and other platforms. Video quality approved; error handling confirmed for both interactive and automated posts.",
-                                             "proofType":  "manual-script",
-                                             "exactCommand":  "Run docs/video-generation-manual-test-plan.md: create test campaign with video enabled; generate TikTok 15-sec video, confirm quality; generate YouTube 60-sec video, confirm quality; test per-post override; trigger error on interactive post, confirm UI feedback and retry; trigger error on automated post (mocked), confirm email sent; verify credit usage aligns with estimates",
-                                             "expectedInitialFailure":  "No manual test plan exists; videos not yet generated.",
-                                             "expectedPassingEvidence":  "Test plan document completed with all checks passed. Video quality approved by operator. No critical errors.",
-                                             "waiverGuidance":  "Operator sign-off on quality is the gate. If quality unsatisfactory, document feedback and adjust prompts."
-                                         }
-                                     ]
-                  }
-              ]
+{
+    "tasks": [
+        {
+            "number": 1,
+            "title": "Build the 25 experts automation engine.",
+            "description": "Build the engine that will take the videos that have been synced to Aesop Academy courses and create new content for all social media platforms, and build a schedule to share them.",
+            "category": "feature",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-19",
+            "completed_at": null,
+            "dependencies": []
+        },
+        {
+            "number": 2,
+            "title": "Complete repeated X staging proof across three separate app sessions",
+            "description": "Record three real X staging proof sessions from separate Diamond app launches. Each session must capture: session ID, timestamp, account, draft text, screenshot, URL, and result. This is a required gate before platform expansion.",
+            "category": "test",
+            "priority": 95,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ]
+        },
+        {
+            "number": 3,
+            "title": "Complete Instagram, TikTok, Facebook, and LinkedIn routine automation",
+            "description": "Wire assisted composer and media upload proofs for Instagram, TikTok, and LinkedIn. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+            "category": "feature",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ],
+            "impact": "standard"
+        },
+        {
+            "number": 4,
+            "title": "Complete YouTube Shorts and Facebook routine automation",
+            "description": "Wire assisted composer and media upload proofs for YouTube Shorts and Facebook. Currently platform account defaults, browser profiles, planned slots, templates, routine scaffolds, manual staging adapter states, and proof counters are in place. Complete the assisted composer adapters, media upload proofs, and automate staging for these platforms.",
+            "category": "feature",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1
+            ]
+        },
+        {
+            "number": 5,
+            "title": "Complete repeated staging proof for each writable platform",
+            "description": "Run and record staging proofs for Instagram, TikTok, LinkedIn, YouTube Shorts, and Facebook. Each platform must have successful staging records from separate app sessions before expanding automation further.",
+            "category": "test",
+            "priority": 85,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                3,
+                4
+            ]
+        },
+        {
+            "number": 6,
+            "title": "Complete user guide review after first full operator session",
+            "description": "In-app guide, highlight tour, ElevenLabs audio generation, and step-level voiceover playback are built. Conduct a full operator session with Diamond and review guide completeness, accuracy, and clarity.",
+            "category": "docs",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                1,
+                2
+            ]
+        },
+        {
+            "number": 7,
+            "title": "Scott workflow signoff on Diamond posting flow",
+            "description": "Scott reviews the first staged workflow in the visible browser and approval queue. Confirms the flow matches the intended Diamond operating model. This is a required gate before auto_publish can be considered for enablement.",
+            "category": "test",
+            "priority": 95,
+            "status": "build-started",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                2,
+                5,
+                6
+            ],
+            "impact": "standard"
+        },
+        {
+            "number": 8,
+            "title": "Finalize auto_publish policy and make go/no-go decision",
+            "description": "After repeated staging proof, expert checklist, and Scott workflow signoff are complete, make an explicit product decision on whether auto_publish should ever become enabled. Document the decision and any conditions that must be met before enablement.",
+            "category": "feature",
+            "priority": 80,
+            "status": "backlog",
+            "created_at": "2026-05-23",
+            "completed_at": null,
+            "dependencies": [
+                7
+            ]
+        },
+        {
+            "number": 9,
+            "title": "build image generation",
+            "description": "Connect to an image generation service and connect to Diamond.\nAdd ability to turn on automatic image creation for posts at campaign level and in new posts UI\nAdd image generation option per campaign per platform\nadd campaign guidance for image generation prompt",
+            "category": "feature",
+            "priority": 90,
+            "impact": "standard",
+            "status": "backlog",
+            "created_at": "2026-05-25",
+            "completed_at": null,
+            "dependencies": []
+        },
+        {
+            "number": 10,
+            "title": "build video generation feature",
+            "description": "Connect to an video generation service and connect to Diamond.\nAdd ability to turn on automatic video creation for posts at campaign level and in new posts UI\nAdd video generation option per campaign per platform\nadd campaign guidance for video generation prompt",
+            "category": "feature",
+            "priority": 90,
+            "impact": "standard",
+            "status": "cba-complete",
+            "created_at": "2026-05-25",
+            "completed_at": null,
+            "dependencies": []
+        }
+    ]
 }
