@@ -6351,6 +6351,8 @@ async function requestPlatformGeneration() {
     applyGenerationResult(drafts, result, postPackage);
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
+    board = buildPostBoardView(prototypeModel);
+    renderBoard(board);
     reopenActiveDetail();
   } finally {
     if (generateButton) {
@@ -6436,9 +6438,11 @@ function applyGenerationResult(drafts, result, postPackage) {
     draft.changeNote = generated.changeNote || null;
     draft.generationStatus = "ok";
     draft.generationError = null;
-    draft.status = "needs_review";
     draft.updatedAt = now;
     evaluatePlatformDraft(draft); // Stage 3: deterministic claim/banned-phrase enforcement.
+    // LLM-generated content always needs human review; upgrade clean drafts to needs_review
+    // without downgrading anything the evaluator already flagged as blocked.
+    if (draft.status === "draft") draft.status = "needs_review";
   });
 }
 
