@@ -21,10 +21,12 @@ export function migrateWorkspaceState(workspace) {
 function migrateClearBrandDerivedHandles(workspace) {
   if (workspace._handlesClearedV1) return workspace;
   const next = structuredClone(workspace);
+  // All handles before v0.1.68 were auto-derived from brand/company names
+  // (e.g. "AA Mappings" → "@AAMappings"). Since the @Username field was only
+  // added in v0.1.70, no user has ever set a real handle — clear all of them
+  // unconditionally so the user can enter their actual platform usernames.
   (next.socialAccounts || []).forEach((account) => {
-    if (account.handle && account.handle.includes(" ")) {
-      account.handle = "";
-    }
+    account.handle = "";
   });
   next._handlesClearedV1 = true;
   return next;

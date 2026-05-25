@@ -1779,8 +1779,21 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
         <div>
           <span class="eyebrow">Logging into</span>
           <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
-          <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
-          <p class="account-login-safety-note">For brand-new social accounts, finish first login in normal Chrome when possible. Diamond rate-limits login controls so platforms do not see rapid repeated login checks.</p>
+          <div class="account-login-identity">
+            <label class="account-handle-label">
+              <span>Name</span>
+              <input class="account-handle-input" data-account-field="name" type="text"
+                value="${escapeHtml(account.name || "")}" placeholder="e.g. The Card Bet"
+                autocomplete="off" spellcheck="false">
+            </label>
+            <label class="account-handle-label">
+              <span>@Username</span>
+              <input class="account-handle-input" data-account-field="handle" type="text"
+                value="${escapeHtml(account.handle || "")}" placeholder="e.g. @25experts"
+                autocomplete="off" spellcheck="false">
+            </label>
+          </div>
+          <p class="account-login-safety-note">Use this pane to confirm the account is actually logged in. For brand-new accounts, finish first login in normal Chrome when possible.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(statusMessage)}</span>
       </header>

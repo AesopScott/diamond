@@ -2594,6 +2594,18 @@ select.style-select {
   text-align: right;
 }
 
+.account-login-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.account-login-identity .account-handle-label {
+  flex: 1 1 160px;
+  max-width: 280px;
+}
+
 .account-login-safety-note {
   color: var(--muted);
   font-size: 12px;
