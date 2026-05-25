@@ -57,6 +57,13 @@ import {
   platformStagingPlan,
   stagingProofSessionProgress,
 } from "../index.js";
+import {
+  TOGGLEABLE_PLATFORMS,
+  computeCompanyCascade,
+  computeBrandCascade,
+  applyDraftScope,
+  removePlatformDraft,
+} from "./posts-scope-helpers.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -5544,7 +5551,7 @@ function openDetail(postPackage, drafts) {
 function renderPlatformButtons(drafts, postPackage) {
   const target = document.querySelector("#platform-buttons");
   const activePlatforms = new Set(drafts.map((draft) => draft.platform));
-  const toggleable = SUPPORTED_SOCIAL_PLATFORMS.filter((p) => p !== "reddit");
+  const toggleable = TOGGLEABLE_PLATFORMS;
   target.innerHTML = toggleable.map((platform) => {
     const isActive = activePlatforms.has(platform);
     const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
@@ -6136,15 +6143,16 @@ async function handlePlatformToggle(event) {
       const ok = await showConfirmModal(`Remove ${platformLabel(platform)}? Your edited draft text will be lost.`);
       if (!ok) return;
     }
-    prototypeModel.platformDrafts = prototypeModel.platformDrafts.filter(
-      (draft) => !(draft.postPackageId === activePostPackageId && draft.platform === platform)
-    );
+    prototypeModel.platformDrafts = removePlatformDraft(prototypeModel.platformDrafts, activePostPackageId, platform);
   } else {
+    const draftId = `${postPackage.id}-${platform}`;
+    // Guard against duplicate IDs from rapid double-click before reopenActiveDetail completes.
+    if (prototypeModel.platformDrafts.some((d) => d.id === draftId)) return;
     const now = new Date().toISOString();
     const context = { ...postPackage.context, platform, socialAccountId: socialAccountIdForPlatform(platform) };
     const guidance = guidanceForContext(context);
     const draft = createPlatformDraft({
-      id: `${postPackage.id}-${platform}`,
+      id: draftId,
       postPackage,
       context,
       platform,
@@ -6166,25 +6174,19 @@ async function handlePlatformToggle(event) {
 }
 
 function propagateScopeChangeToDrafts(postPackage) {
-  const { companyId, brandId, campaignId } = postPackage.context || {};
-  prototypeModel.platformDrafts
-    .filter((draft) => draft.postPackageId === postPackage.id)
-    .forEach((draft) => {
-      draft.context = { ...draft.context, companyId, brandId, campaignId };
-      draft.companyId = companyId || "";
-      draft.brandId = brandId || "";
-      draft.campaignId = campaignId || "";
-      draft.generationStatus = "needs-attention";
-    });
+  const scope = postPackage.context || {};
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map((draft) => {
+    if (draft.postPackageId !== postPackage.id) return draft;
+    return applyDraftScope(draft, scope);
+  });
 }
 
 async function handleDetailCompanyChange() {
   if (!activePostPackageId) return;
   const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
   if (!postPackage) return;
-  const companyId = document.querySelector("#detail-company")?.value || "";
-  const brandId = (state.brands || []).find((b) => b.companyId === companyId)?.id || "";
-  const campaignId = (state.campaigns || []).find((c) => c.companyId === companyId && c.brandId === brandId)?.id || "";
+  const rawCompanyId = document.querySelector("#detail-company")?.value || "";
+  const { companyId, brandId, campaignId } = computeCompanyCascade(rawCompanyId, state.brands || [], state.campaigns || []);
   postPackage.context = { ...postPackage.context, companyId, brandId, campaignId };
   postPackage.companyId = companyId;
   postPackage.brandId = brandId;
@@ -6203,9 +6205,9 @@ async function handleDetailBrandChange() {
   if (!activePostPackageId) return;
   const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
   if (!postPackage) return;
-  const companyId = document.querySelector("#detail-company")?.value || postPackage.context?.companyId || "";
-  const brandId = document.querySelector("#detail-brand")?.value || "";
-  const campaignId = (state.campaigns || []).find((c) => c.companyId === companyId && c.brandId === brandId)?.id || "";
+  const rawCompanyId = document.querySelector("#detail-company")?.value || postPackage.context?.companyId || "";
+  const rawBrandId = document.querySelector("#detail-brand")?.value || "";
+  const { companyId, brandId, campaignId } = computeBrandCascade(rawCompanyId, rawBrandId, state.campaigns || []);
   postPackage.context = { ...postPackage.context, companyId, brandId, campaignId };
   postPackage.companyId = companyId;
   postPackage.brandId = brandId;
@@ -6232,6 +6234,7 @@ async function handleDetailCampaignChange() {
   propagateScopeChangeToDrafts(postPackage);
   state.context = { ...state.context, companyId, brandId, campaignId };
   await saveProductionState();
+  reopenActiveDetail();
 }
 
 async function addPlatformToActivePackage() {
