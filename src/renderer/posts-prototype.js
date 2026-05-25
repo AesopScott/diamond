@@ -1849,9 +1849,62 @@ function initializeDraftComposeBrowser(draft) {
     const reason = event?.errorDescription || event?.errorCode || "unknown load error";
     setOperatorMessage(`Compose browser failed to load: ${reason}`);
   });
+  // Auto-fill text after load. X/LinkedIn are SPAs — the composer textarea renders
+  // asynchronously after did-finish-load, so retry every 600 ms up to 8 times.
+  webview.addEventListener("did-finish-load", () => {
+    autoFillComposeBrowser(draft, webview, 8, 600);
+  });
+}
+
+async function autoFillComposeBrowser(draft, webview, maxAttempts, intervalMs) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const filled = await tryInjectDraftText(draft, webview);
+    if (filled) {
+      setOperatorMessage("Draft text filled in the compose browser. Review it before publishing.");
+      return;
+    }
+  }
+  // All retries exhausted — copy to clipboard as fallback.
+  await window.diamond?.writeClipboard?.(draft.text || "");
+  setOperatorMessage("Text couldn't be auto-filled — copied to clipboard. Paste it into the composer manually.");
+}
+
+// Returns true if text was successfully injected, false if the target wasn't found yet.
+async function tryInjectDraftText(draft, webview) {
+  const selectorMap = {
+    x: [
+      '[data-testid="tweetTextarea_0"]',
+      'div[role="textbox"][contenteditable="true"]',
+    ],
+    linkedin: [
+      '.ql-editor[contenteditable="true"]',
+      'div[role="textbox"][contenteditable="true"]',
+    ],
+  };
+  const selectors = selectorMap[draft.platform];
+  if (!selectors) return false;
+  try {
+    return await webview.executeJavaScript(`
+      (() => {
+        const selectors = ${JSON.stringify(selectors)};
+        const text = ${JSON.stringify(draft.text || "")};
+        const target = selectors.map((s) => document.querySelector(s)).find(Boolean);
+        if (!target) return false;
+        target.focus();
+        target.textContent = "";
+        document.execCommand("insertText", false, text);
+        target.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+        return target.textContent.length > 0;
+      })();
+    `);
+  } catch {
+    return false;
+  }
 }
 
 async function fillDraftComposeText(draft) {
+  // Manual "Fill text" button — attempt once, fall back to clipboard.
   const webview = document.querySelector(`#draft-compose-webview-${CSS.escape(draft.id)}`);
   if (!webview) return;
   const selectorMap = {
@@ -1871,34 +1924,10 @@ async function fillDraftComposeText(draft) {
     await window.diamond?.writeClipboard?.(draft.text || "");
     setOperatorMessage("Copied draft text to clipboard. Paste it into the composer manually.");
   };
-  if (!selectors) {
-    await copyFallback();
-    return;
-  }
-  try {
-    const inserted = await webview.executeJavaScript(`
-      (() => {
-        const selectors = ${JSON.stringify(selectors)};
-        const text = ${JSON.stringify(draft.text || "")};
-        const target = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
-        if (!target) return false;
-        target.focus();
-        if ("value" in target) {
-          target.value = "";
-          target.dispatchEvent(new Event("input", { bubbles: true }));
-        } else {
-          target.textContent = "";
-        }
-        document.execCommand("insertText", false, text);
-        target.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
-        return true;
-      })();
-    `);
-    if (!inserted) await copyFallback();
-    else setOperatorMessage("Draft text filled in the compose browser. Review it before publishing.");
-  } catch {
-    await copyFallback();
-  }
+  if (!selectors) { await copyFallback(); return; }
+  const filled = await tryInjectDraftText(draft, webview);
+  if (!filled) await copyFallback();
+  else setOperatorMessage("Draft text filled in the compose browser. Review it before publishing.");
 }
 
 function accountBrowserUserAgent(account) {
