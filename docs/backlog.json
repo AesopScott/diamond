@@ -117,12 +117,85 @@
                       "category":  "feature",
                       "priority":  90,
                       "impact":  "standard",
-                      "status":  "backlog",
+                      "status":  "planned",
                       "created_at":  "2026-05-25",
                       "completed_at":  null,
                       "dependencies":  [
 
-                                       ]
+                                       ],
+                      "plan":  "## Overview\n\nBuild image generation feature for Diamond social platform. Connect to Replicate API + Flux Pro for automated image creation. Campaign operators can enable/disable image generation per campaign and per platform (X optional, Instagram required, others optional). Images generated via Replicate, stored in Firestore, with error handling and cost tracking.\n\n## Design Summary\n\n**User Problem**: Campaign operators need to automatically generate image assets instead of manually sourcing them. Images are essential for social engagement across all platforms.\n\n**Service Selection**: Replicate API + Flux Pro (~$0.06/image pay-as-you-go) provides high-quality image generation with flexible pay-per-use pricing.\n\n**Platform Requirements**:\n- Instagram: REQUIRES images\n- X, TikTok, LinkedIn, YouTube, Facebook, Reddit: OPTIONAL (per-platform toggles)\n\n## Implementation Phases\n\n1. **Service Setup & Platform Specs** – Create Replicate wrapper module, define per-platform image format/size specs\n2. **Backend Foundation** – Extend Firestore schema (images collection, campaign settings, post toggles), implement Replicate API integration layer\n3. **Campaign UI** – Add image generation toggle and prompt template to campaign settings\n4. **Post UI** – Add image preview, regenerate, adjust prompt controls to post dialog\n5. **Platform Adapters** – Implement image upload logic for all 7 platforms with format/sizing\n6. **Error Handling & Notifications** – UI toasts, logging, prepare email hooks for automated failures\n7. **Testing & Validation** – Manual end-to-end testing with operators, prompt iteration, quality validation\n\n## Key Assumptions\n\n- Replicate API stable and responsive (~10-15 seconds per image)\n- Flux Pro quality sufficient for campaign assets without heavy editing\n- Manual validation phase validates quality before scaling automation\n- Platform image specs are configurable and validated\n\n## Estimated Effort\n\n~11 days solo (1.5 + 2.5 + 1 + 2 + 2 + 1 + 1 day per phase)\n\n## Success Criteria\n\n- Replicate + Flux Pro API integrated and tested\n- Campaign operators can enable/disable image generation per platform\n- Per-post toggle overrides campaign default\n- Images generated and stored in Firestore with metadata (cost, prompt, service)\n- Platform-specific upload works for all 7 platforms\n- Error handling notifies operators on failures\n- Manual validation confirms image quality meets standards\n- Cost tracking functional (~$0.06/image logged)",
+                      "proofUnits":  [
+                                         {
+                                             "number":  1,
+                                             "title":  "Firestore schema registry updated with images collection",
+                                             "expectedBehavior":  "Firestore schema registry documents the new images collection with fields for service, prompt, cost, approval status, and image metadata.",
+                                             "proofType":  "registry-diff",
+                                             "exactCommand":  "git diff docs/registries/firestore-schema.md",
+                                             "expectedInitialFailure":  "File does not mention images collection or related fields.",
+                                             "expectedPassingEvidence":  "Diff shows new images collection entry with documented fields: service, prompt, generationCost, approvalStatus, imageUrl, dimensions, uploadedAt, regenerationCount.",
+                                             "waiverGuidance":  "N/A"
+                                         },
+                                         {
+                                             "number":  2,
+                                             "title":  "Replicate service wrapper module passes unit tests",
+                                             "expectedBehavior":  "Replicate service wrapper correctly handles API authentication, request/response formatting, error handling, and cost tracking. All unit tests pass.",
+                                             "proofType":  "failing-test",
+                                             "exactCommand":  "npm test -- src/replicate-image-service.test.js",
+                                             "expectedInitialFailure":  "Module src/replicate-image-service.js does not exist. Tests fail with module not found.",
+                                             "expectedPassingEvidence":  "Test output shows 8+ tests passing (auth, request shape, response parsing, error handling, cost tracking, rate limit handling).",
+                                             "waiverGuidance":  "N/A"
+                                         },
+                                         {
+                                             "number":  3,
+                                             "title":  "Campaign imageGenerationSettings persists to/from Firestore",
+                                             "expectedBehavior":  "Campaign settings screen allows setting per-platform image generation toggle, prompt template, and service choice. Values save to Firestore and load on refresh.",
+                                             "proofType":  "ui-check",
+                                             "exactCommand":  "Launch Diamond app; select company → brand → campaign; open campaign settings; find Image Generation section; toggle Generate images for Instagram (on); enter prompt template; click Save; refresh page (Ctrl+R); verify toggle is still on and prompt template still visible",
+                                             "expectedInitialFailure":  "Campaign settings screen has no Image Generation section. No image toggles or prompt editor visible.",
+                                             "expectedPassingEvidence":  "Image Generation section visible with per-platform toggles (X, Instagram, TikTok, LinkedIn, YouTube, Facebook, Reddit), prompt template text area, and service choice display. Values persist after page refresh.",
+                                             "waiverGuidance":  "N/A"
+                                         },
+                                         {
+                                             "number":  4,
+                                             "title":  "Post dialog image generation flow end-to-end",
+                                             "expectedBehavior":  "User creates new post with image generation enabled. Post text generated, image generated via Replicate + Flux Pro, preview appears. User can regenerate or adjust prompt. Post saves with image metadata.",
+                                             "proofType":  "manual-script",
+                                             "exactCommand":  "Launch Diamond; create new company → brand → campaign with image generation enabled for X and Instagram; click New Post; observe campaign defaults apply; enter post text or use generated text; observe image generation loading state; verify image preview appears (~10-15 seconds); click Regenerate Image; observe new image; click Adjust Prompt and modify text; regenerate again; click Save Post; verify post document in Firestore contains images collection entry with URL, prompt, cost, approval status",
+                                             "expectedInitialFailure":  "Post dialog has no image preview area. No Regenerate or Adjust Prompt buttons. Image generation does not happen. No image metadata in saved post.",
+                                             "expectedPassingEvidence":  "Image preview appears after generation. Regenerate button produces new image without saving. Adjust prompt interface allows editing and regenerating. Post saves with image URL, service choice, prompt, cost, and approval status in Firestore.",
+                                             "waiverGuidance":  "N/A"
+                                         },
+                                         {
+                                             "number":  5,
+                                             "title":  "Platform image upload adapters handle all 7 platforms",
+                                             "expectedBehavior":  "Image staging/publishing works for each platform with correct format, size, and metadata. Platform adapters convert generated image to platform-specific format and upload successfully.",
+                                             "proofType":  "manual-script",
+                                             "exactCommand":  "Stage post with image to each platform: X (observe image upload in Network tab), Instagram (observe image attachment), TikTok (verify upload in mobile), LinkedIn (verify image attaches), YouTube (verify thumbnail), Facebook (verify image in composer), Reddit (verify upload). For each, screenshot Network tab showing HTTP 200/201. Verify image appears correctly formatted.",
+                                             "expectedInitialFailure":  "Platform adapters do not handle image attachment. Images fail to upload (HTTP 4xx/5xx). Image dimensions incorrect.",
+                                             "expectedPassingEvidence":  "All 7 platforms show successful image upload (HTTP 200/201 responses). Images appear correctly sized and formatted per platform specs. No console errors.",
+                                             "waiverGuidance":  "If automated tests cannot cover all platform interactions, document manual testing steps and screenshot evidence of successful image upload for each platform."
+                                         },
+                                         {
+                                             "number":  6,
+                                             "title":  "Error handling notifies user on image generation failure",
+                                             "expectedBehavior":  "When image generation fails (Replicate API error, rate limit, timeout), user receives immediate UI notification with error message and option to retry or adjust prompt. Error is logged with context.",
+                                             "proofType":  "manual-script",
+                                             "exactCommand":  "Temporarily disable Replicate API key; open Diamond and create new post with image generation enabled; click Generate Post; observe error toast notification appears with message like Image generation failed: API error. Try again?; check browser console (F12 → Console) for logged error with details (timestamp, error code, request context); click Retry button; re-enable API; verify retry succeeds",
+                                             "expectedInitialFailure":  "No error notification on failed image generation. User doesn't know image generation failed. No logging of error details.",
+                                             "expectedPassingEvidence":  "Error toast appears within 2 seconds of failure. Toast message explains issue. Console log shows error with timestamp, service, error code. User can retry or adjust prompt. Retry succeeds if service recovers.",
+                                             "waiverGuidance":  "N/A"
+                                         },
+                                         {
+                                             "number":  7,
+                                             "title":  "Image generation costs tracked and logged",
+                                             "expectedBehavior":  "Each image generation request logs the Replicate API cost (~$0.06 per Flux Pro image). Costs tracked per post, per campaign, and aggregated for reporting.",
+                                             "proofType":  "failing-test",
+                                             "exactCommand":  "npm test -- src/replicate-image-service.test.js --grep cost",
+                                             "expectedInitialFailure":  "No generationCost field in image metadata. Cost not extracted from Replicate API response. Costs not logged or aggregated.",
+                                             "expectedPassingEvidence":  "Unit tests for cost tracking pass. Image documents in Firestore include generationCost field. Campaign dashboard displays total image generation spend. Logs show cost per request and cumulative spend.",
+                                             "waiverGuidance":  "N/A"
+                                         }
+                                     ]
                   },
                   {
                       "number":  10,
