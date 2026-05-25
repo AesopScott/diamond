@@ -5203,6 +5203,11 @@ async function runOperatorAction(action, dataset = {}) {
     draft.updatedAt = stagedAt;
     draft.stageUrl = composeUrl;
     draft.stageNote = "Compose browser opened. Fill text if needed, review the post, then publish manually.";
+    // Ensure the post detail is the active view — the draft's package may not be
+    // open yet (user came here straight from the board) and the Operator drawer
+    // must close so the embedded webview is actually visible.
+    if (draft.postPackageId) activePostPackageId = draft.postPackageId;
+    closeOperatorDrawer();
     await saveProductionState();
     await refreshProductionViews();
     reopenActiveDetail();
@@ -6663,6 +6668,7 @@ async function handlePlatformDraftAction(event) {
     draft.stageUrl = composeUrl;
     draft.stageNote = "Compose browser opened. Fill text if needed, review the post, then publish manually.";
     draft.updatedAt = stagedAt;
+    closeOperatorDrawer();
     await saveProductionState();
     await refreshProductionViews();
     reopenActiveDetail();
