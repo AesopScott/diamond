@@ -6,10 +6,6 @@ import {
 } from "./video-generation-worker.js";
 
 export async function integrateVideoGenerationIntoPostCreation(postPackage, postDraft, campaign, config = {}) {
-  if (!campaign?.videoGenerationEnabled) {
-    return { ok: false, reason: "Video generation disabled for campaign" };
-  }
-
   const videoGenerationEnabled =
     postDraft.videoGenerationOverride !== null
       ? postDraft.videoGenerationOverride
@@ -44,16 +40,19 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       };
     }
 
-    postDraft.videoGenerationStatus = "generating";
-    postDraft.generatedVideoPrompt = videoRequest.prompt;
-    postDraft.videoGenerationAttempts = (postDraft.videoGenerationAttempts || 0) + 1;
+    const workingDraft = {
+      ...postDraft,
+      videoGenerationStatus: "generating",
+      generatedVideoPrompt: videoRequest.prompt,
+      videoGenerationAttempts: (postDraft.videoGenerationAttempts || 0) + 1,
+    };
 
     if (config.skipPolling) {
       return {
         ok: true,
         reason: "Video generation started (async)",
         videoId: generationResult.videoId,
-        updatedDraft: postDraft,
+        updatedDraft: workingDraft,
       };
     }
 
@@ -62,7 +61,7 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       heygenApiEndpoint: config.heygenApiEndpoint || process.env.HEYGEN_API_ENDPOINT,
     });
 
-    const finalDraft = updatePostDraftWithVideoResult(postDraft, pollResult);
+    const finalDraft = updatePostDraftWithVideoResult(workingDraft, pollResult);
 
     return {
       ok: pollResult.ok,
@@ -101,9 +100,7 @@ export async function processVideoGenerationForPostPackage(postPackage, drafts, 
         ...result,
       });
 
-      if (result.updatedDraft) {
-        Object.assign(draft, result.updatedDraft);
-      }
+      // updatedDraft is returned in results — callers should read results[i].updatedDraft
     } catch (error) {
       results.push({
         draftId: draft.id,

@@ -140,19 +140,17 @@ assert.strictEqual(
 );
 
 // Test generateVideoWithHeyGen with missing API key
-const missingKeyResult = generateVideoWithHeyGen(videoRequest, { heygenApiKey: "" });
-Promise.resolve(missingKeyResult).then((result) => {
-  assert.strictEqual(
-    result.ok,
-    false,
-    "Should fail when API key missing"
-  );
-  assert.strictEqual(
-    result.error.code,
-    "missing_api_key",
-    "Should indicate missing API key"
-  );
-});
+const missingKeyResult = await generateVideoWithHeyGen(videoRequest, { heygenApiKey: "" });
+assert.strictEqual(
+  missingKeyResult.ok,
+  false,
+  "Should fail when API key missing"
+);
+assert.strictEqual(
+  missingKeyResult.error.code,
+  "missing_api_key",
+  "Should indicate missing API key"
+);
 
 console.log("✓ All Diamond video generation worker tests passed.");
 

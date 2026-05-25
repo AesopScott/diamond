@@ -66,6 +66,18 @@ export const VIDEO_SPECS_BY_PLATFORM = Object.freeze({
     format: "mp4",
     aspectRatio: "16:9",
   },
+  "youtube-shorts": {
+    enabled: false,
+    videoDurationSeconds: 60,
+    format: "mp4",
+    aspectRatio: "9:16",
+  },
+  "youtube-longform": {
+    enabled: false,
+    videoDurationSeconds: 60,
+    format: "mp4",
+    aspectRatio: "16:9",
+  },
   x: {
     enabled: false,
     videoDurationSeconds: 30,

@@ -33,7 +33,7 @@ Post draft documents with generated content and metadata.
 - `src/platform-browser-adapter.js` — retrieves video URL
 - `src/metrics.js` — logs video metrics
 
-**Status:** ⚠ extension pending task #10 (12 new video fields)
+**Status:** ✅ implemented — task #10 (12 new video fields, src/draft.js)
 
 ---
 
@@ -56,7 +56,7 @@ Campaign configuration and metadata.
 - `src/post-package.js` — reads defaults
 - `src/content-generation.js` — decides video generation
 
-**Status:** ⚠ extension pending task #10 (4 new fields)
+**Status:** ✅ implemented — task #10 (4 new fields, src/workspace-entities.js)
 
 ---
 
@@ -76,7 +76,7 @@ Generated content packages ready for staging/publishing.
 - `src/renderer/posts-prototype.js` — displays package
 - `src/metrics.js` — aggregates metrics
 
-**Status:** ⚠ extension pending task #10 (2 new fields)
+**Status:** ⚠ fields defined in registry — not yet set by implementation code (postPackages video fields, task #10 follow-up)
 
 ---
 
@@ -95,7 +95,7 @@ Execution logs for staged/published posts.
 - `src/metrics.js` — aggregates metrics
 - `src/budget-tracker.js` — tracks spending
 
-**Status:** ⚠ extension pending task #10 (2 new fields)
+**Status:** ⚠ fields defined in registry — not yet set by implementation code (postRuns video fields, task #10 follow-up)
 
 ---
 
@@ -103,10 +103,10 @@ Execution logs for staged/published posts.
 
 | Collection | New Video Fields | Producers | Consumers | Status |
 |---|---|---|---|---|
-| postDrafts | 12 | firebase-sync, post-package, video-worker | posts-prototype, video-worker, platform-adapter, metrics | ⚠ pending |
-| campaigns | 4 | campaign-ui, seed | posts-prototype, post-package, content-generation | ⚠ pending |
-| postPackages | 2 | firebase-sync, content-generation | posts-prototype, metrics | ⚠ pending |
-| postRuns | 2 | platform-proof | metrics, budget-tracker | ⚠ pending |
+| postDrafts | 12 | firebase-sync, post-package, video-worker | posts-prototype, video-worker, platform-adapter, metrics | ✅ implemented |
+| campaigns | 4 | campaign-ui, seed | posts-prototype, post-package, content-generation | ✅ implemented |
+| postPackages | 2 | firebase-sync, content-generation | posts-prototype, metrics | ⚠ registry-only (no impl yet) |
+| postRuns | 2 | platform-proof | metrics, budget-tracker | ⚠ registry-only (no impl yet) |
 
 Total: 20 new fields across 4 collections
 

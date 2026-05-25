@@ -129,6 +129,22 @@ Email service provider.
 
 ---
 
+### `SENDGRID_API_KEY`
+
+SendGrid API key for sending video error notification emails.
+
+**Type:** string (secret)  
+**Required:** yes (if `NOTIFICATION_EMAIL_SERVICE=sendgrid`)  
+**Default:** (none)  
+**Location:** .env.local or production secret manager
+
+**Consumers**
+- `src/video-error-handler.js` — Authorization header for SendGrid API calls
+
+**Status:** ✅ NEW — task #10
+
+---
+
 ## Summary
 
 **New variables for task #10:** 8 (6 HeyGen + 2 email)  

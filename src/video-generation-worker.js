@@ -1,3 +1,5 @@
+import { VIDEO_SPECS_BY_PLATFORM } from "./constants.js";
+
 export async function requestVideoGeneration(postDraft, campaign, options = {}) {
   if (!postDraft || !campaign) return null;
 
@@ -12,10 +14,18 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
   const qualitySize = postDraft.videoQualitySizeOverride || campaign.videoQualitySize || "high";
   const heygenQuality = HEYGEN_QUALITY_MAP[qualitySize] || "hd";
 
+  const platform = postDraft.platform || null;
+  const platformConfig =
+    (platform && campaign.videoGenerationPlatforms?.[platform]) ||
+    (platform && VIDEO_SPECS_BY_PLATFORM[platform]) ||
+    null;
+  const duration = platformConfig?.videoDurationSeconds ?? 30;
+
   const videoRequest = {
     prompt,
     quality: heygenQuality,
-    duration: 30,
+    duration,
+    platform,
     postDraftId: postDraft.id,
     campaignId: campaign.id,
     createdAt: new Date().toISOString(),

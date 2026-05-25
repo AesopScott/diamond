@@ -81,10 +81,11 @@ Object.values(VIDEO_SPECS_BY_PLATFORM).forEach((spec, index) => {
   );
 });
 
+// 7 original platforms + youtube-shorts + youtube-longform = 9
 assert.strictEqual(
   Object.keys(VIDEO_SPECS_BY_PLATFORM).length,
-  7,
-  "VIDEO_SPECS_BY_PLATFORM should contain exactly 7 platforms"
+  9,
+  "VIDEO_SPECS_BY_PLATFORM should contain exactly 9 platforms"
 );
 
 // Test VIDEO_QUALITY_LEVELS
