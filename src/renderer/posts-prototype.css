@@ -1911,6 +1911,48 @@ select.style-select {
   margin-top: 6px;
 }
 
+.social-preview-media {
+  border-radius: 10px;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.social-preview-thumb {
+  aspect-ratio: 16 / 9;
+  background: var(--surface-2);
+  border-radius: 6px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.social-preview-video-thumb,
+.social-preview-file-thumb {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-preview-media-overflow {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-2);
+  border-radius: 6px;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  justify-content: center;
+}
+
 .calendar-board {
   display: grid;
   gap: 18px;

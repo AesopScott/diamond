@@ -5914,6 +5914,13 @@ function accountLoginName(account) {
   return account?.handle || "";
 }
 
+function localFileUrl(filePath) {
+  // Convert a local filesystem path to a file:// URL for use in <img src>.
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  const withSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return `file://${withSlash}`;
+}
+
 function renderSocialPreview(draft, preflight) {
   const account = preflight.account || accountForDraft(draft);
   const loginName = accountLoginName(account);
@@ -5922,6 +5929,23 @@ function renderSocialPreview(draft, preflight) {
   const stageUrl = draft.stageUrl || "";
   const openLink = stageUrl
     ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
+    : "";
+  const media = draft.media || [];
+  const inspections = mediaInspectionMap(draft);
+  const mediaHtml = media.length
+    ? `<div class="social-preview-media">
+        ${media.slice(0, 4).map((filePath) => {
+          const item = inspections.get(filePath) || mediaPathFallback(filePath);
+          if (item.kind === "image") {
+            return `<img class="social-preview-thumb" src="${escapeHtml(localFileUrl(filePath))}" alt="${escapeHtml(item.name)}" loading="lazy">`;
+          }
+          if (item.kind === "video") {
+            return `<div class="social-preview-thumb social-preview-video-thumb" title="${escapeHtml(item.name)}">▶ ${escapeHtml(item.name)}</div>`;
+          }
+          return `<div class="social-preview-thumb social-preview-file-thumb" title="${escapeHtml(item.name)}">📎 ${escapeHtml(item.name)}</div>`;
+        }).join("")}
+        ${media.length > 4 ? `<div class="social-preview-media-overflow">+${media.length - 4} more</div>` : ""}
+      </div>`
     : "";
   return `
     <section class="social-preview" aria-label="Post preview">
@@ -5936,7 +5960,7 @@ function renderSocialPreview(draft, preflight) {
             <strong class="social-preview-handle">${escapeHtml(displayHandle)}</strong>
           </div>
           <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
-          ${(draft.media || []).length ? `<div class="social-preview-media-count">📎 ${draft.media.length} media file${draft.media.length > 1 ? "s" : ""} attached</div>` : ""}
+          ${mediaHtml}
         </div>
       </div>
     </section>
