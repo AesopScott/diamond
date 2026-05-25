@@ -25,6 +25,7 @@ export * from "./social-account.js";
 export * from "./tenant-context.js";
 export * from "./template-renderer.js";
 export * from "./user-guide.js";
+export * from "./video-error-handler.js";
 export * from "./video-generation-integration.js";
 export * from "./video-generation-worker.js";
 export * from "./workspace-entities.js";
