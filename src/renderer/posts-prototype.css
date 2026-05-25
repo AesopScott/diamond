@@ -814,6 +814,22 @@ textarea {
   opacity: 0.6;
 }
 
+.campaign-generate-button {
+  background: #0f5c4a;
+  border: 1px solid #0f5c4a;
+  border-radius: 8px;
+  color: #6ee7b7;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.campaign-generate-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
 select.style-select {
   min-height: 38px;
   padding: 8px 12px;

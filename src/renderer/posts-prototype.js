@@ -612,6 +612,7 @@ function wirePrototypeControls() {
   document.querySelector("#detail-brand")?.addEventListener("change", handleDetailBrandChange);
   document.querySelector("#detail-campaign")?.addEventListener("change", handleDetailCampaignChange);
   document.querySelector("#detail-generate")?.addEventListener("click", requestPlatformGeneration);
+  document.querySelector("#campaign-generate")?.addEventListener("click", requestCampaignGeneration);
   document.querySelector("#generation-style")?.addEventListener("change", handleGenerationStyleChange);
   document.querySelector("#platform-previews").addEventListener("click", handlePlatformDraftAction);
   document.querySelector("#platform-previews").addEventListener("input", handlePlatformDraftTextInput);
@@ -5551,11 +5552,16 @@ function renderPlatformButtons(drafts, postPackage) {
     const tip = isActive ? `Remove ${platformLabel(platform)}` : `Add ${platformLabel(platform)}`;
     return `<button type="button" class="platform-button${isActive ? " active" : ""}" data-platform-toggle="${escapeHtml(platform)}" title="${escapeHtml(tip)}">${escapeHtml(platformLabel(platform))}</button>`;
   }).join("");
+  const hasActivePlatforms = activePlatforms.size > 0;
   const generateButton = document.querySelector("#detail-generate");
   if (generateButton) {
-    const hasActivePlatforms = activePlatforms.size > 0;
     generateButton.hidden = !hasActivePlatforms;
     generateButton.disabled = !hasActivePlatforms;
+  }
+  const campaignButton = document.querySelector("#campaign-generate");
+  if (campaignButton) {
+    const hasCampaign = Boolean(postPackage?.campaignId);
+    campaignButton.disabled = !(hasActivePlatforms && hasCampaign);
   }
 }
 
@@ -6318,6 +6324,38 @@ async function requestPlatformGeneration() {
     if (generateButton) {
       generateButton.disabled = false;
       generateButton.textContent = "Content Automation";
+    }
+  }
+}
+
+async function requestCampaignGeneration() {
+  if (!activePostPackageId) return;
+  const postPackage = prototypeModel.postPackages.find((item) => item.id === activePostPackageId);
+  if (!postPackage) return;
+  const drafts = prototypeModel.platformDrafts.filter((draft) => draft.postPackageId === activePostPackageId);
+  if (!drafts.length) return;
+  const campaignButton = document.querySelector("#campaign-generate");
+  if (campaignButton) {
+    campaignButton.disabled = true;
+    campaignButton.textContent = "Generating…";
+  }
+  drafts.forEach((draft) => { draft.generationStatus = "generating"; });
+  const payload = { ...buildGenerationPayload(postPackage, drafts), idea: "", mode: "campaign" };
+  let result;
+  try {
+    result = await window.diamond?.generatePostDrafts(payload);
+  } catch (error) {
+    result = { ok: false, error: error && error.message ? error.message : String(error) };
+  }
+  try {
+    applyGenerationResult(drafts, result, postPackage);
+    updatePostPackageFromDrafts(activePostPackageId);
+    await saveProductionState();
+    reopenActiveDetail();
+  } finally {
+    if (campaignButton) {
+      campaignButton.disabled = false;
+      campaignButton.textContent = "Campaign Automation";
     }
   }
 }
