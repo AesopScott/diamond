@@ -416,6 +416,26 @@ button:disabled {
   padding: 8px 12px;
 }
 
+.filter-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.filter-group-label {
+  align-self: center;
+  color: var(--text-muted, rgba(255,255,255,0.4));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
 .create-button {
   background: var(--accent);
   color: var(--accent-text);
@@ -560,6 +580,16 @@ button:disabled {
   display: flex;
   gap: 8px;
   justify-content: space-between;
+}
+
+.card-platform-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  text-transform: uppercase;
 }
 
 .post-card-delete {
@@ -925,7 +955,8 @@ select.style-select {
   color: var(--text);
   font-size: 13px;
   font-weight: 400;
-  padding: 5px 8px;
+  min-height: 38px;
+  padding: 8px 10px;
   text-transform: none;
 }
 
@@ -1281,7 +1312,8 @@ select.style-select {
   margin-top: 3px;
 }
 
-.workflow-checklist-item em {
+.workflow-checklist-item em,
+.workflow-checklist-item .workflow-badge {
   color: var(--muted);
   font-size: 10px;
   font-style: normal;
@@ -1297,20 +1329,76 @@ select.style-select {
   color: #76f5a8;
 }
 
-.workflow-jump-btn {
-  background: none;
-  border: none;
-  color: var(--accent-text);
+.workflow-action-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
   cursor: pointer;
+  flex-shrink: 0;
   font-size: 10px;
-  font-weight: 1000;
-  padding: 4px 6px;
-  text-decoration: underline;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  text-transform: uppercase;
+  transition: background 0.08s, border-color 0.08s;
+  white-space: nowrap;
+}
+
+.workflow-action-btn:hover {
+  background: color-mix(in srgb, var(--surface-2) 80%, white 20%);
+  border-color: color-mix(in srgb, var(--line) 60%, white 40%);
+}
+
+.workflow-action-btn:active {
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  transform: translateY(1px);
+}
+
+.workflow-action-btn--next {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.workflow-action-btn--next:hover {
+  background: color-mix(in srgb, var(--accent) 85%, white 15%);
+  border-color: color-mix(in srgb, var(--accent) 85%, white 15%);
+}
+
+.workflow-action-btn--danger {
+  border-color: rgba(220, 60, 60, 0.5);
+  color: #f08080;
+}
+
+.workflow-action-btn--danger:hover {
+  background: rgba(220, 60, 60, 0.15);
+  border-color: rgba(220, 60, 60, 0.8);
+  color: #ff9090;
+}
+
+.workflow-checklist-item.danger-item {
+  border-color: rgba(220, 60, 60, 0.2);
+  margin-top: 8px;
+  opacity: 0.75;
+}
+
+.workflow-checklist-item.danger-item:hover {
+  opacity: 1;
+}
+
+.workflow-badge {
+  color: var(--muted);
+  flex-shrink: 0;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.workflow-jump-btn:hover {
-  opacity: 0.8;
+.workflow-badge.done {
+  color: #76f5a8;
 }
 
 .staging-plan {
@@ -1742,31 +1830,94 @@ select.style-select {
 }
 
 .social-preview {
-  background: #09090a;
   border-top: 1px solid var(--line);
+  margin-top: 16px;
+}
+
+.social-preview-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.social-preview-header strong {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.social-preview-open {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.social-preview-open:hover {
+  text-decoration: underline;
+}
+
+.social-preview-card {
+  background: #09090a;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   display: grid;
   gap: 8px 12px;
   grid-template-columns: 44px 1fr;
-  margin: 16px -16px -16px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .social-preview .avatar {
+  align-items: center;
   background: #4b4b55;
   border-radius: 999px;
+  color: var(--text);
+  display: flex;
+  font-size: 18px;
+  font-weight: 800;
   height: 44px;
+  justify-content: center;
   width: 44px;
 }
 
-.social-preview p {
-  color: var(--muted);
-  margin: 0;
+.social-preview-body {
+  min-width: 0;
 }
 
-.social-preview > p {
+.social-preview-meta {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 6px;
+}
+
+.social-preview-meta strong {
+  font-size: 14px;
+}
+
+.social-preview-handle {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.social-preview-text {
   color: var(--text);
-  grid-column: 1 / -1;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.social-preview-media-count {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
 }
 
 .calendar-board {
@@ -2374,7 +2525,9 @@ select.style-select {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
-  font: 800 13px/1.2 inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
   min-height: 34px;
   min-width: 0;
   padding: 6px 10px;
@@ -2385,7 +2538,7 @@ select.style-select {
   background: var(--accent);
   border: 1px solid color-mix(in srgb, var(--accent) 70%, white 16%);
   border-radius: 8px;
-  color: var(--accent-ink);
+  color: var(--accent-text);
   cursor: pointer;
   font-weight: 1000;
   min-height: 34px;

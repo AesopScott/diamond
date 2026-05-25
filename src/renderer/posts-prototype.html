@@ -39,16 +39,7 @@
             <button id="create-post" class="create-button" type="button">Create all</button>
           </header>
 
-          <section class="prototype-toolbar" aria-label="Post filters">
-            <button type="button" class="filter-pill" disabled title="Filtering lands after the default shell flip.">All</button>
-            <button type="button" class="filter-pill" disabled title="Tag filtering lands after the default shell flip.">All tags</button>
-            <button type="button" class="filter-pill" disabled title="Date filtering lands after the default shell flip.">Created date</button>
-            <button type="button" class="filter-pill" disabled title="Sort controls land after the default shell flip.">Newest first</button>
-            <div class="view-toggle" aria-label="View mode">
-              <button type="button" class="active" disabled title="Board view is currently active.">Board</button>
-              <button type="button" disabled title="List view lands after the default shell flip.">List</button>
-            </div>
-          </section>
+          <section class="prototype-toolbar" aria-label="Post filters"></section>
 
           <section id="posts-board" class="posts-board" aria-label="Posts board"></section>
 
@@ -73,19 +64,20 @@
                 <label class="scope-select">Company <select id="detail-company"></select></label>
                 <label class="scope-select">Brand <select id="detail-brand"></select></label>
                 <label class="scope-select">Campaign <select id="detail-campaign"></select></label>
+                <label class="scope-select">Voice
+                  <select id="generation-style" class="style-select" aria-label="Generation style">
+                    <option value="">Select Voice</option>
+                    <option value="Brand voice">Brand voice</option>
+                    <option value="Punchy">Punchy</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Storytelling">Storytelling</option>
+                  </select>
+                </label>
               </div>
-              <select id="generation-style" class="style-select" aria-label="Generation style">
-                <option value="Default">Default</option>
-                <option value="Brand voice">Brand voice</option>
-                <option value="Punchy">Punchy</option>
-                <option value="Professional">Professional</option>
-                <option value="Storytelling">Storytelling</option>
-              </select>
               <button id="detail-generate" class="generate-button" type="button" hidden>+ Create Content</button>
               <button id="campaign-generate" class="campaign-generate-button" type="button" disabled>+ Campaign Content</button>
               <button id="detail-evaluate-all" class="media-button" type="button" hidden disabled>Evaluate All</button>
               <button id="eval-auto-generate" class="eval-auto-button" type="button" disabled>Evaluation Automation</button>
-              <button id="detail-add-media" class="media-button" type="button">+ Media</button>
               <div id="platform-buttons" class="platform-buttons" aria-label="Platform targets"></div>
               <button id="detail-add-all-platforms" class="media-button" type="button">+/- All Ready</button>
               <div class="tag-input">

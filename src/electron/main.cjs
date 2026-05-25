@@ -580,7 +580,7 @@ ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
     appDir: APP_DIR,
     screenshotsDir: path.join(APP_DIR, "screenshots"),
     headless: false,
-    keepOpen: false,
+    keepOpen: true,
   });
 });
 
