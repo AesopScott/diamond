@@ -115,7 +115,7 @@
             "category": "feature",
             "priority": 90,
             "impact": "standard",
-            "status": "backlog",
+            "status": "pr-reviewed",
             "created_at": "2026-05-25",
             "completed_at": null,
             "dependencies": []
@@ -127,9 +127,9 @@
             "category": "feature",
             "priority": 90,
             "impact": "standard",
-            "status": "cba-complete",
+            "status": "production",
             "created_at": "2026-05-25",
-            "completed_at": null,
+            "completed_at": "2026-05-25",
             "dependencies": []
         }
     ]
