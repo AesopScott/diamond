@@ -2823,19 +2823,22 @@ select.style-select {
   padding: 6px 10px;
 }
 
+.compose-browser-capture-proof-btn {
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
+.compose-browser-capture-proof-btn.proof-captured {
+  background: color-mix(in srgb, var(--accent, #2a7d4f) 20%, var(--surface-2)) !important;
+  border-color: var(--accent, #2a7d4f) !important;
+  color: var(--accent, #2a7d4f) !important;
+}
+
 .compose-browser-mark-published-btn {
   background: var(--accent, #2a7d4f) !important;
   border-color: transparent !important;
   color: #fff !important;
   margin-left: auto;
-}
-
-.draft-compose-browser.proof-mode {
-  border-color: var(--accent, #2a7d4f);
-}
-
-.draft-compose-browser.proof-mode .draft-compose-browser-header {
-  background: color-mix(in srgb, var(--accent, #2a7d4f) 15%, var(--surface-2));
 }
 
 .draft-compose-webview-shell {

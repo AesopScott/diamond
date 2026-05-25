@@ -1812,30 +1812,25 @@ function renderDraftComposeBrowser(draft, account, partition, composeUrl) {
   const handle = account?.handle || account?.id || "No handle set";
   const platform = draft.platform || account?.platform || "";
   const webviewId = `draft-compose-webview-${draft.id}`;
-  const proofMode = Boolean(draft.composeBrowserProofMode);
-  const headerNote = proofMode
-    ? "Navigate to the live post, then click Capture Proof Screenshot."
-    : "Manual publishing required. Review the composer yourself before pressing the platform's post button.";
-  const toolbar = proofMode ? `
-    <button type="button" data-platform-action="compose-browser-reload" data-platform-draft-id="${escapeHtml(draft.id)}">Reload</button>
-    <button type="button" data-platform-action="compose-browser-capture-proof" data-platform-draft-id="${escapeHtml(draft.id)}" class="compose-browser-mark-published-btn" title="Take a screenshot of the current webview page as proof">📸 Capture Proof Screenshot</button>
-    <button type="button" data-platform-action="compose-browser-close" data-platform-draft-id="${escapeHtml(draft.id)}">Skip &amp; Close</button>
-  ` : `
-    <button type="button" data-platform-action="compose-browser-reload" data-platform-draft-id="${escapeHtml(draft.id)}">Reload</button>
-    <button type="button" data-platform-action="compose-browser-fill" data-platform-draft-id="${escapeHtml(draft.id)}">Fill text</button>
-    <button type="button" data-platform-action="compose-browser-mark-published" data-platform-draft-id="${escapeHtml(draft.id)}" class="compose-browser-mark-published-btn" title="Mark this draft as published and switch to proof mode">✓ Mark Published</button>
-    <button type="button" data-platform-action="compose-browser-close" data-platform-draft-id="${escapeHtml(draft.id)}">Close browser</button>
-  `;
+  const proofCaptured = Boolean(draft.proofCapturedAt);
   return `
-    <section class="draft-compose-browser${proofMode ? " proof-mode" : ""}" aria-label="${escapeHtml(platformLabel(platform))} compose browser">
+    <section class="draft-compose-browser" aria-label="${escapeHtml(platformLabel(platform))} compose browser">
       <header class="draft-compose-browser-header">
         <div>
           <strong>${escapeHtml(platformLabel(platform))}</strong>
           <span>${escapeHtml(handle)}</span>
         </div>
-        <p>${escapeHtml(headerNote)}</p>
+        <p>After posting: capture a proof screenshot, then mark published.</p>
       </header>
-      <div class="draft-compose-browser-toolbar">${toolbar}</div>
+      <div class="draft-compose-browser-toolbar">
+        <button type="button" data-platform-action="compose-browser-reload" data-platform-draft-id="${escapeHtml(draft.id)}">Reload</button>
+        <button type="button" data-platform-action="compose-browser-fill" data-platform-draft-id="${escapeHtml(draft.id)}">Fill text</button>
+        <button type="button" data-platform-action="compose-browser-capture-proof" data-platform-draft-id="${escapeHtml(draft.id)}" class="compose-browser-capture-proof-btn${proofCaptured ? " proof-captured" : ""}" title="Screenshot the current page as proof of publishing">
+          ${proofCaptured ? "✓ Proof captured" : "📸 Capture proof"}
+        </button>
+        <button type="button" data-platform-action="compose-browser-mark-published" data-platform-draft-id="${escapeHtml(draft.id)}" class="compose-browser-mark-published-btn" title="Mark as published and close the browser">✓ Mark Published</button>
+        <button type="button" data-platform-action="compose-browser-close" data-platform-draft-id="${escapeHtml(draft.id)}">Close</button>
+      </div>
       <div class="draft-compose-webview-shell">
         <webview
           id="${escapeHtml(webviewId)}"
@@ -6759,18 +6754,9 @@ async function handlePlatformDraftAction(event) {
     await fillDraftComposeText(draft);
     return;
   }
-  if (action === "compose-browser-mark-published") {
-    markPlatformDraftPosted(draft);
-    // Keep browser open in proof mode so the user can navigate to the live post
-    // and capture a real screenshot before closing.
-    draft.composeBrowserProofMode = true;
-    updatePostPackageFromDrafts(draft.postPackageId);
-    await saveProductionState();
-    await refreshProductionViews();
-    reopenActiveDetail();
-    return;
-  }
   if (action === "compose-browser-capture-proof") {
+    // Screenshot the current webview page — stays open so the user can then
+    // click Mark Published or keep browsing.
     const webview = document.querySelector(`#draft-compose-webview-${CSS.escape(draft.id)}`);
     if (webview) {
       try {
@@ -6783,11 +6769,19 @@ async function handlePlatformDraftAction(event) {
           draft.proofCapturedAt = new Date().toISOString();
           draft.proofKind = "screenshot";
           draft.proofNote = `Screenshot proof captured for ${platformLabel(draft.platform)}.`;
+          setOperatorMessage("Proof screenshot saved. Click Mark Published when ready.");
         }
       } catch (err) {
         setOperatorMessage(`Screenshot failed: ${err?.message || "unknown error"}`);
       }
     }
+    await saveProductionState();
+    await refreshProductionViews();
+    reopenActiveDetail();
+    return;
+  }
+  if (action === "compose-browser-mark-published") {
+    markPlatformDraftPosted(draft);
     draft.composeBrowserOpen = false;
     draft.composeBrowserProofMode = false;
     updatePostPackageFromDrafts(draft.postPackageId);
