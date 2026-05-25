@@ -1366,6 +1366,27 @@ select.style-select {
   border-color: color-mix(in srgb, var(--accent) 85%, white 15%);
 }
 
+.workflow-action-btn--danger {
+  border-color: rgba(220, 60, 60, 0.5);
+  color: #f08080;
+}
+
+.workflow-action-btn--danger:hover {
+  background: rgba(220, 60, 60, 0.15);
+  border-color: rgba(220, 60, 60, 0.8);
+  color: #ff9090;
+}
+
+.workflow-checklist-item.danger-item {
+  border-color: rgba(220, 60, 60, 0.2);
+  margin-top: 8px;
+  opacity: 0.75;
+}
+
+.workflow-checklist-item.danger-item:hover {
+  opacity: 1;
+}
+
 .workflow-badge {
   color: var(--muted);
   flex-shrink: 0;

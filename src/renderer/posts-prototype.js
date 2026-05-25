@@ -6094,24 +6094,26 @@ function workflowHelpForDraft(draft, preflight, plan) {
 
 function renderWorkflowChecklist(draft, preflight, plan) {
   const checklist = workflowChecklistForDraft(draft, preflight, plan);
-  const completeCount = checklist.filter((item) => item.complete).length;
-  const nextStep = nextWorkflowStep(checklist);
+  const forwardItems = checklist.filter((item) => !item.danger);
+  const completeCount = forwardItems.filter((item) => item.complete).length;
+  const nextStep = nextWorkflowStep(forwardItems);
   return `
     <section class="workflow-checklist-card" aria-label="${escapeHtml(platformLabel(draft.platform))} workflow checklist">
       <header>
         <strong>Workflow checklist</strong>
-        <span>${completeCount}/${checklist.length} done</span>
+        <span>${completeCount}/${forwardItems.length} done</span>
       </header>
       ${nextStep ? `<p class="workflow-next-step"><strong>Next:</strong> ${escapeHtml(nextStep.label)}. ${escapeHtml(nextStep.detail)}</p>` : `<p class="workflow-next-step complete"><strong>Complete:</strong> This draft has reached the posted state.</p>`}
       <ol>
         ${checklist.map((item, index) => {
           let badgeHtml;
           if (item.complete) {
-            badgeHtml = `<em class="workflow-badge done">Done</em>`;
+            badgeHtml = `<em class="workflow-badge done">${item.danger ? "Abandoned" : "Done"}</em>`;
           } else if (item.action) {
-            const isCurrent = item === nextStep;
+            const isCurrent = !item.danger && item === nextStep;
+            const dangerClass = item.danger ? " workflow-action-btn--danger" : "";
             badgeHtml = `<button type="button"
-              class="workflow-action-btn${isCurrent ? " workflow-action-btn--next" : ""}"
+              class="workflow-action-btn${isCurrent ? " workflow-action-btn--next" : ""}${dangerClass}"
               data-platform-action="${escapeHtml(item.action)}"
               data-platform-draft-id="${escapeHtml(draft.id)}"
               title="${escapeHtml(item.detail)}">${escapeHtml(item.label)}</button>`;
@@ -6119,7 +6121,7 @@ function renderWorkflowChecklist(draft, preflight, plan) {
             badgeHtml = `<em class="workflow-badge open">Open</em>`;
           }
           return `
-          <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${item === nextStep ? "current" : ""}">
+          <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${!item.danger && item === nextStep ? "current" : ""} ${item.danger ? "danger-item" : ""}">
             <span class="workflow-step-number">${index + 1}</span>
             <div>
               <strong>${escapeHtml(item.label)}</strong>
@@ -6149,11 +6151,13 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     || ["approved", "scheduled", "staged", "published", "posted", "blocked", "needs_review"].includes(status)
   );
   const approved = ["approved", "scheduled", "staged", "published", "posted"].includes(status) || Boolean(draft.approvedAt);
+  const scheduled = ["scheduled", "staged", "published", "posted"].includes(status) || Boolean(draft.scheduledAt);
   const mediaReady = !plan.mediaRequired || Boolean((draft.media || []).length);
   const staged = ["staged", "published", "posted", "needs_manual_finish"].includes(status)
     || Boolean(draft.stagedAt || draft.stageUrl || draft.stageResult?.openedUrl);
   const published = ["published", "posted"].includes(status) || Boolean(draft.publishedAt);
   const proofed = Boolean(draft.proofCapturedAt || draft.proofKind || draft.lastProofRunId);
+  const abandoned = status === "abandoned";
   return [
     {
       label: "Confirm target",
@@ -6174,6 +6178,13 @@ function workflowChecklistForDraft(draft, preflight, plan) {
       complete: approved,
       detail: "Approve only after the evaluation is clean enough to continue.",
       doneDetail: "This draft is approved for staging or has moved beyond approval.",
+    },
+    {
+      label: "Schedule",
+      action: "schedule",
+      complete: scheduled,
+      detail: "Put this draft on the calendar so it stages at the planned time.",
+      doneDetail: "This draft is scheduled or has moved to staging.",
     },
     {
       label: "Add media if needed",
@@ -6209,11 +6220,19 @@ function workflowChecklistForDraft(draft, preflight, plan) {
       detail: "After the post is live, click Mark Posted so queues and metrics stay correct.",
       doneDetail: "Diamond has moved this draft into the posted state.",
     },
+    {
+      label: "Abandon",
+      action: "abandoned",
+      danger: true,
+      complete: abandoned,
+      detail: "Stop this draft if you decide not to publish it.",
+      doneDetail: "This draft has been abandoned.",
+    },
   ];
 }
 
 function nextWorkflowStep(checklist) {
-  return checklist.find((item) => !item.complete) || null;
+  return checklist.find((item) => !item.complete && !item.danger) || null;
 }
 
 function renderDraftProofPanel(draft) {
