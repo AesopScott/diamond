@@ -64,6 +64,10 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
+import {
+  VIDEO_SPECS_BY_PLATFORM,
+  VIDEO_QUALITY_LEVELS,
+} from "../constants.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -3203,7 +3207,31 @@ function renderCampaigns() {
           <div><dt>Campaign name</dt><dd><input data-campaign-field="campaignName" type="text" value="${escapeHtml(campaign.name || "")}"></dd></div>
           <div><dt>Status</dt><dd><input data-campaign-field="campaignStatus" type="text" value="${escapeHtml(campaign.status || "planning")}"></dd></div>
           <div><dt>Post tags</dt><dd><input data-campaign-field="campaignPostTags" type="text" placeholder="comma-separated, locked on posts" value="${escapeHtml((campaign.postTags || []).join(", "))}"></dd></div>
+          <div><dt>Video generation enabled</dt><dd><input data-campaign-field="videoGenerationEnabled" type="checkbox" ${campaign.videoGenerationEnabled ? "checked" : ""}></dd></div>
+          <div><dt>Video quality</dt><dd><select data-campaign-field="videoQualitySize">${["low", "medium", "high"].map((level) => `<option value="${level}" ${campaign.videoQualitySize === level ? "selected" : ""}>${level}</option>`).join("")}</select></dd></div>
+          <div><dt>Video prompt guidance</dt><dd><textarea data-campaign-field="videoPromptGuidance" rows="3" placeholder="Guidance for video generation prompts">${escapeHtml(campaign.videoPromptGuidance || "")}</textarea></dd></div>
         </dl>
+        ${campaign.videoGenerationEnabled ? `
+          <section style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ccc;">
+            <h4 style="margin: 0.5rem 0;">Platform Video Settings</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+              ${Object.entries(VIDEO_SPECS_BY_PLATFORM).map(([platform, spec]) => {
+                const platformConfig = campaign.videoGenerationPlatforms?.[platform] || spec;
+                return `
+                  <div style="padding: 0.5rem; border: 1px solid #eee; border-radius: 4px;">
+                    <label style="display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                      <input type="checkbox" data-platform-video-field="${platform}" ${platformConfig.enabled ? "checked" : ""}>
+                      <span style="font-weight: 500;">${platform}</span>
+                    </label>
+                    <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                      ${spec.videoDurationSeconds}s • ${spec.aspectRatio}
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </section>
+        ` : ""}
         <section class="account-actions" aria-label="Campaign actions">
           <button type="button" data-campaign-action="save">Save campaign</button>
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
