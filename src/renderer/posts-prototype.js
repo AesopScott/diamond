@@ -64,6 +64,7 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
+import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -2995,6 +2996,44 @@ function guidanceModulesForCampaign(campaignId, strategy = {}) {
   return existing.sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
 }
 
+function renderImageGenerationSection(campaign = {}) {
+  const enabled = campaign.imageGenerationEnabled || false;
+  const guidance = campaign.imagePromptGuidance || "";
+  const platforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
+  const platformRows = Object.entries(platforms).map(([platform, spec]) => `
+    <label class="platform-gen-toggle">
+      <input type="checkbox" data-platform-image-field="${escapeHtml(platform)}" ${spec.enabled ? "checked" : ""}>
+      ${escapeHtml(platformLabel(platform))}
+      <span class="gen-spec">${spec.width}×${spec.height}</span>
+    </label>
+  `).join("");
+  return `
+    <section class="image-gen-settings" aria-label="Image generation settings">
+      <header class="gen-settings-header">
+        <label class="gen-master-toggle">
+          <input type="checkbox" data-campaign-field="imageGenerationEnabled" ${enabled ? "checked" : ""}>
+          <strong>Image Generation</strong>
+        </label>
+        <span class="gen-provider">Replicate · Flux Pro · ~$0.04/image</span>
+      </header>
+      <div class="gen-settings-body${enabled ? "" : " gen-settings-disabled"}">
+        <fieldset class="platform-gen-toggles">
+          <legend>Enable per platform</legend>
+          ${platformRows}
+        </fieldset>
+        <label class="gen-prompt-label">
+          Image prompt guidance
+          <textarea
+            data-campaign-field="imagePromptGuidance"
+            rows="3"
+            placeholder="Describe the visual style, mood, colors, and any recurring imagery for this campaign's images."
+          >${escapeHtml(guidance)}</textarea>
+        </label>
+      </div>
+    </section>
+  `;
+}
+
 function renderCampaigns() {
   const target = document.querySelector("#campaign-workspace");
   if (!target) return;
@@ -3025,6 +3064,7 @@ function renderCampaigns() {
           <button type="button" data-campaign-action="save">Save campaign</button>
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
         </section>
+        ${renderImageGenerationSection(campaign)}
       </article>
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
@@ -3060,18 +3100,35 @@ function renderEditableCampaignPanel(title, field, items = [], placeholder = "")
 
 async function handleCampaignWorkspaceChange(event) {
   const field = event.target.closest("[data-campaign-field]");
-  if (!field || !["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) return;
-  if (field.dataset.campaignField === "contextBrandId") {
-    const brandId = normalizeId(field.value, "brandId");
-    const brand = (state.brands || []).find((item) => item.id === brandId) || {};
-    const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
-    state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+  if (field && ["contextBrandId", "contextCampaignId"].includes(field.dataset.campaignField)) {
+    if (field.dataset.campaignField === "contextBrandId") {
+      const brandId = normalizeId(field.value, "brandId");
+      const brand = (state.brands || []).find((item) => item.id === brandId) || {};
+      const campaignId = (state.campaigns || []).find((campaign) => campaign.companyId === brand.companyId && campaign.brandId === brandId)?.id || "";
+      state.context = { ...state.context, companyId: brand.companyId || state.context?.companyId || "", brandId, campaignId };
+    }
+    if (field.dataset.campaignField === "contextCampaignId") {
+      state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+    }
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  if (field.dataset.campaignField === "contextCampaignId") {
-    state.context = { ...state.context, campaignId: normalizeId(field.value, "campaignId") };
+  // Per-platform image enable checkboxes
+  const platformImageToggle = event.target.closest("[data-platform-image-field]");
+  if (platformImageToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
   }
-  await saveProductionState();
-  renderCampaigns();
+  // Image generation fields that should auto-save on change
+  if (field && CAMPAIGN_IMAGE_GENERATION_FIELDS.includes(field.dataset.campaignField)) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
 }
 
 async function handleCampaignWorkspaceClick(event) {
@@ -3185,6 +3242,7 @@ async function deleteSelectedCampaign() {
 function saveCampaignWorkspace() {
   const workspace = document.querySelector("#campaign-workspace");
   const valueFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.value || "";
+  const checkedFor = (field) => workspace?.querySelector(`[data-campaign-field="${field}"]`)?.checked || false;
   const brandId = normalizeId(valueFor("contextBrandId") || state.context?.brandId, "brandId");
   const brand = (state.brands || []).find((item) => item.id === brandId) || {};
   const companyId = brand.companyId || state.context?.companyId || "";
@@ -3196,6 +3254,18 @@ function saveCampaignWorkspace() {
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    campaign.imageGenerationEnabled = checkedFor("imageGenerationEnabled");
+    campaign.imagePromptGuidance = valueFor("imagePromptGuidance") || campaign.imagePromptGuidance || "";
+    campaign.imageGenerationPlatforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
+    Object.keys(campaign.imageGenerationPlatforms).forEach((platform) => {
+      const checkbox = workspace?.querySelector(`[data-platform-image-field="${platform}"]`);
+      if (checkbox) {
+        campaign.imageGenerationPlatforms[platform] = {
+          ...campaign.imageGenerationPlatforms[platform],
+          enabled: checkbox.checked,
+        };
+      }
+    });
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
@@ -5635,6 +5705,32 @@ function renderPlatformPreviews(drafts) {
   target.innerHTML = tabStrip + panels;
 }
 
+function renderImageGenerationToggle(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  // Only show the toggle if the campaign has image generation enabled
+  if (!campaign?.imageGenerationEnabled) return "";
+
+  const status = draft.imageGenerationStatus;
+  const isEnabled = draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined
+    ? Boolean(draft.imageGenerationEnabled)
+    : Boolean(campaign.imageGenerationEnabled);
+
+  const statusLabel = status === "generating" ? " (generating…)"
+    : status === "complete" ? " ✓"
+    : status === "failed" ? " ✗"
+    : "";
+  const activeClass = isEnabled ? " media-button--active" : "";
+  const title = isEnabled ? "Image generation on — click to disable for this post" : "Enable image generation for this post";
+
+  return `<button
+    type="button"
+    class="media-button${activeClass}"
+    data-platform-action="toggle-image-generation"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="${escapeHtml(title)}"
+  >🖼 Image${escapeHtml(statusLabel)}</button>`;
+}
+
 function renderPlatformPreview(draft, hidden = false) {
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
@@ -5658,6 +5754,7 @@ function renderPlatformPreview(draft, hidden = false) {
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
+        ${renderImageGenerationToggle(draft)}
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
       ${renderDraftMediaList(draft)}
@@ -6205,6 +6302,7 @@ async function handlePlatformDraftAction(event) {
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
+  if (action === "toggle-image-generation") await toggleDraftImageGeneration(draft);
   if (action === "stage") {
     await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
@@ -6253,6 +6351,25 @@ async function copyDraftMediaPaths(draft) {
     ? `Copied ${draft.media.length} media path(s) for manual upload.`
     : "No media paths to copy.";
   draft.updatedAt = new Date().toISOString();
+}
+
+async function toggleDraftImageGeneration(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  if (!campaign?.imageGenerationEnabled) return; // campaign gate must be on
+
+  // Cycle: inherit (null) → on (true) → off (false) → inherit (null)
+  const current = draft.imageGenerationEnabled;
+  if (current === null || current === undefined) {
+    draft.imageGenerationEnabled = true;
+  } else if (current === true) {
+    draft.imageGenerationEnabled = false;
+  } else {
+    draft.imageGenerationEnabled = null; // back to inherit
+  }
+
+  draft.updatedAt = new Date().toISOString();
+  await saveProductionState();
+  reopenActiveDetail();
 }
 
 async function inspectDraftMedia(draft) {

@@ -1,4 +1,5 @@
 import { normalizeId } from "./ids.js";
+import { IMAGE_SPECS_BY_PLATFORM } from "./constants.js";
 
 export function createCompanyRecord(input = {}) {
   const name = String(input.name || "").trim();
@@ -38,6 +39,9 @@ export function createCampaignRecord(input = {}) {
     postTags: Array.isArray(input.postTags)
       ? [...new Set(input.postTags.map((t) => String(t).trim().toLowerCase()).filter(Boolean))]
       : [],
+    imageGenerationEnabled: input.imageGenerationEnabled || false,
+    imageGenerationPlatforms: input.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM },
+    imagePromptGuidance: input.imagePromptGuidance || "",
     createdAt: input.createdAt || new Date().toISOString(),
   };
 }
