@@ -6391,18 +6391,22 @@ async function requestCampaignGeneration() {
     result = { ok: false, error: error && error.message ? error.message : String(error) };
   }
   try {
-    applyGenerationResult(drafts, result, postPackage);
-    // Campaign automation always targets needs_review — reviewers must approve before publishing.
+    // Pass campaignIdea as fallbackIdea so template-fallback drafts (no LLM key) get meaningful
+    // placeholder text instead of the empty ideaText field.
+    applyGenerationResult(drafts, result, postPackage, campaignIdea);
+    // Campaign automation output always requires review — covers both LLM and template-fallback paths.
+    const now = new Date().toISOString();
     drafts.forEach((draft) => {
-      if (draft.textSource === "llm" && draft.status !== "blocked") {
+      if ((draft.textSource === "llm" || draft.textSource === "template-fallback") && draft.status !== "blocked") {
         draft.status = "needs_review";
+        draft.updatedAt = now;
       }
     });
     updatePostPackageFromDrafts(activePostPackageId);
-    await saveProductionState();
-    // Rebuild the board so card status/content reflects the newly generated drafts.
+    // Rebuild board variable so clicking Back shows updated cards — no renderBoard call here
+    // because the user is still in detail view; Back button will call renderBoard(board).
     board = buildPostBoardView(prototypeModel);
-    renderBoard(board);
+    await saveProductionState();
     reopenActiveDetail();
   } finally {
     if (campaignButton) {
@@ -6412,13 +6416,16 @@ async function requestCampaignGeneration() {
   }
 }
 
-function applyGenerationResult(drafts, result, postPackage) {
+function applyGenerationResult(drafts, result, postPackage, fallbackIdea = null) {
   const now = new Date().toISOString();
   // Missing writer key (drafts === null) or an error → renderer template fallback so the page stays usable.
   if (!result || result.ok === false || result.drafts === null) {
+    // Prefer an explicit fallbackIdea (e.g. campaign summary) over the post ideaText so callers
+    // can supply meaningful placeholder copy even when the idea field is intentionally empty.
+    const ideaForFallback = fallbackIdea || postPackage.ideaText || "";
     drafts.forEach((draft) => {
       if (draft.textSource !== "manual") {
-        draft.text = platformCopy(postPackage.ideaText, draft.platform);
+        draft.text = platformCopy(ideaForFallback, draft.platform);
         draft.textSource = "template-fallback";
       }
       draft.generationStatus = result && result.ok === false ? "error" : "fallback";
