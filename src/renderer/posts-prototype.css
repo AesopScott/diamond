@@ -674,8 +674,6 @@ button:disabled {
 .card-scheduled-label {
   background: #162640;
   border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.04em;
