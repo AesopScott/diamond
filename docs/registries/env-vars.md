@@ -42,8 +42,9 @@ HeyGen API authentication key for video generation.
 
 **Consumers**
 - `src/video-generation-worker.js` — constructs Authorization header
+- `src/electron/main.cjs` — `diamond:get-heygen-api-key` IPC handler reads and returns to renderer (task #11)
 
-**Status:** ⚠ NEW — task #10 wires this
+**Status:** ✓ wired — task #10 service + task #11 IPC bridge to renderer
 
 ---
 
@@ -175,7 +176,7 @@ SendGrid API key for sending video error notification emails.
 | Variable | Producer | Consumer | Status |
 |---|---|---|---|
 | `REPLICATE_API_KEY` | .env.local / secret manager | replicate-image-service.js, main.cjs (IPC) | ✓ (task #9) |
-| `HEYGEN_API_KEY` | .env.local / secret manager | video-generation-worker.js | ⚠ NEW (task #10) |
+| `HEYGEN_API_KEY` | .env.local / secret manager | video-generation-worker.js, main.cjs (IPC) | ✓ (task #10 + #11) |
 | `HEYGEN_API_ENDPOINT` | .env.local / secret manager | video-generation-worker.js | ⚠ NEW (task #10) |
 | `HEYGEN_WEBHOOK_SECRET` | .env.local / secret manager | video-webhook-handler.js | ⚠ optional (task #10) |
 | `HEYGEN_STORAGE_BUCKET` | .env.local / secret manager | video-storage.js | ⚠ NEW (task #10) |
