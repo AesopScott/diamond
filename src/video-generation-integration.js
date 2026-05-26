@@ -1,7 +1,7 @@
 import {
   requestVideoGeneration,
-  generateVideoWithHeyGen,
-  pollVideoGeneration,
+  generateVideo,
+  pollProviderVideoGeneration,
   updatePostDraftWithVideoResult,
 } from "./video-generation-worker.js";
 import {
@@ -25,11 +25,17 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       return { ok: false, reason: "Could not create video request" };
     }
 
-    const generationResult = await generateVideoWithHeyGen(videoRequest, {
-      heygenApiKey: config.heygenApiKey || process.env.HEYGEN_API_KEY,
-      heygenApiEndpoint: config.heygenApiEndpoint || process.env.HEYGEN_API_ENDPOINT,
-      heygenAvatarId: config.heygenAvatarId || process.env.HEYGEN_AVATAR_ID,
-      heygenVoiceId: config.heygenVoiceId || process.env.HEYGEN_VOICE_ID,
+    const provider = config.provider || videoRequest.provider || "heygen";
+    const generationResult = await generateVideo(videoRequest, {
+      provider,
+      heygenApiKey: configValue(config, "heygenApiKey", "HEYGEN_API_KEY"),
+      heygenApiEndpoint: configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT"),
+      heygenAvatarId: configValue(config, "heygenAvatarId", "HEYGEN_AVATAR_ID"),
+      heygenVoiceId: configValue(config, "heygenVoiceId", "HEYGEN_VOICE_ID"),
+      klingToken: configValue(config, "klingToken", "KLING_TOKEN"),
+      klingApiEndpoint: configValue(config, "klingApiEndpoint", "KLING_API_ENDPOINT"),
+      klingModel: configValue(config, "klingModel", "KLING_MODEL"),
+      klingEnableAudio: config.klingEnableAudio,
     });
 
     if (!generationResult.ok) {
@@ -57,13 +63,17 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
         ok: true,
         reason: "Video generation started (async)",
         videoId: generationResult.videoId,
+        provider,
         updatedDraft: workingDraft,
       };
     }
 
-    const pollResult = await pollVideoGeneration(generationResult.videoId, {
-      heygenApiKey: config.heygenApiKey || process.env.HEYGEN_API_KEY,
-      heygenApiEndpoint: config.heygenApiEndpoint || process.env.HEYGEN_API_ENDPOINT,
+    const pollResult = await pollProviderVideoGeneration(generationResult.videoId, {
+      provider,
+      heygenApiKey: configValue(config, "heygenApiKey", "HEYGEN_API_KEY"),
+      heygenApiEndpoint: configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT"),
+      klingToken: configValue(config, "klingToken", "KLING_TOKEN"),
+      klingApiEndpoint: configValue(config, "klingApiEndpoint", "KLING_API_ENDPOINT"),
     });
 
     const finalDraft = updatePostDraftWithVideoResult(workingDraft, pollResult);
@@ -73,8 +83,8 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       const notificationPayload = buildVideoErrorNotificationPayload(postPackage, finalDraft);
       if (notificationPayload) {
         await sendVideoErrorNotification(notificationPayload, {
-          service: config.notificationService || process.env.NOTIFICATION_EMAIL_SERVICE,
-          sendgridApiKey: config.sendgridApiKey || process.env.SENDGRID_API_KEY,
+          service: config.notificationService || envValue("NOTIFICATION_EMAIL_SERVICE"),
+          sendgridApiKey: config.sendgridApiKey || envValue("SENDGRID_API_KEY"),
         });
       }
     }
@@ -83,6 +93,7 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       ok: pollResult.ok,
       reason: pollResult.ok ? "Video generated successfully" : pollResult.error?.message,
       videoId: generationResult.videoId,
+      provider,
       updatedDraft: finalDraft,
       videoPollResult: pollResult,
     };
@@ -93,6 +104,14 @@ export async function integrateVideoGenerationIntoPostCreation(postPackage, post
       error: error.message,
     };
   }
+}
+
+function envValue(key) {
+  return typeof process !== "undefined" ? process.env?.[key] : undefined;
+}
+
+function configValue(config, key, envKey) {
+  return Object.prototype.hasOwnProperty.call(config, key) ? config[key] : envValue(envKey);
 }
 
 export async function processVideoGenerationForPostPackage(postPackage, drafts, campaigns, config = {}) {

@@ -60,7 +60,7 @@ export async function generateVideo(videoRequest, config = {}) {
 
 export async function generateVideoWithHeyGen(videoRequest, config = {}) {
   const apiKey = configValue(config, "heygenApiKey", "HEYGEN_API_KEY");
-  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v1";
+  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v2";
 
   if (!apiKey) {
     return {
@@ -203,7 +203,7 @@ export async function pollProviderVideoGeneration(videoId, config = {}, options 
 
 export async function pollVideoGeneration(videoId, config = {}, options = {}) {
   const apiKey = configValue(config, "heygenApiKey", "HEYGEN_API_KEY");
-  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v1";
+  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v2";
   const maxWaitMs = options.maxWaitMs || 300000;
   const pollIntervalMs = options.pollIntervalMs || 2000;
 
