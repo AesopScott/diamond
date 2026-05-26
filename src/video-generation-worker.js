@@ -168,8 +168,10 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
   }
 
   const duration = String(normalizeKlingDuration(videoRequest.duration));
+  // Kling v1 text2video uses `model_name`, not `model`.
+  // `sound` is not a v1 text2video field — omit it to avoid body validation errors.
   const body = {
-    model: config.klingModel || envValue("KLING_MODEL") || "kling-v1-6",
+    model_name: config.klingModel || envValue("KLING_MODEL") || "kling-v1-6",
     prompt: videoRequest.prompt,
     duration,
     aspect_ratio: normalizeKlingAspectRatio(videoRequest.aspectRatio),
@@ -178,7 +180,6 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
 
   const negativePrompt = config.klingNegativePrompt || envValue("KLING_NEGATIVE_PROMPT");
   if (negativePrompt) body.negative_prompt = negativePrompt;
-  if (config.klingEnableAudio != null) body.sound = Boolean(config.klingEnableAudio);
   if (config.klingImageUrl || videoRequest.imageUrl) body.image_url = config.klingImageUrl || videoRequest.imageUrl;
 
   console.log("[diamond] Kling request body:", JSON.stringify(body));
