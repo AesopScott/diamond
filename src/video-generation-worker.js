@@ -1,4 +1,30 @@
+import { createHmac } from "crypto";
 import { VIDEO_SPECS_BY_PLATFORM } from "./constants.js";
+
+/**
+ * Build a short-lived HS256 JWT for the official Kling AI API.
+ * Tokens are valid 30 min; generate fresh on every request.
+ */
+function buildKlingJwt(accessKey, secretKey) {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const payload = Buffer.from(JSON.stringify({
+    iss: accessKey,
+    exp: now + 1800,
+    nbf: now - 5,
+  })).toString("base64url");
+  const unsigned = `${header}.${payload}`;
+  const sig = createHmac("sha256", secretKey).update(unsigned).digest("base64url");
+  return `${unsigned}.${sig}`;
+}
+
+/** Resolve a Bearer token: JWT if access+secret are present, else plain apiKey. */
+function resolveKlingToken(config) {
+  const accessKey = configValue(config, "klingAccessKey", "KLING_ACCESS_KEY");
+  const secretKey = configValue(config, "klingSecretKey", "KLING_SECRET_KEY");
+  if (accessKey && secretKey) return buildKlingJwt(accessKey, secretKey);
+  return configValue(config, "klingApiKey", "KLING_API_KEY") || null;
+}
 
 export async function requestVideoGeneration(postDraft, campaign, options = {}) {
   if (!postDraft || !campaign) return null;
@@ -13,6 +39,7 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
   const prompt = postDraft.videoGenerationPrompt || campaign.videoPromptGuidance || postDraft.text;
   const qualitySize = postDraft.videoQualitySizeOverride || campaign.videoQualitySize || "high";
   const heygenQuality = HEYGEN_QUALITY_MAP[qualitySize] || "hd";
+  const klingMode = KLING_QUALITY_MODE_MAP[qualitySize] || "professional";
 
   const platform = postDraft.platform || null;
   const platformConfig =
@@ -20,11 +47,17 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
     (platform && VIDEO_SPECS_BY_PLATFORM[platform]) ||
     null;
   const duration = platformConfig?.videoDurationSeconds ?? 30;
+  const aspectRatio = platformConfig?.aspectRatio || "16:9";
+  const provider = postDraft.videoGenerationProvider || campaign.videoGenerationProvider || options.provider || "heygen";
 
   const videoRequest = {
     prompt,
+    provider,
     quality: heygenQuality,
+    qualitySize,
+    klingMode,
     duration,
+    aspectRatio,
     platform,
     postDraftId: postDraft.id,
     campaignId: campaign.id,
@@ -34,9 +67,15 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
   return videoRequest;
 }
 
+export async function generateVideo(videoRequest, config = {}) {
+  const provider = normalizeVideoProvider(config.provider || videoRequest?.provider);
+  if (provider === "kling") return generateVideoWithKling(videoRequest, config);
+  return generateVideoWithHeyGen(videoRequest, config);
+}
+
 export async function generateVideoWithHeyGen(videoRequest, config = {}) {
-  const apiKey = config.heygenApiKey || process.env.HEYGEN_API_KEY;
-  const apiEndpoint = config.heygenApiEndpoint || process.env.HEYGEN_API_ENDPOINT || "https://api.heygen.com/v1";
+  const apiKey = configValue(config, "heygenApiKey", "HEYGEN_API_KEY");
+  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v1";
 
   if (!apiKey) {
     return {
@@ -57,8 +96,8 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
         prompt: videoRequest.prompt,
         quality: videoRequest.quality,
         duration: videoRequest.duration,
-        avatar_id: config.heygenAvatarId || process.env.HEYGEN_AVATAR_ID || "default",
-        voice_id: config.heygenVoiceId || process.env.HEYGEN_VOICE_ID || "en-us-1",
+        avatar_id: config.heygenAvatarId || envValue("HEYGEN_AVATAR_ID") || "default",
+        voice_id: config.heygenVoiceId || envValue("HEYGEN_VOICE_ID") || "en-us-1",
         platform: videoRequest.platform || "social_media",
       }),
     });
@@ -98,9 +137,88 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
   }
 }
 
+export async function generateVideoWithKling(videoRequest, config = {}) {
+  const token = resolveKlingToken(config);
+  const apiEndpoint = configValue(config, "klingApiEndpoint", "KLING_API_ENDPOINT") || "https://api.klingai.com/v1";
+
+  if (!token) {
+    return {
+      ok: false,
+      status: "failed",
+      error: { code: "missing_api_key", message: "KLING_ACCESS_KEY + KLING_SECRET_KEY (or KLING_API_KEY) not configured" },
+    };
+  }
+
+  const duration = normalizeKlingDuration(videoRequest.duration);
+  const body = {
+    model: config.klingModel || envValue("KLING_MODEL") || "kling-v2.6-pro",
+    prompt: videoRequest.prompt,
+    duration,
+    aspect_ratio: normalizeKlingAspectRatio(videoRequest.aspectRatio),
+    mode: config.klingMode || videoRequest.klingMode || "professional",
+  };
+
+  const negativePrompt = config.klingNegativePrompt || envValue("KLING_NEGATIVE_PROMPT");
+  if (negativePrompt) body.negative_prompt = negativePrompt;
+  if (config.klingEnableAudio != null) body.sound = Boolean(config.klingEnableAudio);
+  if (config.klingImageUrl || videoRequest.imageUrl) body.image_url = config.klingImageUrl || videoRequest.imageUrl;
+
+  try {
+    const response = await fetch(`${apiEndpoint}/videos/text2video`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        ok: false,
+        status: "failed",
+        statusCode: response.status,
+        error: {
+          code: errorData.error?.code || errorData.code || "api_error",
+          message: errorData.error?.message || errorData.message || `Kling API error: ${response.status}`,
+          retryable: response.status === 429 || response.status === 503,
+        },
+      };
+    }
+
+    const data = await response.json();
+    const taskId = data.task_id || data.taskId || data.id || data.data?.task_id || data.data?.id;
+    return {
+      ok: true,
+      status: normalizeProviderStatus(data.status || data.data?.status || "pending"),
+      videoId: taskId,
+      provider: "kling",
+      creditsUsed: data.credits_used || data.data?.credits_used || 0,
+      createdAt: data.created_at || data.data?.created_at,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "failed",
+      error: {
+        code: "request_error",
+        message: error.message || "Failed to request Kling video generation",
+        retryable: true,
+      },
+    };
+  }
+}
+
+export async function pollProviderVideoGeneration(videoId, config = {}, options = {}) {
+  const provider = normalizeVideoProvider(config.provider);
+  if (provider === "kling") return pollKlingVideoGeneration(videoId, config, options);
+  return pollVideoGeneration(videoId, config, options);
+}
+
 export async function pollVideoGeneration(videoId, config = {}, options = {}) {
-  const apiKey = config.heygenApiKey || process.env.HEYGEN_API_KEY;
-  const apiEndpoint = config.heygenApiEndpoint || process.env.HEYGEN_API_ENDPOINT || "https://api.heygen.com/v1";
+  const apiKey = configValue(config, "heygenApiKey", "HEYGEN_API_KEY");
+  const apiEndpoint = configValue(config, "heygenApiEndpoint", "HEYGEN_API_ENDPOINT") || "https://api.heygen.com/v1";
   const maxWaitMs = options.maxWaitMs || 300000;
   const pollIntervalMs = options.pollIntervalMs || 2000;
 
@@ -177,6 +295,95 @@ export async function pollVideoGeneration(videoId, config = {}, options = {}) {
   };
 }
 
+export async function pollKlingVideoGeneration(videoId, config = {}, options = {}) {
+  const apiEndpoint = configValue(config, "klingApiEndpoint", "KLING_API_ENDPOINT") || "https://api.klingai.com/v1";
+  const maxWaitMs = options.maxWaitMs || 300000;
+  const pollIntervalMs = options.pollIntervalMs || 2000;
+
+  if (!videoId) {
+    return {
+      ok: false,
+      status: "failed",
+      error: { code: "invalid_params", message: "Video ID required" },
+    };
+  }
+
+  if (!resolveKlingToken(config)) {
+    return {
+      ok: false,
+      status: "failed",
+      error: { code: "missing_api_key", message: "KLING_ACCESS_KEY + KLING_SECRET_KEY (or KLING_API_KEY) not configured" },
+    };
+  }
+
+  const startTime = Date.now();
+  let lastError = null;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const pollToken = resolveKlingToken(config);
+      const response = await fetch(`${apiEndpoint}/videos/${videoId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${pollToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        lastError = {
+          code: errorData.error?.code || errorData.code || "api_error",
+          message: errorData.error?.message || errorData.message || `Kling API error: ${response.status}`,
+          retryable: response.status === 429 || response.status === 503,
+        };
+        if (!lastError.retryable) {
+          return { ok: false, status: "failed", error: lastError };
+        }
+      } else {
+        const data = await response.json();
+        const payload = data.data || data;
+        const status = normalizeProviderStatus(payload.status || payload.task_status || payload.state);
+        if (status === "completed") {
+          return {
+            ok: true,
+            status: "completed",
+            videoId: payload.task_id || payload.taskId || payload.id || videoId,
+            videoUrl: extractKlingVideoUrl(payload),
+            creditsUsed: payload.credits_used || payload.cost || 0,
+            durationSeconds: payload.duration_seconds || payload.duration || 0,
+            expiresAt: payload.expires_at,
+          };
+        }
+        if (status === "failed") {
+          return {
+            ok: false,
+            status: "failed",
+            error: { code: "generation_failed", message: payload.error?.message || payload.message || "Kling video generation failed" },
+          };
+        }
+      }
+    } catch (error) {
+      lastError = {
+        code: "request_error",
+        message: error.message || "Failed to poll Kling video status",
+        retryable: true,
+      };
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  return {
+    ok: false,
+    status: "timeout",
+    error: {
+      code: "timeout",
+      message: `Video generation timeout after ${maxWaitMs}ms`,
+      retryable: true,
+    },
+  };
+}
+
 export function updatePostDraftWithVideoResult(postDraft, result) {
   if (!postDraft || !result) return postDraft;
 
@@ -209,6 +416,52 @@ const HEYGEN_QUALITY_MAP = {
   medium: "hd",
   high: "uhd",
 };
+
+const KLING_QUALITY_MODE_MAP = {
+  low: "standard",
+  medium: "standard",
+  high: "professional",
+};
+
+function normalizeVideoProvider(provider) {
+  return String(provider || "heygen").toLowerCase() === "kling" ? "kling" : "heygen";
+}
+
+function normalizeKlingDuration(duration) {
+  return Number(duration || 0) <= 5 ? 5 : 10;
+}
+
+function normalizeKlingAspectRatio(aspectRatio) {
+  const value = String(aspectRatio || "16:9");
+  return ["16:9", "9:16", "1:1"].includes(value) ? value : "16:9";
+}
+
+function normalizeProviderStatus(status) {
+  const value = String(status || "").toLowerCase();
+  if (["completed", "complete", "succeeded", "success"].includes(value)) return "completed";
+  if (["failed", "failure", "error", "cancelled", "canceled"].includes(value)) return "failed";
+  return value || "pending";
+}
+
+function extractKlingVideoUrl(payload = {}) {
+  return payload.video_url
+    || payload.videoUrl
+    || payload.output?.video_url
+    || payload.output?.videoUrl
+    || payload.result?.video_url
+    || payload.result?.videoUrl
+    || payload.assets?.video
+    || payload.videos?.[0]?.url
+    || payload.video?.url;
+}
+
+function envValue(key) {
+  return typeof process !== "undefined" ? process.env?.[key] : undefined;
+}
+
+function configValue(config, key, envKey) {
+  return Object.prototype.hasOwnProperty.call(config, key) ? config[key] : envValue(envKey);
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -6497,7 +6497,9 @@ async function generateDraftProviderVideo(draft, provider) {
       heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
       heygenAvatarId: heygenConfig?.avatarId || undefined,
       heygenVoiceId: draft.enableAudio ? (heygenConfig?.voiceId || undefined) : null,
-      klingApiKey: klingConfig?.apiKey || "",
+      klingAccessKey: klingConfig?.accessKey || undefined,
+      klingSecretKey: klingConfig?.secretKey || undefined,
+      klingApiKey: klingConfig?.apiKey || undefined,   // legacy plain-token fallback
       klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
       klingModel: klingConfig?.model || undefined,
       klingEnableAudio: draft.enableAudio === true,

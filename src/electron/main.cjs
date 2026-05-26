@@ -624,7 +624,9 @@ ipcMain.handle("diamond:get-heygen-video-config", () => ({
   voiceId: process.env.HEYGEN_VOICE_ID || null,
 }));
 ipcMain.handle("diamond:get-kling-video-config", () => ({
-  apiKey: process.env.KLING_API_KEY || null,
+  accessKey: process.env.KLING_ACCESS_KEY || null,
+  secretKey: process.env.KLING_SECRET_KEY || null,
+  apiKey: process.env.KLING_API_KEY || null,          // legacy plain-token fallback
   apiEndpoint: process.env.KLING_API_ENDPOINT || null,
   model: process.env.KLING_MODEL || null,
   enableAudio: process.env.KLING_ENABLE_AUDIO === "true",
