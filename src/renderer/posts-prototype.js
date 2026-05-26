@@ -6021,7 +6021,7 @@ function renderVideoGenerationToggle(draft) {
     : Boolean(campaign.videoGenerationEnabled);
 
   const statusLabel = status === "generating" ? " (generating…)"
-    : status === "complete" ? " ✓"
+    : status === "success" ? " ✓"
     : status === "failed" ? " ✗"
     : "";
   const activeClass = isEnabled ? " media-button--active" : "";
@@ -6851,7 +6851,7 @@ async function toggleDraftVideoGeneration(draft) {
 
   const finalDraft = {
     ...updatedDraft,
-    videoGenerationStatus: resultDraft.videoGenerationStatus || (result.ok ? "complete" : "failed"),
+    videoGenerationStatus: resultDraft.videoGenerationStatus || (result.ok ? "success" : "failed"),
     generatedVideoUrl: resultDraft.generatedVideoUrl || null,
     generatedVideoMetadata: resultDraft.generatedVideoMetadata || null,
     videoGenerationError: resultDraft.videoGenerationError || null,

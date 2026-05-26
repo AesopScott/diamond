@@ -710,4 +710,22 @@ assert.match(js, /renderOperatorCheck/);
 assert.match(js, /renderOperatorAction/);
 assert.match(js, /operatorRunLogs/);
 
+// Task #11 — Video generation UI: registry-compliance assertions
+// Verify renderVideoGenerationSection is present
+assert.match(js, /renderVideoGenerationSection/);
+// Verify renderVideoGenerationToggle is present and campaign-gated
+assert.match(js, /renderVideoGenerationToggle/);
+assert.match(js, /videoGenerationEnabled/);
+// Status enum compliance — must use "success" (registry: pending|generating|success|failed|retrying), never "complete"
+assert.match(js, /status === "success" \? " ✓"/);
+assert.doesNotMatch(js, /videoGenerationStatus.*"complete"/);
+// toggleDraftVideoGeneration writes "success" on ok, not "complete"
+assert.match(js, /result\.ok \? "success" : "failed"/);
+// HeyGen IPC bridge exposed via preload
+assert.match(js, /getHeygenApiKey/);
+// Per-draft toggle action wired into dispatcher
+assert.match(js, /toggle-video-generation/);
+// Per-platform video field attribute present
+assert.match(js, /data-platform-video-field/);
+
 console.log("All Diamond posts prototype tests passed.");
