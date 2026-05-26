@@ -728,4 +728,11 @@ assert.match(js, /toggle-video-generation/);
 // Per-platform video field attribute present
 assert.match(js, /data-platform-video-field/);
 
+// Archive feature — posted drafts auto-archive after 24 h
+assert.match(js, /id: "archived"/);
+assert.match(js, /label: "Archive"/);
+assert.match(js, /if \(s === "posted"\)\s+return "published"/);
+assert.match(js, /24 \* 60 \* 60 \* 1000/);
+assert.match(js, /colId === "published" && draft\.status === "posted"/);
+
 console.log("All Diamond posts prototype tests passed.");
