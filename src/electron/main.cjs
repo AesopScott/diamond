@@ -645,6 +645,10 @@ ipcMain.handle("diamond:get-heygen-video-config", () => ({
 ipcMain.handle("diamond:get-kling-video-config", () => {
   const accessKey = process.env.KLING_ACCESS_KEY || null;
   const secretKey = process.env.KLING_SECRET_KEY || null;
+  // Only the JWT path is supported. KLING_API_KEY is intentionally NOT forwarded
+  // to the renderer — raw non-expiring keys must not leave the main process.
+  // If only KLING_API_KEY is set, the renderer will surface "Kling token not
+  // configured" which correctly prompts migration to KLING_ACCESS_KEY + KLING_SECRET_KEY.
   let token = null;
   if (accessKey && secretKey) {
     try {
@@ -652,8 +656,6 @@ ipcMain.handle("diamond:get-kling-video-config", () => {
     } catch (err) {
       console.error("[diamond] buildKlingJwt failed:", err.message);
     }
-  } else if (process.env.KLING_API_KEY) {
-    token = process.env.KLING_API_KEY; // legacy plain-token fallback
   }
   if (!token) {
     console.warn("[diamond] Kling config: no token — check KLING_ACCESS_KEY + KLING_SECRET_KEY in .env.local");
