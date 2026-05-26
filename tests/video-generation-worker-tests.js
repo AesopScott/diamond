@@ -154,6 +154,24 @@ assert.strictEqual(
   "Should indicate missing API key"
 );
 
+// Test generateVideoWithHeyGen with valid key but missing voice ID
+const missingVoiceResult = await generateVideoWithHeyGen(videoRequest, { heygenApiKey: "test-key" });
+assert.strictEqual(
+  missingVoiceResult.ok,
+  false,
+  "Should fail when voice ID missing"
+);
+assert.strictEqual(
+  missingVoiceResult.error.code,
+  "missing_voice_id",
+  "Should indicate missing voice ID with actionable message"
+);
+assert.match(
+  missingVoiceResult.error.message,
+  /HEYGEN_VOICE_ID/,
+  "Error message should name the env var to set"
+);
+
 // Test request can target Kling without replacing HeyGen defaults
 const klingCampaign = { ...mockCampaign, videoGenerationProvider: "kling" };
 const klingRequest = await requestVideoGeneration(mockPostDraft, klingCampaign);

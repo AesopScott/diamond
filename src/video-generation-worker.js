@@ -70,8 +70,20 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
     };
   }
 
-  const avatarId = config.heygenAvatarId || envValue("HEYGEN_AVATAR_ID") || "default";
-  const voiceId = config.heygenVoiceId || envValue("HEYGEN_VOICE_ID") || "en-us-1";
+  const avatarId = configValue(config, "heygenAvatarId", "HEYGEN_AVATAR_ID") || "default";
+  // HeyGen avatar videos always need a voice — the audio toggle is Kling-only.
+  // Fail early with an actionable message rather than sending an invalid placeholder.
+  const voiceId = configValue(config, "heygenVoiceId", "HEYGEN_VOICE_ID");
+  if (!voiceId) {
+    return {
+      ok: false,
+      status: "failed",
+      error: {
+        code: "missing_voice_id",
+        message: "HEYGEN_VOICE_ID not configured. Add your Voice ID to .env.local — find it at app.heygen.com/voice-library.",
+      },
+    };
+  }
   const aspectRatio = normalizeHeyGenAspectRatio(videoRequest.aspectRatio);
 
   try {
@@ -102,13 +114,18 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      const errMsg = errorData.error?.message
+        || errorData.message
+        || errorData.detail
+        || `HeyGen API error: ${response.status}`;
+      console.error("[diamond] HeyGen generation failed:", response.status, JSON.stringify(errorData));
       return {
         ok: false,
         status: "failed",
         statusCode: response.status,
         error: {
-          code: errorData.error?.code || "api_error",
-          message: errorData.error?.message || `HeyGen API error: ${response.status}`,
+          code: errorData.error?.code || errorData.code || "api_error",
+          message: errMsg,
           retryable: response.status === 429 || response.status === 503,
         },
       };
@@ -118,7 +135,7 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
     return {
       ok: true,
       status: data.status || "pending",
-      videoId: data.video_id,
+      videoId: data.video_id || data.data?.video_id,
       creditsUsed: data.credits_used || 0,
       createdAt: data.created_at,
     };
@@ -139,11 +156,14 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
   const token = resolveKlingToken(config);
   const apiEndpoint = configValue(config, "klingApiEndpoint", "KLING_API_ENDPOINT") || "https://api.klingai.com/v1";
 
+  // Diagnostic: log token presence (not value) so the console shows where the chain breaks.
+  console.log("[diamond] Kling generateVideoWithKling: token", token ? `present (${String(token).slice(0, 12)}…)` : "MISSING — check KLING_ACCESS_KEY + KLING_SECRET_KEY in .env.local");
+
   if (!token) {
     return {
       ok: false,
       status: "failed",
-      error: { code: "missing_api_key", message: "Kling token not configured" },
+      error: { code: "missing_api_key", message: "Kling token not configured — check KLING_ACCESS_KEY + KLING_SECRET_KEY in .env.local" },
     };
   }
 
@@ -173,6 +193,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("[diamond] Kling API error:", response.status, JSON.stringify(errorData));
       return {
         ok: false,
         status: "failed",
@@ -186,6 +207,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
     }
 
     const data = await response.json();
+    console.log("[diamond] Kling generation started:", JSON.stringify({ task_id: data.task_id || data.data?.task_id, status: data.status || data.data?.status }));
     const taskId = data.task_id || data.taskId || data.id || data.data?.task_id || data.data?.id;
     return {
       ok: true,

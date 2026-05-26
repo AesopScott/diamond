@@ -6554,7 +6554,8 @@ async function generateDraftProviderVideo(draft, provider) {
         heygenApiKey: heygenConfig?.apiKey || "",
         heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
         heygenAvatarId: heygenConfig?.avatarId || undefined,
-        heygenVoiceId: draft.enableAudio ? (heygenConfig?.voiceId || undefined) : null,
+        // HeyGen avatars always need a voice — audio toggle only controls Kling's sound flag.
+        heygenVoiceId: heygenConfig?.voiceId || undefined,
         klingToken: klingConfig?.token || undefined,
         klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
         klingModel: klingConfig?.model || undefined,
