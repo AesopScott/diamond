@@ -875,6 +875,12 @@ textarea {
   opacity: 0.5;
 }
 
+.media-button--active {
+  background: #162640;
+  border-color: #8bbcff;
+  color: #8bbcff;
+}
+
 .generate-button {
   background: #4d5bff;
   border: 1px solid #4d5bff;

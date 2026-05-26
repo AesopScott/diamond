@@ -64,6 +64,8 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
+import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
+import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -6187,6 +6189,80 @@ function renderPlatformPreviews(drafts) {
   });
 }
 
+// Returns a 🖼 Image toggle button when the campaign has image generation enabled;
+// empty string otherwise.
+function renderImageGenerationToggle(draft) {
+  const campaign = (state.campaigns || []).find(
+    (item) => item.id === (draft.campaignId || draft.context?.campaignId)
+  );
+  if (!campaign?.imageGenerationEnabled) return "";
+  const status = draft.imageGenerationStatus;
+  const isEnabled = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
+    ? Boolean(draft.imageGenerationEnabled)
+    : Boolean(campaign.imageGenerationEnabled);
+  const statusSuffix = status === "generating" ? " (generating…)"
+    : status === "complete" ? " ✓"
+    : status === "failed" ? " ✗"
+    : "";
+  const activeClass = isEnabled ? " media-button--active" : "";
+  const tip = isEnabled
+    ? "Image generation on — click to disable for this post"
+    : "Enable image generation for this post";
+  return `<button
+    type="button"
+    class="media-button${activeClass}"
+    data-platform-action="toggle-image-generation"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="${escapeHtml(tip)}"
+  >🖼 Image${escapeHtml(statusSuffix)}</button>`;
+}
+
+async function toggleDraftImageGeneration(draft) {
+  const campaign = (state.campaigns || []).find(
+    (item) => item.id === (draft.campaignId || draft.context?.campaignId)
+  );
+  if (!campaign?.imageGenerationEnabled) return;
+  // Cycle: inherit (null/undefined) → on (true) → off (false) → inherit (null)
+  const current = draft.imageGenerationEnabled;
+  const nextEnabled = (current === null || current === undefined) ? true
+    : current === true ? false
+    : null;
+  let updatedDraft = { ...draft, imageGenerationEnabled: nextEnabled, updatedAt: new Date().toISOString() };
+  if (nextEnabled !== true) {
+    prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+      (d) => (d.id === draft.id ? updatedDraft : d)
+    );
+    await saveProductionState();
+    reopenActiveDetail();
+    return;
+  }
+  // Explicitly enabled — start generation immediately
+  updatedDraft = { ...updatedDraft, imageGenerationStatus: "generating", imageGenerationError: null };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? updatedDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+  const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+  const replicateApiKey = window.diamond?.getReplicateApiKey
+    ? await window.diamond.getReplicateApiKey()
+    : undefined;
+  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { replicateApiKey });
+  const resultDraft = result.updatedDraft || updatedDraft;
+  const finalDraft = {
+    ...updatedDraft,
+    imageGenerationStatus: resultDraft.imageGenerationStatus || (result.ok ? "complete" : "failed"),
+    generatedImageUrl:      resultDraft.generatedImageUrl || null,
+    generatedImageMetadata: resultDraft.generatedImageMetadata || null,
+    imageGenerationError:   resultDraft.imageGenerationError || null,
+  };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? finalDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
 function renderPlatformPreview(draft, hidden = false) {
   const account = accountForDraft(draft);
   const partition = account ? accountBrowserPartition(account) : "";
@@ -6206,6 +6282,7 @@ function renderPlatformPreview(draft, hidden = false) {
           ${statusBadge}
           <button class="media-button draft-evaluate-btn" type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
           <button class="media-button draft-add-media-btn" type="button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Image</button>
+          ${renderImageGenerationToggle(draft)}
         </div>
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
@@ -6852,7 +6929,8 @@ async function handlePlatformDraftAction(event) {
     }
   }
   if (action === "approve") approvePlatformDraft(draft);
-  if (action === "schedule") schedulePlatformDraft(draft);
+  if (action === "schedule") await schedulePlatformDraft(draft);
+  if (action === "toggle-image-generation") { await toggleDraftImageGeneration(draft); return; }
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
   if (action === "stage-browser") {

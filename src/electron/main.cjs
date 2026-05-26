@@ -607,6 +607,8 @@ ipcMain.handle("diamond:attach-webview-media", async (_event, input = {}) => {
     }
   }
 });
+ipcMain.handle("diamond:get-replicate-api-key", () => process.env.REPLICATE_API_KEY || null);
+
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();
   const { stagePostWithPlaywright } = await import(pathToFileURL(path.join(PROJECT_ROOT, "src", "playwright-worker.js")).href);

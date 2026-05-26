@@ -1,4 +1,4 @@
-export const PLATFORMS = Object.freeze([
+﻿export const PLATFORMS = Object.freeze([
   "x",
   "instagram",
   "tiktok",
@@ -115,3 +115,20 @@ export const VIDEO_QUALITY_LEVELS = Object.freeze([
   "medium",
   "high",
 ]);
+
+export const CAMPAIGN_IMAGE_GENERATION_FIELDS = Object.freeze([
+  "imageGenerationEnabled",
+  "imageGenerationPlatforms",
+  "imagePromptGuidance",
+]);
+
+// Platform-specific image dimensions for Replicate / Flux Pro
+export const IMAGE_SPECS_BY_PLATFORM = Object.freeze({
+  x:         { enabled: false, width: 1200, height:  675, aspectRatio: "16:9", format: "webp" },
+  instagram: { enabled: false, width: 1080, height: 1350, aspectRatio:  "4:5", format: "webp" },
+  tiktok:    { enabled: false, width: 1080, height: 1920, aspectRatio:  "9:16", format: "webp" },
+  linkedin:  { enabled: false, width: 1200, height:  628, aspectRatio: "16:9", format: "webp" },
+  youtube:   { enabled: false, width: 1280, height:  720, aspectRatio: "16:9", format: "webp" },
+  facebook:  { enabled: false, width: 1200, height:  628, aspectRatio: "16:9", format: "webp" },
+  reddit:    { enabled: false, width: 1200, height:  628, aspectRatio: "16:9", format: "webp" },
+});
