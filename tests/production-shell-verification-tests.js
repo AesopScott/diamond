@@ -51,8 +51,8 @@ assert.match(main, /Partitions/);
 assert.match(main, /backupStateBeforeRiskyWrite/);
 assert.match(main, /state\.backup-before-entity-count-drop/);
 assert.match(main, /stateEntityCounts/);
-assert.match(html, /disabled title="Filtering lands after the default shell flip\."/);
-assert.match(html, /disabled title="List view lands after the default shell flip\."/);
+assert.match(html, /disabled title="Analytics filters land after the default shell flip\."/);
+assert.match(html, /disabled title="Account filters land after the default shell flip\."/);
 assert.match(css, /button:disabled/);
 assert.match(css, /opacity: 0\.52/);
 
