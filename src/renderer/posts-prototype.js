@@ -6012,13 +6012,11 @@ function renderImageGenerationToggle(draft) {
 
 function renderVideoGenerationToggle(draft) {
   const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
-  // Only show the toggle if the campaign has video generation enabled
-  if (!campaign?.videoGenerationEnabled) return "";
 
   const status = draft.videoGenerationStatus;
   const isEnabled = draft.videoGenerationEnabled !== null && draft.videoGenerationEnabled !== undefined
     ? Boolean(draft.videoGenerationEnabled)
-    : Boolean(campaign.videoGenerationEnabled);
+    : Boolean(campaign?.videoGenerationEnabled);
 
   const statusLabel = status === "generating" ? " (generating…)"
     : status === "success" ? " ✓"
