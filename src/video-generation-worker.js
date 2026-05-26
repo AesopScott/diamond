@@ -70,20 +70,33 @@ export async function generateVideoWithHeyGen(videoRequest, config = {}) {
     };
   }
 
+  const avatarId = config.heygenAvatarId || envValue("HEYGEN_AVATAR_ID") || "default";
+  const voiceId = config.heygenVoiceId || envValue("HEYGEN_VOICE_ID") || "en-us-1";
+  const aspectRatio = normalizeHeyGenAspectRatio(videoRequest.aspectRatio);
+
   try {
     const response = await fetch(`${apiEndpoint}/video/generate`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "X-Api-Key": apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: videoRequest.prompt,
-        quality: videoRequest.quality,
-        duration: videoRequest.duration,
-        avatar_id: config.heygenAvatarId || envValue("HEYGEN_AVATAR_ID") || "default",
-        voice_id: config.heygenVoiceId || envValue("HEYGEN_VOICE_ID") || "en-us-1",
-        platform: videoRequest.platform || "social_media",
+        video_inputs: [{
+          character: {
+            type: "avatar",
+            avatar_id: avatarId,
+            avatar_style: "normal",
+          },
+          voice: {
+            type: "text",
+            input_text: videoRequest.prompt,
+            voice_id: voiceId,
+          },
+        }],
+        test: false,
+        aspect_ratio: aspectRatio,
+        caption: false,
       }),
     });
 
@@ -140,7 +153,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
     prompt: videoRequest.prompt,
     duration,
     aspect_ratio: normalizeKlingAspectRatio(videoRequest.aspectRatio),
-    mode: config.klingMode || videoRequest.klingMode || "professional",
+    mode: config.klingMode || videoRequest.klingMode || "pro",
   };
 
   const negativePrompt = config.klingNegativePrompt || envValue("KLING_NEGATIVE_PROMPT");
@@ -220,10 +233,10 @@ export async function pollVideoGeneration(videoId, config = {}, options = {}) {
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
-      const response = await fetch(`${apiEndpoint}/video/${videoId}`, {
+      const response = await fetch(`https://api.heygen.com/v1/video.status.get?video_id=${encodeURIComponent(videoId)}`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "X-Api-Key": apiKey,
         },
       });
 
@@ -239,18 +252,20 @@ export async function pollVideoGeneration(videoId, config = {}, options = {}) {
         }
       } else {
         const data = await response.json();
-        if (data.status === "completed") {
+        const payload = data.data || data;
+        const status = (payload.status || "").toLowerCase();
+        if (status === "completed") {
           return {
             ok: true,
             status: "completed",
-            videoId: data.video_id,
-            videoUrl: data.video_url,
-            creditsUsed: data.credits_used,
-            durationSeconds: data.duration_seconds,
-            expiresAt: data.expires_at,
+            videoId: payload.video_id || videoId,
+            videoUrl: payload.video_url,
+            creditsUsed: payload.credits_used,
+            durationSeconds: payload.duration_seconds,
+            expiresAt: payload.expires_at,
           };
         }
-        if (data.status === "failed") {
+        if (status === "failed") {
           return {
             ok: false,
             status: "failed",
@@ -403,9 +418,9 @@ const HEYGEN_QUALITY_MAP = {
 };
 
 const KLING_QUALITY_MODE_MAP = {
-  low: "standard",
-  medium: "standard",
-  high: "professional",
+  low: "std",
+  medium: "std",
+  high: "pro",
 };
 
 function normalizeVideoProvider(provider) {
@@ -417,6 +432,12 @@ function normalizeKlingDuration(duration) {
 }
 
 function normalizeKlingAspectRatio(aspectRatio) {
+  const value = String(aspectRatio || "16:9");
+  return ["16:9", "9:16", "1:1"].includes(value) ? value : "16:9";
+}
+
+function normalizeHeyGenAspectRatio(aspectRatio) {
+  // HeyGen v2 accepts "16:9", "9:16", "1:1"
   const value = String(aspectRatio || "16:9");
   return ["16:9", "9:16", "1:1"].includes(value) ? value : "16:9";
 }

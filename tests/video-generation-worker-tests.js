@@ -2,6 +2,7 @@ import assert from "assert";
 import {
   requestVideoGeneration,
   generateVideoWithHeyGen,
+  generateVideoWithKling,
   updatePostDraftWithVideoResult,
 } from "../src/video-generation-worker.js";
 
@@ -43,6 +44,7 @@ const videoRequest = await requestVideoGeneration(mockPostDraft, mockCampaign);
 assert(videoRequest, "Should create a video request");
 assert.strictEqual(videoRequest.prompt, mockCampaign.videoPromptGuidance, "Should use campaign guidance for prompt");
 assert.strictEqual(videoRequest.quality, "uhd", "Quality should map high to uhd");
+assert.strictEqual(videoRequest.provider, "heygen", "Default provider should remain HeyGen");
 
 // Test with campaign video generation disabled
 const disabledCampaign = { ...mockCampaign, videoGenerationEnabled: false };
@@ -151,6 +153,46 @@ assert.strictEqual(
   "missing_api_key",
   "Should indicate missing API key"
 );
+
+// Test request can target Kling without replacing HeyGen defaults
+const klingCampaign = { ...mockCampaign, videoGenerationProvider: "kling" };
+const klingRequest = await requestVideoGeneration(mockPostDraft, klingCampaign);
+assert.strictEqual(klingRequest.provider, "kling", "Campaign can select Kling provider");
+assert.strictEqual(klingRequest.klingMode, "pro", "High quality should map to pro mode for Kling");
+assert.strictEqual(klingRequest.aspectRatio, "16:9", "Should include platform aspect ratio for Kling");
+
+const missingKlingKeyResult = await generateVideoWithKling(klingRequest, { klingApiKey: "" });
+assert.strictEqual(
+  missingKlingKeyResult.ok,
+  false,
+  "Should fail when Kling API key missing"
+);
+assert.strictEqual(
+  missingKlingKeyResult.error.code,
+  "missing_api_key",
+  "Should indicate missing Kling API key"
+);
+
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (url, options) => {
+  assert.strictEqual(url, "https://example.test/v1/videos/text2video", "Should call Kling text-to-video endpoint");
+  const payload = JSON.parse(options.body);
+  assert.strictEqual(payload.model, "kling-v2.6-pro", "Should use default Kling model");
+  assert.strictEqual(payload.duration, 10, "Should normalize Kling duration to 5 or 10 seconds");
+  assert.strictEqual(payload.aspect_ratio, "16:9", "Should pass supported aspect ratio");
+  return {
+    ok: true,
+    json: async () => ({ task_id: "kling-task-1", status: "queued", credits_used: 0.33 }),
+  };
+};
+const klingStartResult = await generateVideoWithKling(klingRequest, {
+  klingApiKey: "test-key",
+  klingApiEndpoint: "https://example.test/v1",
+});
+globalThis.fetch = originalFetch;
+assert.strictEqual(klingStartResult.ok, true, "Should start Kling generation");
+assert.strictEqual(klingStartResult.videoId, "kling-task-1", "Should parse Kling task ID");
+assert.strictEqual(klingStartResult.provider, "kling", "Should return Kling provider marker");
 
 console.log("✓ All Diamond video generation worker tests passed.");
 
