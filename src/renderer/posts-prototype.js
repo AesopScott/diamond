@@ -3455,7 +3455,7 @@ function renderImageGenerationCampaignSection(campaign = {}) {
         Campaign image prompt
         <textarea
           data-campaign-field="imagePromptGuidance"
-          rows="4"
+          rows="6"
           placeholder="Describe the visual style, brand colours, composition, and mood to use when generating images for posts in this campaign."
         >${escapeHtml(prompt)}</textarea>
       </label>
@@ -6235,7 +6235,7 @@ function renderImagePromptRow(draft) {
         <textarea
           class="image-prompt-textarea"
           data-image-prompt-draft-id="${escapeHtml(draft.id)}"
-          rows="2"
+          rows="6"
           placeholder="${escapeHtml(campaignPrompt || "Describe the image to generate for this post…")}"
         >${escapeHtml(postPrompt)}</textarea>
       </label>
