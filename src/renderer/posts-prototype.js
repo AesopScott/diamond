@@ -6455,7 +6455,7 @@ async function generateDraftProviderVideo(draft, provider) {
 
   // Use content-type-specific duration if selected; falls back to platform spec in worker.
   const contentTypeSpec = draft.mediaContentType ? MEDIA_CONTENT_TYPE_SPECS[draft.mediaContentType] : null;
-  const contentTypeDuration = contentTypeSpec?.klingDuration ?? null;
+  const contentTypeDuration = contentTypeSpec?.videoDurationSeconds ?? null;
 
   // Merge content type duration into the campaign config so requestVideoGeneration picks it up.
   const videoCampaign = {
