@@ -64,7 +64,7 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
-import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
+import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS, MEDIA_CONTENT_TYPE_SPECS } from "../constants.js";
 import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
 import { integrateVideoGenerationIntoPostCreation } from "../video-generation-integration.js";
 
@@ -6261,25 +6261,11 @@ function renderImageGenerationSection(draft) {
         ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign: ${escapeHtml(campaignPrompt.length > 55 ? campaignPrompt.slice(0, 52) + "…" : campaignPrompt)}</span>` : ""}
       </div>
       <div class="media-prompt-generator">
-        <select class="media-prompt-style-select" data-media-prompt-style="${escapeHtml(draft.id)}" aria-label="Visual style for prompt generation">
+        <select class="media-prompt-style-select" data-media-prompt-style="${escapeHtml(draft.id)}" aria-label="Content type for prompt generation">
           <option value="">Content type…</option>
-          <option value="absurdist near-real AI loop">Absurdist near-real AI loop</option>
-          <option value="humorous AI trampoline gag">Humorous AI trampoline gag</option>
-          <option value="AI yacht jump / splash gag">AI yacht jump / splash gag</option>
-          <option value="AI animal/cat reel">AI animal/cat reel</option>
-          <option value="surreal AI reel">Surreal AI reel</option>
-          <option value="cinematic surreal AI reel">Cinematic surreal AI reel</option>
-          <option value="cursed horror AI reel">Cursed horror AI reel</option>
-          <option value="AI microdrama series">AI microdrama series</option>
-          <option value="absurd AI chiropractor physical gag">Absurd AI chiropractor gag</option>
-          <option value="AI cat work/restaurant chaos video">AI cat work/restaurant chaos</option>
-          <option value="AI brainrot creature meme">AI brainrot creature meme</option>
-          <option value="scary AI water-slide/fall clip">Scary AI water-slide/fall clip</option>
-          <option value="boxed AI action figure portrait">Boxed AI action figure portrait</option>
-          <option value="Ghibli-style AI portrait">Ghibli-style AI portrait</option>
-          <option value="vintage AI portrait">Vintage AI portrait</option>
-          <option value="hyper-real 3D figurine avatar">Hyper-real 3D figurine avatar</option>
-          <option value="AI restored family / lost-relative photo">AI restored family photo</option>
+          ${Object.entries(MEDIA_CONTENT_TYPE_SPECS).map(([value, spec]) =>
+            `<option value="${escapeHtml(value)}"${draft.mediaContentType === value ? " selected" : ""}>${escapeHtml(spec.label)} (${escapeHtml(spec.durationRange)})</option>`
+          ).join("")}
         </select>
         <button type="button" class="media-button media-prompt-btn"
           data-platform-action="generate-media-prompt"
@@ -6466,10 +6452,31 @@ async function generateDraftProviderVideo(draft, provider) {
   const heygenConfig = !isKling && window.diamond?.getHeyGenVideoConfig
     ? await window.diamond.getHeyGenVideoConfig()
     : {};
+
+  // Use content-type-specific duration if selected; falls back to platform spec in worker.
+  const contentTypeSpec = draft.mediaContentType ? MEDIA_CONTENT_TYPE_SPECS[draft.mediaContentType] : null;
+  const contentTypeDuration = contentTypeSpec?.klingDuration ?? null;
+
+  // Merge content type duration into the campaign config so requestVideoGeneration picks it up.
+  const videoCampaign = {
+    ...campaign,
+    videoGenerationEnabled: true,
+    videoGenerationProvider: provider,
+    ...(contentTypeDuration ? {
+      videoGenerationPlatforms: {
+        ...(campaign.videoGenerationPlatforms || {}),
+        [generatingDraft.platform]: {
+          ...(campaign.videoGenerationPlatforms?.[generatingDraft.platform] || {}),
+          videoDurationSeconds: contentTypeDuration,
+        },
+      },
+    } : {}),
+  };
+
   const result = await integrateVideoGenerationIntoPostCreation(
     postPackage,
     generatingDraft,
-    { ...campaign, videoGenerationEnabled: true, videoGenerationProvider: provider },
+    videoCampaign,
     {
       provider,
       heygenApiKey: heygenConfig?.apiKey || "",
@@ -7751,6 +7758,17 @@ function handleGenerationStyleChange(event) {
 }
 
 function handlePlatformDraftTextInput(event) {
+  // Content type dropdown
+  const styleSelect = event.target.closest("[data-media-prompt-style]");
+  if (styleSelect) {
+    const draft = prototypeModel.platformDrafts.find((item) => item.id === styleSelect.dataset.mediaPromptStyle);
+    if (draft) {
+      draft.mediaContentType = styleSelect.value || null;
+      draft.updatedAt = new Date().toISOString();
+      saveProductionState();
+    }
+    return;
+  }
   // Per-post image prompt
   const promptTextarea = event.target.closest("[data-image-prompt-draft-id]");
   if (promptTextarea) {
