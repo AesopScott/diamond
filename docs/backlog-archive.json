@@ -89,6 +89,23 @@
             "project_source": "diamond",
             "promoted_via_pr": "6",
             "promoted_at": "2026-05-26T00:42:43Z"
+        },
+        {
+            "number": 11,
+            "title": "video generation UI",
+            "description": "Build the missing UI layer for task #10's video generation service. Adds campaign-level video generation settings section (master toggle, per-platform checkboxes, quality selector, prompt guidance), per-draft 🎬 Video toggle button in the draft media row mirroring the existing image generation button, toggleDraftVideoGeneration handler, and HeyGen API key IPC bridge.",
+            "category": "feature",
+            "priority": 90,
+            "impact": "standard",
+            "status": "production",
+            "branch": "task/11-video-generation-ui",
+            "pr_url": "https://github.com/AesopScott/diamond/pull/8",
+            "created_at": "2026-05-25",
+            "completed_at": "2026-05-26T02:21:34Z",
+            "dependencies": [10],
+            "project_source": "diamond",
+            "promoted_via_pr": "8",
+            "promoted_at": "2026-05-26T02:21:34Z"
         }
     ]
 }
