@@ -64,8 +64,9 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
-import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
+import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS, VIDEO_SPECS_BY_PLATFORM, CAMPAIGN_VIDEO_GENERATION_FIELDS } from "../constants.js";
 import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
+import { integrateVideoGenerationIntoPostCreation } from "../video-generation-integration.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -3238,6 +3239,53 @@ function renderImageGenerationSection(campaign = {}) {
   `;
 }
 
+function renderVideoGenerationSection(campaign = {}) {
+  const enabled = campaign.videoGenerationEnabled || false;
+  const guidance = campaign.videoPromptGuidance || "";
+  const quality = campaign.videoQualitySize || "high";
+  const platforms = campaign.videoGenerationPlatforms || { ...VIDEO_SPECS_BY_PLATFORM };
+  const platformRows = Object.entries(platforms).map(([platform, spec]) => `
+    <label class="platform-gen-toggle">
+      <input type="checkbox" data-platform-video-field="${escapeHtml(platform)}" ${spec.enabled ? "checked" : ""}>
+      ${escapeHtml(platformLabel(platform))}
+      <span class="gen-spec">${spec.videoDurationSeconds}s · ${spec.aspectRatio}</span>
+    </label>
+  `).join("");
+  return `
+    <section class="video-gen-settings" aria-label="Video generation settings">
+      <header class="gen-settings-header">
+        <label class="gen-master-toggle">
+          <input type="checkbox" data-campaign-field="videoGenerationEnabled" ${enabled ? "checked" : ""}>
+          <strong>Video Generation</strong>
+        </label>
+        <span class="gen-provider">HeyGen · AI Avatar · ~$0.10/video</span>
+      </header>
+      <div class="gen-settings-body${enabled ? "" : " gen-settings-disabled"}">
+        <fieldset class="platform-gen-toggles">
+          <legend>Enable per platform</legend>
+          ${platformRows}
+        </fieldset>
+        <label class="gen-prompt-label">
+          Quality
+          <select data-campaign-field="videoQualitySize">
+            <option value="low" ${quality === "low" ? "selected" : ""}>Low</option>
+            <option value="medium" ${quality === "medium" ? "selected" : ""}>Medium</option>
+            <option value="high" ${quality === "high" ? "selected" : ""}>High</option>
+          </select>
+        </label>
+        <label class="gen-prompt-label">
+          Video prompt guidance
+          <textarea
+            data-campaign-field="videoPromptGuidance"
+            rows="3"
+            placeholder="Describe the avatar style, tone, background, and any recurring themes for this campaign's videos."
+          >${escapeHtml(guidance)}</textarea>
+        </label>
+      </div>
+    </section>
+  `;
+}
+
 function renderCampaigns() {
   const target = document.querySelector("#campaign-workspace");
   if (!target) return;
@@ -3269,6 +3317,7 @@ function renderCampaigns() {
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
         </section>
         ${renderImageGenerationSection(campaign)}
+        ${renderVideoGenerationSection(campaign)}
       </article>
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
@@ -3341,7 +3390,7 @@ async function handleCampaignWorkspaceChange(event) {
     renderCampaigns();
     return;
   }
-  if (field && ["videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
+  if (field && CAMPAIGN_VIDEO_GENERATION_FIELDS.includes(field.dataset.campaignField)) {
     saveCampaignWorkspace();
     await saveProductionState();
     renderCampaigns();
@@ -5961,6 +6010,32 @@ function renderImageGenerationToggle(draft) {
   >🖼 Image${escapeHtml(statusLabel)}</button>`;
 }
 
+function renderVideoGenerationToggle(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  // Only show the toggle if the campaign has video generation enabled
+  if (!campaign?.videoGenerationEnabled) return "";
+
+  const status = draft.videoGenerationStatus;
+  const isEnabled = draft.videoGenerationEnabled !== null && draft.videoGenerationEnabled !== undefined
+    ? Boolean(draft.videoGenerationEnabled)
+    : Boolean(campaign.videoGenerationEnabled);
+
+  const statusLabel = status === "generating" ? " (generating…)"
+    : status === "complete" ? " ✓"
+    : status === "failed" ? " ✗"
+    : "";
+  const activeClass = isEnabled ? " media-button--active" : "";
+  const title = isEnabled ? "Video generation on — click to disable for this post" : "Enable video generation for this post";
+
+  return `<button
+    type="button"
+    class="media-button${activeClass}"
+    data-platform-action="toggle-video-generation"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="${escapeHtml(title)}"
+  >🎬 Video${escapeHtml(statusLabel)}</button>`;
+}
+
 function renderPlatformPreview(draft, hidden = false) {
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
@@ -5985,6 +6060,7 @@ function renderPlatformPreview(draft, hidden = false) {
         <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
         ${renderImageGenerationToggle(draft)}
+        ${renderVideoGenerationToggle(draft)}
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
       ${renderDraftMediaList(draft)}
@@ -6619,6 +6695,7 @@ async function handlePlatformDraftAction(event) {
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
   if (action === "toggle-image-generation") await toggleDraftImageGeneration(draft);
+  if (action === "toggle-video-generation") await toggleDraftVideoGeneration(draft);
   if (action === "stage") {
     await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
@@ -6719,6 +6796,65 @@ async function toggleDraftImageGeneration(draft) {
     generatedImageUrl: resultDraft.generatedImageUrl || null,
     generatedImageMetadata: resultDraft.generatedImageMetadata || null,
     imageGenerationError: resultDraft.imageGenerationError || null,
+  };
+
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? finalDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
+async function toggleDraftVideoGeneration(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  if (!campaign?.videoGenerationEnabled) return; // campaign gate must be on
+
+  // Cycle: inherit (null) → on (true) → off (false) → inherit (null)
+  const current = draft.videoGenerationEnabled;
+  const nextEnabled = (current === null || current === undefined) ? true
+    : current === true ? false
+    : null;
+
+  // Create immutable updated draft — never mutate the input object
+  let updatedDraft = {
+    ...draft,
+    videoGenerationEnabled: nextEnabled,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (nextEnabled !== true) {
+    // Toggle to off or inherit — apply immediately and return
+    prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+      (d) => (d.id === draft.id ? updatedDraft : d)
+    );
+    await saveProductionState();
+    reopenActiveDetail();
+    return;
+  }
+
+  // User explicitly enabled — start generation immediately
+  updatedDraft = { ...updatedDraft, videoGenerationStatus: "generating", videoGenerationError: null };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? updatedDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+
+  const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+  // Fetch HeyGen API key from main process via IPC — process.env not available in renderer
+  // (contextIsolation: true, nodeIntegration: false). Key is never stored in the renderer bundle.
+  const heygenApiKey = window.diamond?.getHeygenApiKey
+    ? await window.diamond.getHeygenApiKey()
+    : undefined;
+  const result = await integrateVideoGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { heygenApiKey });
+  const resultDraft = result.updatedDraft || updatedDraft;
+
+  const finalDraft = {
+    ...updatedDraft,
+    videoGenerationStatus: resultDraft.videoGenerationStatus || (result.ok ? "complete" : "failed"),
+    generatedVideoUrl: resultDraft.generatedVideoUrl || null,
+    generatedVideoMetadata: resultDraft.generatedVideoMetadata || null,
+    videoGenerationError: resultDraft.videoGenerationError || null,
   };
 
   prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
