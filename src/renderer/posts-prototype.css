@@ -926,6 +926,27 @@ textarea {
 }
 
 /* Image generation section — per-post */
+.media-prompt-generator {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.media-prompt-style-select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.media-prompt-btn {
+  font-size: 12px;
+}
+
 .image-prompt-header {
   align-items: baseline;
   display: flex;

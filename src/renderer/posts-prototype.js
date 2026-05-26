@@ -6260,6 +6260,29 @@ function renderImageGenerationSection(draft) {
         <span class="image-prompt-label-text">Image &amp; video prompt</span>
         ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign: ${escapeHtml(campaignPrompt.length > 55 ? campaignPrompt.slice(0, 52) + "…" : campaignPrompt)}</span>` : ""}
       </div>
+      <div class="media-prompt-generator">
+        <select class="media-prompt-style-select" data-media-prompt-style="${escapeHtml(draft.id)}" aria-label="Visual style for prompt generation">
+          <option value="">Visual style…</option>
+          <option value="cinematic">Cinematic</option>
+          <option value="editorial">Editorial</option>
+          <option value="abstract">Abstract</option>
+          <option value="product">Product</option>
+          <option value="lifestyle">Lifestyle</option>
+          <option value="documentary">Documentary</option>
+        </select>
+        <button type="button" class="media-button media-prompt-btn"
+          data-platform-action="generate-media-prompt"
+          data-media-prompt-type="image"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          title="Generate an image prompt from the post text"
+        >✨ Image prompt</button>
+        <button type="button" class="media-button media-prompt-btn"
+          data-platform-action="generate-media-prompt"
+          data-media-prompt-type="video"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          title="Generate a video prompt from the post text"
+        >✨ Video prompt</button>
+      </div>
       <textarea
         class="image-prompt-textarea"
         data-image-prompt-draft-id="${escapeHtml(draft.id)}"
@@ -7141,6 +7164,43 @@ async function handlePlatformDraftAction(event) {
   if (action === "generate-image") { await generateDraftImage(draft); return; }
   if (action === "generate-video") { await generateDraftVideo(draft); return; }
   if (action === "generate-kling-video") { await generateDraftKlingVideo(draft); return; }
+  if (action === "generate-media-prompt") {
+    const mediaType = button.dataset.mediaPromptType || "image";
+    const panel = button.closest("[data-platform-panel]") || button.closest(".image-prompt-row")?.parentElement;
+    const styleSelect = panel?.querySelector(`[data-media-prompt-style="${draft.id}"]`);
+    const visualStyle = styleSelect?.value || "";
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Generating…";
+    try {
+      const result = await window.diamond?.generateMediaPrompt?.({
+        draftText: draft.text || "",
+        visualStyle,
+        mediaType,
+      });
+      if (result?.ok && result.prompt) {
+        // Write prompt into the textarea and save to draft
+        const textarea = panel?.querySelector(`[data-image-prompt-draft-id="${draft.id}"]`);
+        if (textarea) textarea.value = result.prompt;
+        const updatedDraft = {
+          ...draft,
+          imagePromptOverride: result.prompt,
+          updatedAt: new Date().toISOString(),
+        };
+        prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+          (d) => (d.id === draft.id ? updatedDraft : d)
+        );
+        await saveProductionState();
+      } else {
+        const err = result?.error || result?.degraded || "Prompt generation unavailable";
+        alert(`Could not generate prompt: ${err}`);
+      }
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+    return;
+  }
   if (action === "open-generated-image") {
     const url = draft.generatedImageUrl;
     if (!url) return;

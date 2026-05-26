@@ -390,6 +390,88 @@ function buildRewritePrompt({ platform, text, issues = [], suggestions = [], bra
   ].filter(Boolean).join("\n\n");
 }
 
+// ─── Media Prompt Generation ─────────────────────────────────────────────────
+//
+// generateMediaPrompt produces an optimised image or video generation prompt
+// from the post draft text and a chosen visual style.
+//
+// Returns:
+//   { ok: true,  prompt: "<generated prompt>" }
+//   { ok: true,  prompt: null, degraded: "no-writer-key" }
+//   { ok: false, prompt: null, error: "..." }
+
+const MEDIA_PROMPT_MAX_TOKENS = 512;
+
+const MEDIA_VISUAL_STYLES = [
+  "cinematic",
+  "editorial",
+  "abstract",
+  "product",
+  "lifestyle",
+  "documentary",
+];
+
+function buildMediaPromptInstruction(draftText, visualStyle, mediaType) {
+  const target = mediaType === "video"
+    ? "a short social media video clip (Kling AI)"
+    : "a social media image (Flux Pro)";
+  const styleNote = visualStyle ? `Visual style: ${visualStyle}.` : "";
+  return [
+    `You are a creative director writing generation prompts for AI media tools.`,
+    `Based on the social media post below, write a concise, vivid generation prompt for ${target}.`,
+    styleNote,
+    `The prompt should describe the visual scene, mood, and composition — NOT the post text itself.`,
+    `Output only the prompt text, no preamble, no quotes.`,
+    ``,
+    `Post text:`,
+    draftText.trim(),
+  ].filter(Boolean).join("\n");
+}
+
+async function generateMediaPrompt(payload = {}, deps = {}) {
+  const env = deps.env || process.env;
+  const writerKey = env.ANTHROPIC_API_KEY;
+  const writerModel = env.DIAMOND_WRITER_MODEL || DEFAULT_WRITER_MODEL;
+
+  if (!writerKey && !deps.writer) {
+    return { ok: true, prompt: null, degraded: "no-writer-key" };
+  }
+
+  const { draftText = "", visualStyle = "", mediaType = "image" } = payload;
+  if (!draftText.trim()) {
+    return { ok: false, prompt: null, error: "No draft text to generate a prompt from." };
+  }
+
+  const instruction = buildMediaPromptInstruction(draftText, visualStyle, mediaType);
+
+  const doFetch = deps.fetchImpl || fetch;
+  try {
+    const response = await doFetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": writerKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: writerModel,
+        max_tokens: MEDIA_PROMPT_MAX_TOKENS,
+        messages: [{ role: "user", content: instruction }],
+      }),
+      signal: AbortSignal.timeout(STAGE_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Anthropic ${response.status} ${await safeText(response)}`);
+    const data = await response.json();
+    const prompt = Array.isArray(data.content)
+      ? data.content.map((p) => p.text || "").join("").trim()
+      : "";
+    if (!prompt) throw new Error("Empty response from model");
+    return { ok: true, prompt };
+  } catch (err) {
+    return { ok: false, prompt: null, error: normalizeError(err) };
+  }
+}
+
 async function safeText(response) {
   try {
     return await response.text();
@@ -402,6 +484,8 @@ module.exports = {
   generatePostDrafts,
   evaluateDraftWithLlm,
   rewriteDraftWithSuggestions,
+  generateMediaPrompt,
+  MEDIA_VISUAL_STYLES,
   buildWriterPrompt,
   buildReviewerPrompt,
   buildEvaluationPrompt,

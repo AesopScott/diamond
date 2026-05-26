@@ -5,7 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
-const { generatePostDrafts, evaluateDraftWithLlm, rewriteDraftWithSuggestions } = require("../content-generation-llm.cjs");
+const { generatePostDrafts, evaluateDraftWithLlm, rewriteDraftWithSuggestions, generateMediaPrompt } = require("../content-generation-llm.cjs");
 
 // Allowed protocols for shell.openExternal — keep attack surface minimal.
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
@@ -283,6 +283,15 @@ ipcMain.handle("diamond:rewrite-draft", async (_event, payload = {}) => {
   } catch (error) {
     console.error("[diamond:rewrite-draft] unexpected error:", error);
     return { ok: false, revisedText: null, error: "Rewrite failed. Check application logs." };
+  }
+});
+ipcMain.handle("diamond:generate-media-prompt", async (_event, payload = {}) => {
+  try {
+    const result = await generateMediaPrompt(payload);
+    return result;
+  } catch (error) {
+    console.error("[diamond:generate-media-prompt] unexpected error:", error);
+    return { ok: false, prompt: null, error: "Media prompt generation failed. Check application logs." };
   }
 });
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
@@ -608,6 +617,18 @@ ipcMain.handle("diamond:attach-webview-media", async (_event, input = {}) => {
   }
 });
 ipcMain.handle("diamond:get-replicate-api-key", () => process.env.REPLICATE_API_KEY || null);
+ipcMain.handle("diamond:get-heygen-video-config", () => ({
+  apiKey: process.env.HEYGEN_API_KEY || null,
+  apiEndpoint: process.env.HEYGEN_API_ENDPOINT || null,
+  avatarId: process.env.HEYGEN_AVATAR_ID || null,
+  voiceId: process.env.HEYGEN_VOICE_ID || null,
+}));
+ipcMain.handle("diamond:get-kling-video-config", () => ({
+  apiKey: process.env.KLING_API_KEY || null,
+  apiEndpoint: process.env.KLING_API_ENDPOINT || null,
+  model: process.env.KLING_MODEL || null,
+  enableAudio: process.env.KLING_ENABLE_AUDIO === "true",
+}));
 
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();

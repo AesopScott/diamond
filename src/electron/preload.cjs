@@ -24,8 +24,11 @@ contextBridge.exposeInMainWorld("diamond", {
   inspectMedia: (paths) => ipcRenderer.invoke("diamond:inspect-media", paths),
   attachWebviewMedia: (input) => ipcRenderer.invoke("diamond:attach-webview-media", input),
   getReplicateApiKey: () => ipcRenderer.invoke("diamond:get-replicate-api-key"),
+  getHeyGenVideoConfig: () => ipcRenderer.invoke("diamond:get-heygen-video-config"),
+  getKlingVideoConfig: () => ipcRenderer.invoke("diamond:get-kling-video-config"),
   stageWithPlaywright: (input) => ipcRenderer.invoke("diamond:stage-with-playwright", input),
   generatePostDrafts: (payload) => ipcRenderer.invoke("diamond:generate-post-drafts", payload),
   evaluateDraft: (payload) => ipcRenderer.invoke("diamond:evaluate-draft", payload),
   rewriteDraft: (payload) => ipcRenderer.invoke("diamond:rewrite-draft", payload),
+  generateMediaPrompt: (payload) => ipcRenderer.invoke("diamond:generate-media-prompt", payload),
 });
