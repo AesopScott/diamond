@@ -81,6 +81,13 @@ export function handleReplicateError({ status, message, retryAfter }) {
   };
 }
 
+// Returns a fetch with a hard timeout (ms). Rejects with an AbortError on timeout.
+function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 export async function generateImageViaReplicate({
   prompt,
   platform,
@@ -100,7 +107,7 @@ export async function generateImageViaReplicate({
     // Use /v1/models/{owner}/{model}/predictions for named (non-versioned) models.
     // This accepts { input: {...} } with no `version` field, which is correct for
     // official Replicate models like black-forest-labs/flux-pro.
-    const predictionResponse = await fetch(
+    const predictionResponse = await fetchWithTimeout(
       `${REPLICATE_API_BASE}/models/${MODEL_ID}/predictions`,
       {
         method: "POST",
@@ -109,7 +116,8 @@ export async function generateImageViaReplicate({
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
+      30000  // 30s to accept the job
     );
 
     if (!predictionResponse.ok) {
@@ -124,8 +132,9 @@ export async function generateImageViaReplicate({
     const prediction = await predictionResponse.json();
     const predictionId = prediction.id;
 
-    // Poll for completion
-    const maxAttempts = 120; // 2 minutes with 1-second polling
+    // Poll for completion — 90 polls × 2s = 3 min max, each poll has a 10s timeout.
+    const maxAttempts = 90;
+    const pollIntervalMs = 2000;
     let attempts = 0;
     let completed = false;
     let finalPrediction = prediction;
@@ -137,16 +146,19 @@ export async function generateImageViaReplicate({
       }
 
       attempts += 1;
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
 
-      const statusResponse = await fetch(`${REPLICATE_API_BASE}/predictions/${predictionId}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      });
-
-      if (statusResponse.ok) {
-        finalPrediction = await statusResponse.json();
+      try {
+        const statusResponse = await fetchWithTimeout(
+          `${REPLICATE_API_BASE}/predictions/${predictionId}`,
+          { headers: { Authorization: `Bearer ${apiKey}` } },
+          10000  // 10s per poll
+        );
+        if (statusResponse.ok) {
+          finalPrediction = await statusResponse.json();
+        }
+      } catch {
+        // Transient poll failure — keep trying until maxAttempts
       }
 
       if (onProgress) {

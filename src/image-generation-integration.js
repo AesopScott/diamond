@@ -65,24 +65,9 @@ export function buildImagePrompt(draft, campaign) {
  * @param {object} config       — optional overrides { replicateApiKey, skipGeneration }
  */
 export async function integrateImageGenerationIntoPostCreation(postPackage, postDraft, campaign, config = {}) {
-  if (!campaign?.imageGenerationEnabled) {
-    return { ok: false, reason: "Image generation disabled for campaign" };
-  }
-
-  // Derive platform key before the resolver so it can consult per-platform spec for null/inherit
+  // The post-level toggle is the authority — no campaign gate here.
+  // The caller (toggleDraftImageGeneration) has already confirmed the user enabled it.
   const platformKey = postDraft.platform?.replace("-shorts", "").replace("-longform", "") || "";
-
-  const enabled = resolveImageGenerationEnabled(postDraft, campaign, platformKey);
-  if (!enabled) {
-    return { ok: false, reason: `Image generation disabled for this post or platform ${postDraft.platform}` };
-  }
-
-  // Defensive gate: also block if the platform spec explicitly disables generation, regardless
-  // of per-post override. Keeps platform-level as an operator constraint that can't be bypassed.
-  const platformSpec = campaign.imageGenerationPlatforms?.[platformKey];
-  if (platformSpec && !platformSpec.enabled && postDraft.imageGenerationEnabled === true) {
-    return { ok: false, reason: `Image generation disabled for platform ${postDraft.platform}` };
-  }
 
   const prompt = buildImagePrompt(postDraft, campaign);
   if (!prompt) {

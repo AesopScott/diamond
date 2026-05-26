@@ -6303,13 +6303,16 @@ async function toggleDraftImageGeneration(draft) {
     ? await window.diamond.getReplicateApiKey()
     : undefined;
   const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { replicateApiKey });
-  const resultDraft = result.updatedDraft || updatedDraft;
+  // Always resolve to a terminal status — never leave the draft stuck at "generating".
+  // result.updatedDraft carries the authoritative fields when the API returned a result;
+  // when it's absent (early-exit / no API call), we still force a terminal status.
+  const resultDraft = result.updatedDraft || {};
   const finalDraft = {
     ...updatedDraft,
     imageGenerationStatus: resultDraft.imageGenerationStatus || (result.ok ? "complete" : "failed"),
-    generatedImageUrl:      resultDraft.generatedImageUrl || null,
-    generatedImageMetadata: resultDraft.generatedImageMetadata || null,
-    imageGenerationError:   resultDraft.imageGenerationError || null,
+    generatedImageUrl:      resultDraft.generatedImageUrl    ?? null,
+    generatedImageMetadata: resultDraft.generatedImageMetadata ?? null,
+    imageGenerationError:   resultDraft.imageGenerationError   ?? (result.ok ? null : (result.reason || "Generation failed")),
   };
   prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
     (d) => (d.id === draft.id ? finalDraft : d)
