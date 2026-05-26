@@ -92,12 +92,19 @@ export async function integrateImageGenerationIntoPostCreation(postPackage, post
     });
 
     if (!result.ok) {
-      // result.error may be a string from generateImageViaReplicate — wrap it in a proper
-      // error object so formatErrorForUI can match on .code / .reason correctly.
+      // generateImageViaReplicate has two error shapes:
+      //   handleReplicateError path: { ok:false, code, message, reason, retriable, retryAfter }
+      //   direct return path:        { ok:false, error: <string> }
+      // Normalise both into a single errorObj for formatErrorForUI.
       const rawError = result.error;
       const errorObj = typeof rawError === "string"
         ? { code: "replicate_api_error", message: rawError, reason: "replicate_api_error" }
-        : (rawError || { code: "replicate_api_error" });
+        : (rawError || {
+            code:       result.reason || result.code || "replicate_api_error",
+            message:    result.message || null,
+            retriable:  result.retriable,
+            retryAfter: result.retryAfter,
+          });
       const errorDetails = formatImageGenerationError(errorObj);
       const updatedDraft = {
         ...postDraft,
