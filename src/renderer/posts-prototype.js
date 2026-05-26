@@ -64,6 +64,8 @@ import {
   applyDraftScope,
   removePlatformDraft,
 } from "./posts-scope-helpers.js";
+import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
+import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -3198,6 +3200,44 @@ function guidanceModulesForCampaign(campaignId, strategy = {}) {
   return existing.sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
 }
 
+function renderImageGenerationSection(campaign = {}) {
+  const enabled = campaign.imageGenerationEnabled || false;
+  const guidance = campaign.imagePromptGuidance || "";
+  const platforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
+  const platformRows = Object.entries(platforms).map(([platform, spec]) => `
+    <label class="platform-gen-toggle">
+      <input type="checkbox" data-platform-image-field="${escapeHtml(platform)}" ${spec.enabled ? "checked" : ""}>
+      ${escapeHtml(platformLabel(platform))}
+      <span class="gen-spec">${spec.width}×${spec.height}</span>
+    </label>
+  `).join("");
+  return `
+    <section class="image-gen-settings" aria-label="Image generation settings">
+      <header class="gen-settings-header">
+        <label class="gen-master-toggle">
+          <input type="checkbox" data-campaign-field="imageGenerationEnabled" ${enabled ? "checked" : ""}>
+          <strong>Image Generation</strong>
+        </label>
+        <span class="gen-provider">Replicate · Flux Pro · ~$0.04/image</span>
+      </header>
+      <div class="gen-settings-body${enabled ? "" : " gen-settings-disabled"}">
+        <fieldset class="platform-gen-toggles">
+          <legend>Enable per platform</legend>
+          ${platformRows}
+        </fieldset>
+        <label class="gen-prompt-label">
+          Image prompt guidance
+          <textarea
+            data-campaign-field="imagePromptGuidance"
+            rows="3"
+            placeholder="Describe the visual style, mood, colors, and any recurring imagery for this campaign's images."
+          >${escapeHtml(guidance)}</textarea>
+        </label>
+      </div>
+    </section>
+  `;
+}
+
 function renderCampaigns() {
   const target = document.querySelector("#campaign-workspace");
   if (!target) return;
@@ -3228,6 +3268,7 @@ function renderCampaigns() {
           <button type="button" data-campaign-action="save">Save campaign</button>
           <button type="button" class="danger-action" data-campaign-action="delete">Delete campaign</button>
         </section>
+        ${renderImageGenerationSection(campaign)}
       </article>
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
@@ -3277,8 +3318,24 @@ async function handleCampaignWorkspaceChange(event) {
     renderCampaigns();
     return;
   }
-  const platformToggle = event.target.closest("[data-platform-video-field]");
-  if (platformToggle) {
+  // Per-platform image enable checkboxes
+  const platformImageToggle = event.target.closest("[data-platform-image-field]");
+  if (platformImageToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
+  // Per-platform video enable toggles
+  const platformVideoToggle = event.target.closest("[data-platform-video-field]");
+  if (platformVideoToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
+  // Image generation fields that should auto-save on change
+  if (field && CAMPAIGN_IMAGE_GENERATION_FIELDS.includes(field.dataset.campaignField)) {
     saveCampaignWorkspace();
     await saveProductionState();
     renderCampaigns();
@@ -3415,6 +3472,15 @@ function saveCampaignWorkspace() {
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    campaign.imageGenerationEnabled = checkedFor("imageGenerationEnabled");
+    campaign.imagePromptGuidance = valueFor("imagePromptGuidance") || campaign.imagePromptGuidance || "";
+    const basePlatforms = campaign.imageGenerationPlatforms || { ...IMAGE_SPECS_BY_PLATFORM };
+    campaign.imageGenerationPlatforms = Object.fromEntries(
+      Object.entries(basePlatforms).map(([platform, spec]) => {
+        const checkbox = workspace?.querySelector(`[data-platform-image-field="${platform}"]`);
+        return [platform, checkbox ? { ...spec, enabled: checkbox.checked } : { ...spec }];
+      })
+    );
     campaign.videoGenerationEnabled = checkedFor("videoGenerationEnabled");
     campaign.videoQualitySize = valueFor("videoQualitySize") || campaign.videoQualitySize || "high";
     campaign.videoPromptGuidance = valueFor("videoPromptGuidance") || campaign.videoPromptGuidance || "";
@@ -5869,6 +5935,32 @@ function renderPlatformPreviews(drafts) {
   target.innerHTML = tabStrip + panels;
 }
 
+function renderImageGenerationToggle(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  // Only show the toggle if the campaign has image generation enabled
+  if (!campaign?.imageGenerationEnabled) return "";
+
+  const status = draft.imageGenerationStatus;
+  const isEnabled = draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined
+    ? Boolean(draft.imageGenerationEnabled)
+    : Boolean(campaign.imageGenerationEnabled);
+
+  const statusLabel = status === "generating" ? " (generating…)"
+    : status === "complete" ? " ✓"
+    : status === "failed" ? " ✗"
+    : "";
+  const activeClass = isEnabled ? " media-button--active" : "";
+  const title = isEnabled ? "Image generation on — click to disable for this post" : "Enable image generation for this post";
+
+  return `<button
+    type="button"
+    class="media-button${activeClass}"
+    data-platform-action="toggle-image-generation"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="${escapeHtml(title)}"
+  >🖼 Image${escapeHtml(statusLabel)}</button>`;
+}
+
 function renderPlatformPreview(draft, hidden = false) {
   const preflight = platformDraftPreflight(draft);
   const plan = platformStagingPlan(draft.platform, { media: draft.media || [] });
@@ -5892,6 +5984,7 @@ function renderPlatformPreview(draft, hidden = false) {
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
+        ${renderImageGenerationToggle(draft)}
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
       ${renderDraftMediaList(draft)}
@@ -6525,6 +6618,7 @@ async function handlePlatformDraftAction(event) {
   if (action === "schedule") schedulePlatformDraft(draft);
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
+  if (action === "toggle-image-generation") await toggleDraftImageGeneration(draft);
   if (action === "stage") {
     await inspectDraftMedia(draft);
     stagePlatformDraft(draft);
@@ -6573,6 +6667,65 @@ async function copyDraftMediaPaths(draft) {
     ? `Copied ${draft.media.length} media path(s) for manual upload.`
     : "No media paths to copy.";
   draft.updatedAt = new Date().toISOString();
+}
+
+async function toggleDraftImageGeneration(draft) {
+  const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
+  if (!campaign?.imageGenerationEnabled) return; // campaign gate must be on
+
+  // Cycle: inherit (null) → on (true) → off (false) → inherit (null)
+  const current = draft.imageGenerationEnabled;
+  const nextEnabled = (current === null || current === undefined) ? true
+    : current === true ? false
+    : null;
+
+  // Create immutable updated draft — never mutate the input object
+  let updatedDraft = {
+    ...draft,
+    imageGenerationEnabled: nextEnabled,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (nextEnabled !== true) {
+    // Toggle to off or inherit — apply immediately and return
+    prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+      (d) => (d.id === draft.id ? updatedDraft : d)
+    );
+    await saveProductionState();
+    reopenActiveDetail();
+    return;
+  }
+
+  // User explicitly enabled — start generation immediately
+  updatedDraft = { ...updatedDraft, imageGenerationStatus: "generating", imageGenerationError: null };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? updatedDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+
+  const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+  // Fetch API key from main process via IPC — process.env is not available in the renderer
+  // (contextIsolation: true, nodeIntegration: false). The key is never stored in the renderer bundle.
+  const replicateApiKey = window.diamond?.getReplicateApiKey
+    ? await window.diamond.getReplicateApiKey()
+    : undefined;
+  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { replicateApiKey });
+  const resultDraft = result.updatedDraft || updatedDraft;
+
+  const finalDraft = {
+    ...updatedDraft,
+    imageGenerationStatus: resultDraft.imageGenerationStatus || (result.ok ? "complete" : "failed"),
+    generatedImageUrl: resultDraft.generatedImageUrl || null,
+    generatedImageMetadata: resultDraft.generatedImageMetadata || null,
+    imageGenerationError: resultDraft.imageGenerationError || null,
+  };
+
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? finalDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
 }
 
 async function inspectDraftMedia(draft) {

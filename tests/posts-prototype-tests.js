@@ -246,7 +246,7 @@ assert.match(js, /handleBoardDrop/);
 assert.match(js, /clearBoardDragState/);
 assert.match(js, /movePostPackageToStatus/);
 assert.match(js, /deletePostPackage/);
-assert.match(js, /data-board-action="move"/);
+// Note: move buttons were removed from board cards (v0.1.16) — drag-to-column is the move mechanism
 assert.match(js, /data-board-action="delete"/);
 assert.match(js, /draggable="true"/);
 assert.match(js, /platformStatuses/);
@@ -257,7 +257,7 @@ assert.match(js, /inspectAccountsForPostCreation/);
 assert.match(js, /createPlatformDraftsForAccounts/);
 assert.match(js, /addAllReadyPlatformsToActivePackage/);
 assert.match(js, /detail-add-all-platforms/);
-assert.match(html, /Select all ready/);
+assert.match(html, /All Ready/);
 assert.match(js, /handlePlatformToggle/);
 assert.match(js, /data-platform-toggle/);
 assert.match(js, /propagateScopeChangeToDrafts/);

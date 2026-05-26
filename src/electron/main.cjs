@@ -285,6 +285,12 @@ ipcMain.handle("diamond:rewrite-draft", async (_event, payload = {}) => {
     return { ok: false, revisedText: null, error: "Rewrite failed. Check application logs." };
   }
 });
+// Return the Replicate API key to the renderer via IPC so it never needs direct process.env access.
+// The key stays in the main process; the renderer receives it once per generation call over the
+// secure contextBridge channel (contextIsolation: true, nodeIntegration: false).
+ipcMain.handle("diamond:get-replicate-api-key", () => {
+  return process.env.REPLICATE_API_KEY || null;
+});
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));
