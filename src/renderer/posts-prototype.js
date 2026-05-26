@@ -292,8 +292,8 @@ let prototypeModel = buildProductionPostModel(state);
 const DRAFT_BOARD_COLUMNS = [
   { id: "draft",        label: "Draft" },
   { id: "needs_review", label: "Needs Review" },
-  { id: "scheduled",    label: "Scheduled" },
   { id: "staged",       label: "Staged" },
+  { id: "scheduled",    label: "Scheduled" },
   { id: "published",    label: "Published" },
   { id: "failed",       label: "Failed" },
 ];
@@ -687,7 +687,7 @@ function renderCard(card) {
           title="Delete post" aria-label="Delete post">×</button>
       </header>
       <strong>${escapeHtml(card.excerpt || card.title)}</strong>
-      <time datetime="${escapeHtml(card.updatedAt || card.createdAt || "")}">${formatDate(card.updatedAt || card.createdAt)}</time>
+      <div class="card-scheduled"><span class="card-scheduled-label card-created-label">Created</span> <time datetime="${escapeHtml(card.createdAt || "")}">${formatDateTime(card.createdAt)}</time></div>
       ${card.scheduledAt ? `<div class="card-scheduled"><span class="card-scheduled-label">Scheduled</span> <time datetime="${escapeHtml(card.scheduledAt)}">${formatDateTime(card.scheduledAt)}</time></div>` : ""}
       ${card.tags?.length ? `<div class="tag-row">${card.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </article>
@@ -6089,13 +6089,23 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#post-detail-heading").textContent = postPackage.title || "Draft";
   document.querySelector("#detail-status").textContent = statusLabel(postPackage.status);
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
+  // Show created time.
+  const detailCreatedEl = document.querySelector("#detail-created-time");
+  if (detailCreatedEl) {
+    const createdAt = postPackage.createdAt;
+    if (createdAt) {
+      detailCreatedEl.innerHTML = `<span class="card-scheduled-label card-created-label">Created</span> <time datetime="${escapeHtml(createdAt)}">${formatDateTime(createdAt)}</time>`;
+      detailCreatedEl.hidden = false;
+    } else {
+      detailCreatedEl.hidden = true;
+    }
+  }
   // Show scheduled time if any draft is scheduled.
   const detailScheduledEl = document.querySelector("#detail-scheduled-time");
   if (detailScheduledEl) {
     const scheduledTimes = drafts.map((d) => d.scheduledAt).filter(Boolean).sort();
     if (scheduledTimes.length) {
-      detailScheduledEl.textContent = `Scheduled ${formatDateTime(scheduledTimes[0])}`;
-      detailScheduledEl.setAttribute("datetime", scheduledTimes[0]);
+      detailScheduledEl.innerHTML = `<span class="card-scheduled-label">Scheduled</span> <time datetime="${escapeHtml(scheduledTimes[0])}">${formatDateTime(scheduledTimes[0])}</time>`;
       detailScheduledEl.hidden = false;
     } else {
       detailScheduledEl.hidden = true;
