@@ -296,6 +296,7 @@ const DRAFT_BOARD_COLUMNS = [
   { id: "staged",       label: "Staged" },
   { id: "published",    label: "Published" },
   { id: "failed",       label: "Failed" },
+  { id: "archived",     label: "Archive" },
 ];
 let activeBoardPlatformFilter = new Set(); // empty = all platforms
 let activeBoardCompanyFilter  = new Set(); // empty = all companies
@@ -335,6 +336,7 @@ function draftColumnForStatus(status) {
   if (s === "approved")  return "needs_review";
   if (s === "blocked")   return "needs_review";
   if (s === "abandoned") return "failed";
+  if (s === "posted")    return "published";
   return DRAFT_BOARD_COLUMNS.some((c) => c.id === s) ? s : "draft";
 }
 
@@ -360,7 +362,11 @@ function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyF
     const excerpt = snippetSource.length > 80
       ? `${snippetSource.slice(0, 77)}…`
       : snippetSource || "(no content)";
-    const colId = draftColumnForStatus(draft.status);
+    let colId = draftColumnForStatus(draft.status);
+    if (colId === "published" && draft.status === "posted") {
+      const postedAt = new Date(draft.publishedAt || draft.updatedAt || 0).getTime();
+      if (Date.now() - postedAt > 24 * 60 * 60 * 1000) colId = "archived";
+    }
     const col = columnMap.get(colId) || columnMap.get("draft");
     col.posts.push({
       id:            draft.id,
@@ -6012,13 +6018,11 @@ function renderImageGenerationToggle(draft) {
 
 function renderVideoGenerationToggle(draft) {
   const campaign = (state.campaigns || []).find((item) => item.id === (draft.campaignId || draft.context?.campaignId));
-  // Only show the toggle if the campaign has video generation enabled
-  if (!campaign?.videoGenerationEnabled) return "";
 
   const status = draft.videoGenerationStatus;
   const isEnabled = draft.videoGenerationEnabled !== null && draft.videoGenerationEnabled !== undefined
     ? Boolean(draft.videoGenerationEnabled)
-    : Boolean(campaign.videoGenerationEnabled);
+    : Boolean(campaign?.videoGenerationEnabled);
 
   const statusLabel = status === "generating" ? " (generating…)"
     : status === "success" ? " ✓"
