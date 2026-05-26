@@ -1042,6 +1042,50 @@ textarea {
   margin: 4px 0 0;
 }
 
+.image-gen-error-block {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.image-gen-error-label {
+  color: #c03030;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.image-gen-error-msg {
+  color: #e07070;
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.image-gen-copy-error {
+  background: transparent;
+  border: 1px solid #c03030;
+  border-radius: 4px;
+  color: #c03030;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.image-gen-copy-error:hover {
+  background: #c03030;
+  color: #fff;
+}
+
+.heygen-gen-btn {
+  flex-shrink: 0;
+}
+
 .image-gen-preview-row {
   margin-top: 8px;
 }

@@ -645,10 +645,19 @@ ipcMain.handle("diamond:get-heygen-video-config", () => ({
 ipcMain.handle("diamond:get-kling-video-config", () => {
   const accessKey = process.env.KLING_ACCESS_KEY || null;
   const secretKey = process.env.KLING_SECRET_KEY || null;
-  // Generate a fresh JWT in the main process — secret key never leaves Node context.
-  const token = (accessKey && secretKey)
-    ? buildKlingJwt(accessKey, secretKey)
-    : (process.env.KLING_API_KEY || null);
+  let token = null;
+  if (accessKey && secretKey) {
+    try {
+      token = buildKlingJwt(accessKey, secretKey);
+    } catch (err) {
+      console.error("[diamond] buildKlingJwt failed:", err.message);
+    }
+  } else if (process.env.KLING_API_KEY) {
+    token = process.env.KLING_API_KEY; // legacy plain-token fallback
+  }
+  if (!token) {
+    console.warn("[diamond] Kling config: no token — check KLING_ACCESS_KEY + KLING_SECRET_KEY in .env.local");
+  }
   return {
     token,
     apiEndpoint: process.env.KLING_API_ENDPOINT || null,

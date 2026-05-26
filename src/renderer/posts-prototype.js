@@ -6249,18 +6249,40 @@ function renderImageGenerationSection(draft) {
   const imgError = imgStatus === "failed" && draft.imageGenerationError
     ? `<p class="image-gen-error">${escapeHtml(draft.imageGenerationError)}</p>` : "";
 
-  // Video status — track whichever provider is active
-  const vidStatus = draft.videoGenerationProvider === "kling" ? draft.videoGenerationStatus : null;
+  // Video status — track whichever provider last ran
+  const vidProvider = draft.videoGenerationProvider || "";
   const vidGenerating = draft.videoGenerationStatus === "generating";
-  const vidBadge = vidStatus === "generating"
-    ? `<span class="image-gen-status generating">Generating video…</span>`
-    : vidStatus === "success"
-      ? `<span class="image-gen-status complete">✓ Video ready</span>`
-      : vidStatus === "failed"
-        ? `<span class="image-gen-status failed">✗ Video failed</span>`
-        : "";
-  const vidError = vidStatus === "failed" && draft.videoGenerationError
-    ? `<p class="image-gen-error">${escapeHtml(draft.videoGenerationError?.message || String(draft.videoGenerationError || ""))}</p>` : "";
+  const klingActive = vidProvider === "kling";
+  const heygenActive = vidProvider === "heygen";
+  const vidFailed = draft.videoGenerationStatus === "failed";
+  const vidSuccess = draft.videoGenerationStatus === "success";
+
+  const klingBadge = klingActive
+    ? (vidGenerating ? `<span class="image-gen-status generating">Kling generating…</span>`
+      : vidSuccess   ? `<span class="image-gen-status complete">✓ Kling ready</span>`
+      : vidFailed    ? `<span class="image-gen-status failed">✗ Kling failed</span>`
+      : "")
+    : "";
+  const heygenBadge = heygenActive
+    ? (vidGenerating ? `<span class="image-gen-status generating">HeyGen generating…</span>`
+      : vidSuccess   ? `<span class="image-gen-status complete">✓ HeyGen ready</span>`
+      : vidFailed    ? `<span class="image-gen-status failed">✗ HeyGen failed</span>`
+      : "")
+    : "";
+
+  // Error block: show for any provider, with provider label and copyable detail
+  const rawVidErr = vidFailed && draft.videoGenerationError
+    ? (draft.videoGenerationError?.message || String(draft.videoGenerationError || "Unknown error"))
+    : null;
+  const vidErrorBlock = rawVidErr ? `
+    <div class="image-gen-error-block">
+      <span class="image-gen-error-label">${escapeHtml(vidProvider || "video")} error:</span>
+      <span class="image-gen-error-msg">${escapeHtml(rawVidErr)}</span>
+      <button type="button" class="image-gen-copy-error"
+        data-platform-action="copy-video-error"
+        data-platform-draft-id="${escapeHtml(draft.id)}"
+        title="Copy full error details to clipboard">Copy</button>
+    </div>` : "";
 
   const busy = imgGenerating || vidGenerating;
 
@@ -6304,7 +6326,7 @@ function renderImageGenerationSection(draft) {
           data-platform-draft-id="${escapeHtml(draft.id)}"
           ${busy ? "disabled" : ""}
           title="Generate image via Replicate Flux Pro"
-        >🖼 ${imgGenerating ? "Generating…" : "Generate image"}</button>
+        >🖼 ${imgGenerating ? "Generating…" : "Image"}</button>
         <button
           type="button"
           class="media-button kling-gen-btn"
@@ -6312,12 +6334,20 @@ function renderImageGenerationSection(draft) {
           data-platform-draft-id="${escapeHtml(draft.id)}"
           ${busy ? "disabled" : ""}
           title="Generate video via Kling AI"
-        >🎬 ${vidGenerating ? "Generating…" : "Generate video"}</button>
+        >🎬 ${klingActive && vidGenerating ? "Generating…" : "Kling"}</button>
+        <button
+          type="button"
+          class="media-button heygen-gen-btn"
+          data-platform-action="generate-video"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          ${busy ? "disabled" : ""}
+          title="Generate video via HeyGen"
+        >📹 ${heygenActive && vidGenerating ? "Generating…" : "HeyGen"}</button>
         <label class="audio-toggle-label" title="Enable AI-generated audio/voice. Increases generation cost.">
           <input type="checkbox" data-audio-toggle-draft-id="${escapeHtml(draft.id)}" ${draft.enableAudio ? "checked" : ""} />
           🔊 Audio
         </label>
-        ${imgBadge}${vidBadge}
+        ${imgBadge}${klingBadge}${heygenBadge}
         ${draft.generatedImageUrl ? `
           <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open image ↗</button>
           <button type="button" class="image-gen-link" data-platform-action="copy-generated-image-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy image URL</button>
@@ -6327,7 +6357,7 @@ function renderImageGenerationSection(draft) {
           <button type="button" class="image-gen-link" data-platform-action="copy-generated-video-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy video URL</button>
         ` : ""}
       </div>
-      ${imgError}${vidError}
+      ${imgError}${vidErrorBlock}
       ${draft.generatedImageUrl ? `<div class="image-gen-preview-row"><img class="image-gen-preview" src="${escapeHtml(draft.generatedImageUrl)}" alt="Generated image" /></div>` : ""}
     </div>
   `;
@@ -7280,6 +7310,20 @@ async function handlePlatformDraftAction(event) {
       window.diamond.writeClipboard(url);
       const btn = event.target.closest("[data-platform-action]");
       if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy video URL"; }, 2000); }
+    }
+    return;
+  }
+  if (action === "copy-video-error") {
+    const err = draft.videoGenerationError;
+    const detail = JSON.stringify({
+      provider: draft.videoGenerationProvider,
+      status: draft.videoGenerationStatus,
+      error: err,
+    }, null, 2);
+    if (window.diamond?.writeClipboard) {
+      window.diamond.writeClipboard(detail);
+      const btn = event.target.closest("[data-platform-action]");
+      if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 2000); }
     }
     return;
   }
