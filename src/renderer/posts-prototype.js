@@ -6205,13 +6205,13 @@ function renderPlatformPreview(draft, hidden = false) {
         <div>
           ${statusBadge}
           <button class="media-button draft-evaluate-btn" type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
+          <button class="media-button draft-add-media-btn" type="button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Image</button>
         </div>
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       ${charCount}
       ${renderDraftEvaluation(draft)}
       <div class="draft-media-row">
-        <button type="button" class="media-button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
         <span>${escapeHtml(mediaStatus(draft))}</span>
       </div>
