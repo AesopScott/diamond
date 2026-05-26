@@ -6189,17 +6189,17 @@ function renderPlatformPreviews(drafts) {
   });
 }
 
-// Returns a 🖼 Image toggle button when the campaign has image generation enabled;
-// empty string otherwise.
+// Always renders a 🖼 Image toggle. Post-level override takes priority;
+// when null/undefined the post inherits from the campaign (defaults to false).
 function renderImageGenerationToggle(draft) {
   const campaign = (state.campaigns || []).find(
     (item) => item.id === (draft.campaignId || draft.context?.campaignId)
   );
-  if (!campaign?.imageGenerationEnabled) return "";
   const status = draft.imageGenerationStatus;
+  // Effective state: post override → campaign default → false
   const isEnabled = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
     ? Boolean(draft.imageGenerationEnabled)
-    : Boolean(campaign.imageGenerationEnabled);
+    : Boolean(campaign?.imageGenerationEnabled);
   const statusSuffix = status === "generating" ? " (generating…)"
     : status === "complete" ? " ✓"
     : status === "failed" ? " ✗"
@@ -6221,14 +6221,15 @@ async function toggleDraftImageGeneration(draft) {
   const campaign = (state.campaigns || []).find(
     (item) => item.id === (draft.campaignId || draft.context?.campaignId)
   );
-  if (!campaign?.imageGenerationEnabled) return;
-  // Cycle: inherit (null/undefined) → on (true) → off (false) → inherit (null)
-  const current = draft.imageGenerationEnabled;
-  const nextEnabled = (current === null || current === undefined) ? true
-    : current === true ? false
-    : null;
+  // No campaign gate — the post can always override independently.
+  // Effective current = post override ?? campaign default ?? false.
+  // Toggle flips that effective value: on → off, off → on.
+  const effectiveCurrent = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
+    ? Boolean(draft.imageGenerationEnabled)
+    : Boolean(campaign?.imageGenerationEnabled);
+  const nextEnabled = !effectiveCurrent;
   let updatedDraft = { ...draft, imageGenerationEnabled: nextEnabled, updatedAt: new Date().toISOString() };
-  if (nextEnabled !== true) {
+  if (!nextEnabled) {
     prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
       (d) => (d.id === draft.id ? updatedDraft : d)
     );
