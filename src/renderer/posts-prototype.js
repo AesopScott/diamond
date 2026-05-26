@@ -6249,9 +6249,9 @@ function renderImageGenerationSection(draft) {
   const imgError = imgStatus === "failed" && draft.imageGenerationError
     ? `<p class="image-gen-error">${escapeHtml(draft.imageGenerationError)}</p>` : "";
 
-  // Video status
+  // Video status — track whichever provider is active
   const vidStatus = draft.videoGenerationProvider === "kling" ? draft.videoGenerationStatus : null;
-  const vidGenerating = vidStatus === "generating";
+  const vidGenerating = draft.videoGenerationStatus === "generating";
   const vidBadge = vidStatus === "generating"
     ? `<span class="image-gen-status generating">Generating video…</span>`
     : vidStatus === "success"
@@ -6458,6 +6458,8 @@ async function generateDraftProviderVideo(draft, provider) {
   );
   await saveProductionState();
   reopenActiveDetail();
+  let result;
+  try {
 
   const postPackage = (prototypeModel.postPackages || state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
   const klingConfig = isKling && window.diamond?.getKlingVideoConfig
@@ -6487,24 +6489,31 @@ async function generateDraftProviderVideo(draft, provider) {
     } : {}),
   };
 
-  const result = await integrateVideoGenerationIntoPostCreation(
-    postPackage,
-    generatingDraft,
-    videoCampaign,
-    {
-      provider,
-      heygenApiKey: heygenConfig?.apiKey || "",
-      heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
-      heygenAvatarId: heygenConfig?.avatarId || undefined,
-      heygenVoiceId: draft.enableAudio ? (heygenConfig?.voiceId || undefined) : null,
-      klingAccessKey: klingConfig?.accessKey || undefined,
-      klingSecretKey: klingConfig?.secretKey || undefined,
-      klingApiKey: klingConfig?.apiKey || undefined,   // legacy plain-token fallback
-      klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
-      klingModel: klingConfig?.model || undefined,
-      klingEnableAudio: draft.enableAudio === true,
-    }
-  );
+    result = await integrateVideoGenerationIntoPostCreation(
+      postPackage,
+      generatingDraft,
+      videoCampaign,
+      {
+        provider,
+        heygenApiKey: heygenConfig?.apiKey || "",
+        heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
+        heygenAvatarId: heygenConfig?.avatarId || undefined,
+        heygenVoiceId: draft.enableAudio ? (heygenConfig?.voiceId || undefined) : null,
+        klingAccessKey: klingConfig?.accessKey || undefined,
+        klingSecretKey: klingConfig?.secretKey || undefined,
+        klingApiKey: klingConfig?.apiKey || undefined,   // legacy plain-token fallback
+        klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
+        klingModel: klingConfig?.model || undefined,
+        klingEnableAudio: draft.enableAudio === true,
+      }
+    );
+  } catch (err) {
+    result = {
+      ok: false,
+      reason: err?.message || "Unexpected error during video generation",
+      updatedDraft: null,
+    };
+  }
 
   const resultDraft = result.updatedDraft || {};
   const finalDraft = {
