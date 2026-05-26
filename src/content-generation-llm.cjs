@@ -403,12 +403,23 @@ function buildRewritePrompt({ platform, text, issues = [], suggestions = [], bra
 const MEDIA_PROMPT_MAX_TOKENS = 512;
 
 const MEDIA_VISUAL_STYLES = [
-  "cinematic",
-  "editorial",
-  "abstract",
-  "product",
-  "lifestyle",
-  "documentary",
+  "absurdist near-real AI loop",
+  "humorous AI trampoline gag",
+  "AI yacht jump / splash gag",
+  "AI animal/cat reel",
+  "surreal AI reel",
+  "cinematic surreal AI reel",
+  "cursed horror AI reel",
+  "AI microdrama series",
+  "absurd AI chiropractor physical gag",
+  "AI cat work/restaurant chaos video",
+  "AI brainrot creature meme",
+  "scary AI water-slide/fall clip",
+  "boxed AI action figure portrait",
+  "Ghibli-style AI portrait",
+  "vintage AI portrait",
+  "hyper-real 3D figurine avatar",
+  "AI restored family / lost-relative photo",
 ];
 
 function buildMediaPromptInstruction(draftText, visualStyle, mediaType) {

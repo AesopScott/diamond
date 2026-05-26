@@ -6262,13 +6262,24 @@ function renderImageGenerationSection(draft) {
       </div>
       <div class="media-prompt-generator">
         <select class="media-prompt-style-select" data-media-prompt-style="${escapeHtml(draft.id)}" aria-label="Visual style for prompt generation">
-          <option value="">Visual style…</option>
-          <option value="cinematic">Cinematic</option>
-          <option value="editorial">Editorial</option>
-          <option value="abstract">Abstract</option>
-          <option value="product">Product</option>
-          <option value="lifestyle">Lifestyle</option>
-          <option value="documentary">Documentary</option>
+          <option value="">Content type…</option>
+          <option value="absurdist near-real AI loop">Absurdist near-real AI loop</option>
+          <option value="humorous AI trampoline gag">Humorous AI trampoline gag</option>
+          <option value="AI yacht jump / splash gag">AI yacht jump / splash gag</option>
+          <option value="AI animal/cat reel">AI animal/cat reel</option>
+          <option value="surreal AI reel">Surreal AI reel</option>
+          <option value="cinematic surreal AI reel">Cinematic surreal AI reel</option>
+          <option value="cursed horror AI reel">Cursed horror AI reel</option>
+          <option value="AI microdrama series">AI microdrama series</option>
+          <option value="absurd AI chiropractor physical gag">Absurd AI chiropractor gag</option>
+          <option value="AI cat work/restaurant chaos video">AI cat work/restaurant chaos</option>
+          <option value="AI brainrot creature meme">AI brainrot creature meme</option>
+          <option value="scary AI water-slide/fall clip">Scary AI water-slide/fall clip</option>
+          <option value="boxed AI action figure portrait">Boxed AI action figure portrait</option>
+          <option value="Ghibli-style AI portrait">Ghibli-style AI portrait</option>
+          <option value="vintage AI portrait">Vintage AI portrait</option>
+          <option value="hyper-real 3D figurine avatar">Hyper-real 3D figurine avatar</option>
+          <option value="AI restored family / lost-relative photo">AI restored family photo</option>
         </select>
         <button type="button" class="media-button media-prompt-btn"
           data-platform-action="generate-media-prompt"
