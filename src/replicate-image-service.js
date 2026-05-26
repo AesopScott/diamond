@@ -156,6 +156,13 @@ export async function generateImageViaReplicate({
         );
         if (statusResponse.ok) {
           finalPrediction = await statusResponse.json();
+          // Check terminal status immediately so the last allowed poll is not
+          // mis-classified as a timeout (the top-of-loop check runs only on the
+          // *next* iteration, which never happens when attempts === maxAttempts).
+          if (finalPrediction.status === "succeeded" || finalPrediction.status === "failed") {
+            completed = true;
+            break;
+          }
         }
       } catch {
         // Transient poll failure — keep trying until maxAttempts
@@ -180,8 +187,13 @@ export async function generateImageViaReplicate({
       };
     }
 
-    // Extract results
-    const imageUrl = finalPrediction.output?.[0]?.url || finalPrediction.output?.[0];
+    // Extract results — Flux Pro output may be an array of URLs or a bare string URL.
+    const rawOutput = finalPrediction.output;
+    const imageUrl = typeof rawOutput === "string"
+      ? rawOutput                             // bare string: "https://..."
+      : Array.isArray(rawOutput)
+        ? (rawOutput[0]?.url || rawOutput[0]) // array: [{url:"…"}] or ["…"]
+        : null;
     const cost = extractGenerationCost({
       predictTime: finalPrediction.metrics?.predict_time || 10,
       model: MODEL_ID,

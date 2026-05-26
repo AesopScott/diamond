@@ -6261,7 +6261,10 @@ function renderImageGenerationSection(draft) {
           title="Generate image via Replicate Flux Pro"
         >🖼 ${isGenerating ? "Generating…" : "Generate image"}</button>
         ${statusBadge}
-        ${draft.generatedImageUrl ? `<button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open in browser ↗</button>` : ""}
+        ${draft.generatedImageUrl ? `
+          <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open in browser ↗</button>
+          <button type="button" class="image-gen-link" data-platform-action="copy-generated-image-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy URL</button>
+        ` : ""}
       </div>
       ${errorLine}
       ${draft.generatedImageUrl ? `<div class="image-gen-preview-row"><img class="image-gen-preview" src="${escapeHtml(draft.generatedImageUrl)}" alt="Generated image" /></div>` : ""}
@@ -6992,7 +6995,23 @@ async function handlePlatformDraftAction(event) {
   if (action === "generate-image") { await generateDraftImage(draft); return; }
   if (action === "open-generated-image") {
     const url = draft.generatedImageUrl;
-    if (url && window.diamond?.openExternal) window.diamond.openExternal(url);
+    if (!url) return;
+    if (window.diamond?.openExternal) {
+      window.diamond.openExternal(url).catch(() => {});
+    } else {
+      // Fallback: copy URL to clipboard so user can paste in browser.
+      window.diamond?.writeClipboard?.(url);
+      alert("Could not open browser automatically. URL copied to clipboard.");
+    }
+    return;
+  }
+  if (action === "copy-generated-image-url") {
+    const url = draft.generatedImageUrl;
+    if (url && window.diamond?.writeClipboard) {
+      window.diamond.writeClipboard(url);
+      const btn = event.target.closest("[data-platform-action]");
+      if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy URL"; }, 2000); }
+    }
     return;
   }
   if (action === "add-media") await attachMediaToDraft(draft);
