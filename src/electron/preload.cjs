@@ -27,4 +27,5 @@ contextBridge.exposeInMainWorld("diamond", {
   evaluateDraft: (payload) => ipcRenderer.invoke("diamond:evaluate-draft", payload),
   rewriteDraft: (payload) => ipcRenderer.invoke("diamond:rewrite-draft", payload),
   getReplicateApiKey: () => ipcRenderer.invoke("diamond:get-replicate-api-key"),
+  getHeygenApiKey: () => ipcRenderer.invoke("diamond:get-heygen-api-key"),
 });

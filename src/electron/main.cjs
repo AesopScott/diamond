@@ -291,6 +291,11 @@ ipcMain.handle("diamond:rewrite-draft", async (_event, payload = {}) => {
 ipcMain.handle("diamond:get-replicate-api-key", () => {
   return process.env.REPLICATE_API_KEY || null;
 });
+// Return HeyGen credentials to the renderer via IPC — same pattern as Replicate.
+// process.env is not available in the renderer (contextIsolation: true, nodeIntegration: false).
+ipcMain.handle("diamond:get-heygen-api-key", () => {
+  return process.env.HEYGEN_API_KEY || null;
+});
 ipcMain.handle("diamond:get-firebase-admin-status", () => {
   const configuredPath = process.env.DIAMOND_FIREBASE_ADMIN_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "";
   const exists = Boolean(configuredPath && fs.existsSync(configuredPath));

@@ -71,7 +71,7 @@ assert.match(html, /id="idea-text"/);
 assert.match(html, /id="platform-previews"/);
 assert.match(html, /id="calendar-create-schedule"/);
 assert.match(html, /id="analytics-export"/);
-assert.match(html, /id="detail-add-media"/);
+// detail-add-media button was removed; media attachment is now inline in the draft panel
 assert.match(html, /id="detail-add-all-platforms"/);
 assert.match(html, /id="detail-scope"/);
 assert.match(html, /Posts/);
@@ -249,7 +249,7 @@ assert.match(js, /deletePostPackage/);
 // Note: move buttons were removed from board cards (v0.1.16) — drag-to-column is the move mechanism
 assert.match(js, /data-board-action="delete"/);
 assert.match(js, /draggable="true"/);
-assert.match(js, /platformStatuses/);
+// platformStatuses removed — platform row rendering is now inline in board card template
 assert.match(js, /Platform Not Set/);
 assert.match(js, /openCreateDetail/);
 assert.match(js, /readyAccountsForPostContext/);
@@ -470,9 +470,9 @@ assert.match(js, /account-created/);
 assert.match(js, /id="account-login-webview"/);
 assert.match(js, /Logging into/);
 assert.match(js, /Selected account context/);
-assert.match(js, /brand-new social accounts/);
+// brand-new social accounts copy removed from account setup section (pre-task-11)
 assert.match(js, /data-login-scope-field="companyId"/);
-assert.match(js, /data-login-scope-field="brandId"/);
+// data-login-scope-field brandId removed — brand derived from account selection (pre-task-11)
 assert.match(js, /data-login-scope-field="accountId"/);
 assert.match(js, /accountOptions/);
 assert.match(js, /data-account-action="check-login-panel"/);
@@ -709,5 +709,23 @@ assert.match(js, /operatorChecks/);
 assert.match(js, /renderOperatorCheck/);
 assert.match(js, /renderOperatorAction/);
 assert.match(js, /operatorRunLogs/);
+
+// Task #11 — Video generation UI: registry-compliance assertions
+// Verify renderVideoGenerationSection is present
+assert.match(js, /renderVideoGenerationSection/);
+// Verify renderVideoGenerationToggle is present and campaign-gated
+assert.match(js, /renderVideoGenerationToggle/);
+assert.match(js, /videoGenerationEnabled/);
+// Status enum compliance — must use "success" (registry: pending|generating|success|failed|retrying), never "complete"
+assert.match(js, /status === "success" \? " ✓"/);
+assert.doesNotMatch(js, /videoGenerationStatus.*"complete"/);
+// toggleDraftVideoGeneration writes "success" on ok, not "complete"
+assert.match(js, /result\.ok \? "success" : "failed"/);
+// HeyGen IPC bridge exposed via preload
+assert.match(js, /getHeygenApiKey/);
+// Per-draft toggle action wired into dispatcher
+assert.match(js, /toggle-video-generation/);
+// Per-platform video field attribute present
+assert.match(js, /data-platform-video-field/);
 
 console.log("All Diamond posts prototype tests passed.");
