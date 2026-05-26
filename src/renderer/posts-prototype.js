@@ -6282,7 +6282,7 @@ function renderPlatformPreview(draft, hidden = false) {
         <div>
           ${statusBadge}
           <button class="media-button draft-evaluate-btn" type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
-          <button class="media-button draft-add-media-btn" type="button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Image</button>
+          <button class="media-button draft-add-media-btn" type="button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
           ${renderImageGenerationToggle(draft)}
         </div>
       </header>
