@@ -288,6 +288,18 @@
       </form>
     </dialog>
 
+    <!-- Datetime modal (schedule picker) -->
+    <dialog id="datetime-modal" class="app-modal">
+      <form method="dialog" class="app-modal-form">
+        <label id="datetime-modal-label" class="app-modal-label"></label>
+        <input id="datetime-modal-field" type="datetime-local" class="app-modal-input">
+        <div class="app-modal-actions">
+          <button type="button" id="datetime-modal-cancel">Cancel</button>
+          <button type="submit" value="ok" id="datetime-modal-ok">Schedule</button>
+        </div>
+      </form>
+    </dialog>
+
     <!-- Confirm modal (replaces window.confirm) -->
     <dialog id="confirm-modal" class="app-modal">
       <form method="dialog" class="app-modal-form">

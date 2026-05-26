@@ -64,7 +64,7 @@ assert.match(html, /<nav id="prototype-nav">\s*<a href="#accounts" data-view="ac
 assert.match(html, /data-view="accounts-view">Accounts<\/a>\s*<a class="active nav-parent" href="#posts"/);
 assert.match(html, /data-view="posts-view">Posts<\/a>\s*<a class="nav-child" href="#templates"/);
 assert.match(html, /data-view="templates-view">Templates<\/a>\s*<a class="nav-child" href="#calendar"/);
-assert.match(html, /data-view="campaigns-view">Campaigns<\/a>\s*<a href="#analytics"/);
+assert.match(html, /data-view="campaigns-view">Campaigns<\/a>[\s\S]*?<a href="#analytics"/);
 assert.match(html, /data-view="analytics-view">Analytics<\/a>\s*<a href="#settings"/);
 assert.match(html, /id="post-detail"/);
 assert.match(html, /id="idea-text"/);

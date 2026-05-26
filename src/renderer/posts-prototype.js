@@ -7546,10 +7546,15 @@ function approvePlatformDraft(draft) {
   draft.updatedAt = draft.approvedAt;
 }
 
-function schedulePlatformDraft(draft) {
+async function schedulePlatformDraft(draft) {
   if (!["approved", "staged", "scheduled", "published"].includes(draft.status)) approvePlatformDraft(draft);
   if (draft.status === "blocked") return;
-  const scheduledAt = draft.scheduledAt || nextScheduleTime();
+  const picked = await showDateTimeModal(
+    `Schedule ${platformLabel(draft.platform)} post`,
+    draft.scheduledAt || nextScheduleTime()
+  );
+  if (!picked) return; // user cancelled
+  const scheduledAt = picked;
   const schedule = {
     id: draft.scheduledPostId || `scheduled-${Date.now()}-${draft.platform}`,
     draftId: draft.id,
@@ -8170,6 +8175,41 @@ function showConfirmModal(message) {
 
 async function promptForText(label, fallback = "") {
   return (await showInputModal(label, fallback)) || "";
+}
+
+// Returns an ISO string (user's local time converted to UTC) or null if cancelled.
+function showDateTimeModal(label, defaultIso = "") {
+  return new Promise((resolve) => {
+    const dialog = document.querySelector("#datetime-modal");
+    const labelEl = document.querySelector("#datetime-modal-label");
+    const field = document.querySelector("#datetime-modal-field");
+    const cancelBtn = document.querySelector("#datetime-modal-cancel");
+    labelEl.textContent = label;
+    // datetime-local expects "YYYY-MM-DDTHH:MM" in LOCAL time (not UTC).
+    // Subtract the timezone offset so toISOString's UTC output matches local wall-clock.
+    const toLocalInput = (ms) => {
+      const d = new Date(ms);
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    };
+    field.value = toLocalInput(defaultIso ? new Date(defaultIso).getTime() : Date.now() + 3600_000);
+    const onClose = () => {
+      cancelBtn.removeEventListener("click", onCancel);
+      if (dialog.returnValue === "ok" && field.value) {
+        resolve(new Date(field.value).toISOString());
+      } else {
+        resolve(null);
+      }
+    };
+    const onCancel = () => {
+      dialog.removeEventListener("close", onClose);
+      dialog.close("");
+      resolve(null);
+    };
+    dialog.addEventListener("close", onClose, { once: true });
+    cancelBtn.addEventListener("click", onCancel, { once: true });
+    dialog.showModal();
+    field.focus();
+  });
 }
 
 function startGuideTour() {
