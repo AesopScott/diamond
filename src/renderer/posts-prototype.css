@@ -661,6 +661,26 @@ button:disabled {
   margin-top: 8px;
 }
 
+.card-scheduled {
+  align-items: center;
+  color: #8bbcff;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.card-scheduled-label {
+  background: #162640;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 2px 5px;
+  text-transform: uppercase;
+}
+
 .post-card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -767,6 +787,14 @@ button:disabled {
 .status-badge.failed,
 .status-badge.blocked { background: #351414; color: #ff6969; }
 .status-badge.scheduled { background: #162640; color: #8bbcff; }
+
+.detail-scheduled-time {
+  color: #8bbcff;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+}
 
 .idea-panel,
 .platform-preview {

@@ -370,6 +370,7 @@ function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyF
       status:        draft.status || "draft",
       updatedAt:     draft.updatedAt || pkg.updatedAt,
       createdAt:     draft.createdAt || pkg.createdAt,
+      scheduledAt:   draft.scheduledAt || null,
       tags:          pkg.tags || [],
     });
   });
@@ -684,6 +685,7 @@ function renderCard(card) {
       </header>
       <strong>${escapeHtml(card.excerpt || card.title)}</strong>
       <time datetime="${escapeHtml(card.updatedAt || card.createdAt || "")}">${formatDate(card.updatedAt || card.createdAt)}</time>
+      ${card.scheduledAt ? `<div class="card-scheduled"><span class="card-scheduled-label">Scheduled</span> <time datetime="${escapeHtml(card.scheduledAt)}">${formatDateTime(card.scheduledAt)}</time></div>` : ""}
       ${card.tags?.length ? `<div class="tag-row">${card.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </article>
   `;
@@ -6057,6 +6059,18 @@ function openDetail(postPackage, drafts) {
   document.querySelector("#post-detail-heading").textContent = postPackage.title || "Draft";
   document.querySelector("#detail-status").textContent = statusLabel(postPackage.status);
   document.querySelector("#detail-status").className = `status-badge ${postPackage.status}`;
+  // Show scheduled time if any draft is scheduled.
+  const detailScheduledEl = document.querySelector("#detail-scheduled-time");
+  if (detailScheduledEl) {
+    const scheduledTimes = drafts.map((d) => d.scheduledAt).filter(Boolean).sort();
+    if (scheduledTimes.length) {
+      detailScheduledEl.textContent = `Scheduled ${formatDateTime(scheduledTimes[0])}`;
+      detailScheduledEl.setAttribute("datetime", scheduledTimes[0]);
+      detailScheduledEl.hidden = false;
+    } else {
+      detailScheduledEl.hidden = true;
+    }
+  }
   document.querySelector("#idea-text").value = postPackage.ideaText || "";
   renderLockedCampaignTags(postPackage);
   const autoTagNames = [
