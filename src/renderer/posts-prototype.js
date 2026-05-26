@@ -288,7 +288,17 @@ const firstRunSteps = getDiamondFirstRunSteps();
 const tourSteps = getDiamondTourSteps();
 const operatorManual = await loadOperatorManual();
 let prototypeModel = buildProductionPostModel(state);
-let board = buildPostBoardView(prototypeModel);
+const DRAFT_BOARD_COLUMNS = [
+  { id: "draft",        label: "Draft" },
+  { id: "needs_review", label: "Needs Review" },
+  { id: "scheduled",    label: "Scheduled" },
+  { id: "staged",       label: "Staged" },
+  { id: "published",    label: "Published" },
+  { id: "failed",       label: "Failed" },
+];
+let activeBoardPlatformFilter = new Set(); // empty = all platforms
+let activeBoardCompanyFilter  = new Set(); // empty = all companies
+let board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
 let activePostPackageId = null;
 let activePlatformTab = null; // currently visible platform tab inside the detail view
 let selectedAccountId = state.context?.socialAccountId || null;
@@ -317,6 +327,61 @@ const ACCOUNT_LOGIN_ACTION_COOLDOWNS = {
   "fit-login-panel": 5000,
 };
 const SUPPORTED_SOCIAL_PLATFORMS = ["x", "instagram", "tiktok", "linkedin", "youtube-shorts", "youtube-longform", "facebook", "pinterest", "reddit"];
+// ─── Platform-draft board view ────────────────────────────────────────────────
+
+function draftColumnForStatus(status) {
+  const s = status || "draft";
+  if (s === "approved")  return "needs_review";
+  if (s === "blocked")   return "needs_review";
+  if (s === "abandoned") return "failed";
+  return DRAFT_BOARD_COLUMNS.some((c) => c.id === s) ? s : "draft";
+}
+
+function buildPlatformDraftBoardView(model, platformFilter = new Set(), companyFilter = new Set()) {
+  const packageMap = new Map((model.postPackages || []).map((p) => [p.id, p]));
+  const drafts = (model.platformDrafts || []).filter((d) => {
+    if (platformFilter.size > 0 && !platformFilter.has(d.platform)) return false;
+    if (companyFilter.size > 0) {
+      const pkg = packageMap.get(d.postPackageId);
+      const draftCompanyId = d.companyId || pkg?.companyId || pkg?.context?.companyId;
+      if (!companyFilter.has(draftCompanyId)) return false;
+    }
+    return true;
+  });
+  const columns = DRAFT_BOARD_COLUMNS.map((col) => ({ ...col, posts: [] }));
+  const columnMap = new Map(columns.map((col) => [col.id, col]));
+  drafts.forEach((draft) => {
+    const pkg = packageMap.get(draft.postPackageId);
+    if (!pkg) return;
+    const idea = pkg.ideaText || pkg.title || "";
+    const body = draft.llmRevisedText || draft.text || "";
+    const snippetSource = body || idea;
+    const excerpt = snippetSource.length > 80
+      ? `${snippetSource.slice(0, 77)}…`
+      : snippetSource || "(no content)";
+    const colId = draftColumnForStatus(draft.status);
+    const col = columnMap.get(colId) || columnMap.get("draft");
+    col.posts.push({
+      id:            draft.id,
+      postPackageId: draft.postPackageId,
+      platform:      draft.platform,
+      title:         idea,
+      excerpt,
+      status:        draft.status || "draft",
+      updatedAt:     draft.updatedAt || pkg.updatedAt,
+      createdAt:     draft.createdAt || pkg.createdAt,
+      tags:          pkg.tags || [],
+    });
+  });
+  columns.forEach((col) => {
+    col.posts.sort((a, b) =>
+      new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
+    col.count = col.posts.length;
+  });
+  return columns;
+}
+
 applyDiamondTheme(state.themeId);
 applyOperatorLanguage();
 applyBeginnerMode();
@@ -392,13 +457,13 @@ function buildProductionPostModel(workspace) {
 async function saveProductionState() {
   state.postPackages = prototypeModel.postPackages;
   state.platformDrafts = prototypeModel.platformDrafts;
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await window.diamond?.saveState?.(state);
 }
 
 async function refreshProductionBoard() {
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   renderBoard(board);
 }
 
@@ -528,6 +593,7 @@ function renderBoard(columns) {
   document.querySelector("#posts-board").classList.remove("hidden");
   document.querySelector(".prototype-toolbar").classList.remove("hidden");
   document.querySelector("#post-detail").classList.add("hidden");
+  renderBoardFilters();
   const target = document.querySelector("#posts-board");
   target.innerHTML = columns.map((column) => `
     <article class="post-column" aria-labelledby="column-${escapeHtml(column.id)}" data-board-status="${escapeHtml(column.id)}">
@@ -542,19 +608,83 @@ function renderBoard(columns) {
   `).join("");
 }
 
-function renderCard(post) {
-  const platformStatuses = post.platformStatuses?.length
-    ? post.platformStatuses
-    : (post.platforms || []).map((platform) => ({ platform, status: post.status || "draft" }));
+function renderBoardFilters() {
+  const toolbar = document.querySelector(".prototype-toolbar");
+  if (!toolbar) return;
+
+  // Derive companies and platforms present in current drafts
+  const pkgMap = new Map((prototypeModel.postPackages || []).map((p) => [p.id, p]));
+
+  // Read companyId from the draft directly first (createPlatformDraft sets it),
+  // then fall back to the linked package, then to context sub-object.
+  const draftCompanyIds = (prototypeModel.platformDrafts || []).map((d) => {
+    const pkg = pkgMap.get(d.postPackageId);
+    return d.companyId || pkg?.companyId || pkg?.context?.companyId;
+  }).filter(Boolean);
+
+  // If no draft carries a companyId, use all configured companies as the list.
+  const companyIds = [...new Set(
+    draftCompanyIds.length
+      ? draftCompanyIds
+      : (state.companies || []).map((c) => c.id).filter(Boolean)
+  )];
+
+  const platforms = [...new Set(
+    (prototypeModel.platformDrafts || []).map((d) => d.platform).filter(Boolean)
+  )].sort();
+
+  const parts = [];
+
+  // Company row — shown whenever at least one company exists
+  if (companyIds.length >= 1) {
+    parts.push(`<span class="filter-group-label">Companies</span>`);
+    parts.push(
+      `<button type="button" class="filter-pill${activeBoardCompanyFilter.size === 0 ? " active" : ""}" data-company-filter="all">All</button>`
+    );
+    for (const id of companyIds) {
+      const co = (state.companies || []).find((c) => c.id === id);
+      const name = co?.name || id;
+      const isActive = activeBoardCompanyFilter.has(id);
+      parts.push(
+        `<button type="button" class="filter-pill${isActive ? " active" : ""}" data-company-filter="${escapeHtml(id)}">${escapeHtml(name)}</button>`
+      );
+    }
+    parts.push(`<div class="filter-break"></div>`);
+  }
+
+  // Platform row
+  parts.push(`<span class="filter-group-label">Platforms</span>`);
+  parts.push(
+    `<button type="button" class="filter-pill${activeBoardPlatformFilter.size === 0 ? " active" : ""}" data-platform-filter="all">All</button>`
+  );
+  for (const p of platforms) {
+    const isActive = activeBoardPlatformFilter.has(p);
+    parts.push(
+      `<button type="button" class="filter-pill${isActive ? " active" : ""}" data-platform-filter="${escapeHtml(p)}">${escapeHtml(platformLabel(p))}</button>`
+    );
+  }
+
+  toolbar.innerHTML = parts.join("");
+}
+
+function renderCard(card) {
+  const pkgId = card.postPackageId || card.id;
   return `
-    <article class="post-card" data-package-id="${escapeHtml(post.id)}" draggable="true" tabindex="0" role="button" aria-label="Open ${escapeHtml(post.title || post.excerpt || "post")}">
+    <article class="post-card"
+      data-package-id="${escapeHtml(pkgId)}"
+      data-draft-platform="${escapeHtml(card.platform || "")}"
+      draggable="true" tabindex="0" role="button"
+      aria-label="Open ${escapeHtml(card.title || card.excerpt || "post")}">
       <header class="post-card-header">
-        <button class="post-card-delete" type="button" data-board-action="delete" data-package-id="${escapeHtml(post.id)}" title="Delete post" aria-label="Delete post">Delete</button>
+        ${card.platform ? `<span class="card-platform-badge platform-${escapeHtml(card.platform)}">${escapeHtml(platformLabel(card.platform))}</span>` : ""}
+        <button class="post-card-delete" type="button"
+          data-board-action="delete"
+          data-package-id="${escapeHtml(pkgId)}"
+          title="Delete post" aria-label="Delete post">×</button>
       </header>
-      <strong>${escapeHtml(post.excerpt || post.title)}</strong>
-      <time datetime="${escapeHtml(post.updatedAt || post.createdAt || "")}">${formatDate(post.updatedAt || post.createdAt)}</time>
-      ${platformStatuses.length ? `<div class="platform-row" aria-label="Platform status">${platformStatuses.map((item) => `<span>${escapeHtml(platformLabel(item.platform))} / ${escapeHtml(statusLabel(item.status))}</span>`).join("")}</div>` : `<div class="platform-row missing"><span>${escapeHtml(t("Platform Not Set"))}</span></div>`}
-      ${post.tags?.length ? `<div class="tag-row">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+      <strong>${escapeHtml(card.excerpt || card.title)}</strong>
+      <time datetime="${escapeHtml(card.updatedAt || card.createdAt || "")}">${formatDate(card.updatedAt || card.createdAt)}</time>
+      ${card.tags?.length ? `<div class="tag-row">${card.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
     </article>
   `;
 }
@@ -585,6 +715,31 @@ function wirePrototypeControls() {
   document.querySelector("#add-campaign-record")?.addEventListener("click", addCampaignRecord);
   document.querySelector("#add-template-record")?.addEventListener("click", addTemplateRecord);
   document.querySelector("#back-to-board").addEventListener("click", () => renderBoard(board));
+  document.querySelector(".prototype-toolbar")?.addEventListener("click", (event) => {
+    const pill = event.target.closest("[data-platform-filter], [data-company-filter]");
+    if (!pill) return;
+    if (pill.dataset.platformFilter !== undefined) {
+      const val = pill.dataset.platformFilter;
+      if (val === "all") {
+        activeBoardPlatformFilter = new Set();
+      } else {
+        const next = new Set(activeBoardPlatformFilter);
+        if (next.has(val)) { next.delete(val); } else { next.add(val); }
+        activeBoardPlatformFilter = next;
+      }
+    } else if (pill.dataset.companyFilter !== undefined) {
+      const val = pill.dataset.companyFilter;
+      if (val === "all") {
+        activeBoardCompanyFilter = new Set();
+      } else {
+        const next = new Set(activeBoardCompanyFilter);
+        if (next.has(val)) { next.delete(val); } else { next.add(val); }
+        activeBoardCompanyFilter = next;
+      }
+    }
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
+    renderBoard(board);
+  });
   document.querySelector("#posts-board").addEventListener("click", (event) => {
     const actionButton = event.target.closest("[data-board-action]");
     if (actionButton) {
@@ -593,12 +748,14 @@ function wirePrototypeControls() {
     }
     const card = event.target.closest(".post-card[data-package-id]");
     if (!card) return;
+    if (card.dataset.draftPlatform) activePlatformTab = card.dataset.draftPlatform;
     openPackageDetail(card.dataset.packageId);
   });
   document.querySelector("#posts-board").addEventListener("keydown", (event) => {
     const card = event.target.closest(".post-card[data-package-id]");
     if (!card || !["Enter", " "].includes(event.key)) return;
     event.preventDefault();
+    if (card.dataset.draftPlatform) activePlatformTab = card.dataset.draftPlatform;
     openPackageDetail(card.dataset.packageId);
   });
   document.querySelector("#posts-board").addEventListener("dragstart", handleBoardDragStart);
@@ -608,7 +765,6 @@ function wirePrototypeControls() {
   document.querySelector("#posts-board").addEventListener("dragend", clearBoardDragState);
   document.querySelector("#idea-text").addEventListener("input", handleIdeaInput);
   document.querySelector("#post-tags").addEventListener("input", handleTagsInput);
-  document.querySelector("#detail-add-media")?.addEventListener("click", attachMediaToActiveDrafts);
   document.querySelector("#detail-add-all-platforms")?.addEventListener("click", addAllReadyPlatformsToActivePackage);
   document.querySelector("#platform-buttons")?.addEventListener("click", handlePlatformToggle);
   document.querySelector("#detail-company")?.addEventListener("change", handleDetailCompanyChange);
@@ -721,7 +877,7 @@ function destroyAccountLoginWebview() {
 }
 
 async function refreshProductionViews() {
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   renderAccounts(selectedAccountId);
   renderCompanies();
   renderBrands();
@@ -749,6 +905,7 @@ function handleBoardDragStart(event) {
   if (!card) return;
   event.dataTransfer?.setData("text/plain", card.dataset.packageId);
   event.dataTransfer?.setData("application/x-diamond-package-id", card.dataset.packageId);
+  event.dataTransfer?.setData("application/x-diamond-draft-platform", card.dataset.draftPlatform || "");
   event.dataTransfer.effectAllowed = "move";
   card.classList.add("dragging");
 }
@@ -775,7 +932,13 @@ async function handleBoardDrop(event) {
   document.querySelectorAll(".post-card.dragging").forEach((item) => item.classList.remove("dragging"));
   const packageId = event.dataTransfer?.getData("application/x-diamond-package-id") || event.dataTransfer?.getData("text/plain");
   if (!packageId) return;
-  await movePostPackageToStatus(packageId, column.dataset.dropStatus || "draft");
+  const platform = event.dataTransfer?.getData("application/x-diamond-draft-platform");
+  const nextStatus = column.dataset.dropStatus || "draft";
+  if (platform) {
+    await movePlatformDraftToStatus(packageId, platform, nextStatus);
+  } else {
+    await movePostPackageToStatus(packageId, nextStatus);
+  }
 }
 
 function clearBoardDragState() {
@@ -819,11 +982,31 @@ async function movePostPackageToStatus(packageId, nextStatus) {
     run.updatedAt = now;
   });
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
   renderAnalytics();
+}
+
+async function movePlatformDraftToStatus(packageId, platform, nextStatus) {
+  const normalized = normalizeId(nextStatus || "draft", "status").replace(/-/g, "_");
+  const draft = prototypeModel.platformDrafts.find(
+    (d) => d.postPackageId === packageId && d.platform === platform
+  );
+  if (!draft) return;
+  const now = new Date().toISOString();
+  draft.status = normalized;
+  draft.updatedAt = now;
+  const stateDraft = (state.platformDrafts || []).find((d) => d.id === draft.id);
+  if (stateDraft) {
+    stateDraft.status = normalized;
+    stateDraft.updatedAt = now;
+  }
+  updatePostPackageFromDrafts(packageId);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
+  await saveProductionState();
+  renderBoard(board);
 }
 
 async function deletePostPackage(packageId) {
@@ -839,7 +1022,7 @@ async function deletePostPackage(packageId) {
   state.scheduledPosts = (state.scheduledPosts || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   state.postRuns = (state.postRuns || []).filter((item) => item.postPackageId !== packageId && !sourceDraftIds.includes(item.draftId) && !platformDraftIds.includes(item.draftId));
   prototypeModel = buildProductionPostModel(state);
-  board = buildPostBoardView(prototypeModel);
+  board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
   await saveProductionState();
   renderBoard(board);
   renderCalendar();
@@ -1091,7 +1274,7 @@ function accountsForScope(companyId, brandId) {
 }
 
 function renderAccountPlatformStatusBoard(companyId, brandId, accounts = [], selectedAccountId = "") {
-  const scopedLabel = `${companyName(companyId)} / ${brandName(brandId)}`;
+  const scopedLabel = companyName(companyId);
   return `
     <section class="account-platform-status-board" aria-label="Platform login status">
       <header>
@@ -1132,7 +1315,7 @@ function renderAccountCard(account, selectedAccountId) {
       <span>
         <strong>${escapeHtml(platformLabel(account.platform))}</strong>
         <small>${escapeHtml(account.handle || account.id)}</small>
-        <small>${escapeHtml(company)} / ${escapeHtml(brand)}</small>
+        <small>${escapeHtml(company)}</small>
       </span>
       <em class="session-pill ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</em>
     </button>
@@ -1241,7 +1424,6 @@ function renderAccountDetail(account) {
         <div>
           <span class="eyebrow">Platform login</span>
           <h2>${escapeHtml(platformLabel(account.platform))}</h2>
-          <p>${escapeHtml(account.handle || "Add the username for this account")}</p>
         </div>
         <em class="session-pill ${escapeHtml(account.sessionStatus || "unknown")}">${escapeHtml(statusLabel(account.sessionStatus || "unknown"))}</em>
       </header>
@@ -1259,7 +1441,7 @@ function renderAccountDetail(account) {
         </div>
         <div>
           <span class="eyebrow">Public page</span>
-          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(account.handle || platformLabel(account.platform))}</a>` : "Not set"}</strong>
+          <strong>${publicUrl ? `<a href="${escapeHtml(publicUrl)}">${escapeHtml(accountLoginName(account) || platformLabel(account.platform))}</a>` : "Not set"}</strong>
         </div>
       </section>
       <details class="account-advanced-panel">
@@ -1576,15 +1758,19 @@ function renderAccountLoginBrowser(account, partition, loginUrl) {
       <header>
         <div>
           <span class="eyebrow">Logging into</span>
-          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))} / ${escapeHtml(brandName(account.brandId))}</h3>
-          <p>${escapeHtml(platformLabel(account.platform))} account: ${escapeHtml(handle)}. Use this pane to confirm the company and brand account is actually logged in.</p>
-          <p class="account-login-safety-note">For brand-new social accounts, finish first login in normal Chrome when possible. Diamond rate-limits login controls so platforms do not see rapid repeated login checks.</p>
+          <h3 id="account-login-browser-heading">${escapeHtml(companyName(account.companyId))}</h3>
+          <label class="account-handle-label account-login-handle">
+            <span>Handle</span>
+            <input class="account-handle-input" data-account-field="handle" type="text"
+              value="${escapeHtml(account.handle || "")}" placeholder="e.g. @25experts"
+              autocomplete="off" spellcheck="false">
+          </label>
+          <p class="account-login-safety-note">Use this pane to confirm the account is actually logged in. For brand-new accounts, finish first login in normal Chrome when possible.</p>
         </div>
         <span id="account-login-browser-status">${escapeHtml(statusMessage)}</span>
       </header>
       <section class="account-login-context" aria-label="Selected account context">
         <label><span>Company</span><select data-login-scope-field="companyId">${companyOptions(account.companyId)}</select></label>
-        <label><span>Brand</span><select data-login-scope-field="brandId">${brandOptions(account.companyId, account.brandId)}</select></label>
         <label><span>Account</span><select data-login-scope-field="accountId">${accountOptions(account.companyId, account.brandId, account.id)}</select></label>
         <div><span>Platform</span><strong>${escapeHtml(platformLabel(account.platform))}</strong></div>
       </section>
@@ -2219,20 +2405,21 @@ async function createSocialAccountForScope(platform) {
     company,
     brand,
     platform,
-    desiredHandle: brand?.name || company?.name || platform,
+    desiredHandle: "",
   });
-  const handle = plan.desiredHandle || brand?.name || company?.name || platform;
-  const id = normalizeId(`${brandId}-${platform}-${handle || Date.now()}`, "socialAccountId");
+  const handle = "";
+  const id = normalizeId(`${brandId}-${platform}-${Date.now()}`, "socialAccountId");
+  const defaultUrl = normalizeAccountUrl("", platform);
   const account = {
     id,
     companyId,
     brandId,
     platform,
     handle,
-    accountUrl: plan.accountUrl || normalizeAccountUrl(handle, platform),
+    accountUrl: plan.accountUrl || defaultUrl,
     loginUrl: plan.loginUrl || normalizeLoginUrl("", platform),
     composeUrl: plan.composeUrl || normalizeComposeUrl("", platform),
-    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || normalizeAccountUrl(handle, platform)),
+    expectedHost: plan.expectedHost || normalizeHost(plan.accountUrl || defaultUrl),
     signupUrl: plan.signupUrl,
     sessionStatus: "unknown",
     browserProfileId: plan.browserProfileId || normalizeBrowserProfileId(`${companyId}-${brandId}-${platform}-${id}`),
@@ -2461,6 +2648,22 @@ function dashlanePayloadForAccount(account) {
 }
 
 async function handleAccountDetailChange(event) {
+  // Inline account field editing (e.g. the Handle input in the browser pane header)
+  const accountField = event.target.closest("[data-account-field]");
+  if (accountField) {
+    const account = (state.socialAccounts || []).find((a) => a.id === selectedAccountId);
+    if (account) {
+      const key = accountField.dataset.accountField;
+      const val = accountField.value || "";
+      account[key] = val;
+      account.updatedAt = new Date().toISOString();
+      await saveProductionState();
+      renderAccounts(account.id);
+      renderOperatorDrawer();
+    }
+    return;
+  }
+
   const field = event.target.closest("[data-login-scope-field]");
   if (!field) return;
   if (field.dataset.loginScopeField === "companyId") {
@@ -3123,8 +3326,22 @@ async function handleCampaignWorkspaceChange(event) {
     renderCampaigns();
     return;
   }
+  // Per-platform video enable toggles
+  const platformVideoToggle = event.target.closest("[data-platform-video-field]");
+  if (platformVideoToggle) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
   // Image generation fields that should auto-save on change
   if (field && CAMPAIGN_IMAGE_GENERATION_FIELDS.includes(field.dataset.campaignField)) {
+    saveCampaignWorkspace();
+    await saveProductionState();
+    renderCampaigns();
+    return;
+  }
+  if (field && ["videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
     saveCampaignWorkspace();
     await saveProductionState();
     renderCampaigns();
@@ -3264,6 +3481,19 @@ function saveCampaignWorkspace() {
         return [platform, checkbox ? { ...spec, enabled: checkbox.checked } : { ...spec }];
       })
     );
+    campaign.videoGenerationEnabled = checkedFor("videoGenerationEnabled");
+    campaign.videoQualitySize = valueFor("videoQualitySize") || campaign.videoQualitySize || "high";
+    campaign.videoPromptGuidance = valueFor("videoPromptGuidance") || campaign.videoPromptGuidance || "";
+    campaign.videoGenerationPlatforms = campaign.videoGenerationPlatforms || { ...VIDEO_SPECS_BY_PLATFORM };
+    Object.keys(campaign.videoGenerationPlatforms).forEach((platform) => {
+      const checkbox = workspace?.querySelector(`[data-platform-video-field="${platform}"]`);
+      if (checkbox) {
+        campaign.videoGenerationPlatforms[platform] = {
+          ...campaign.videoGenerationPlatforms[platform],
+          enabled: checkbox.checked,
+        };
+      }
+    });
   }
   let strategy = (state.contentStrategies || []).find((item) => item.campaignId === campaignId);
   if (!strategy && campaign) {
@@ -3836,7 +4066,7 @@ async function handleSettingsChange(event) {
     state.operatorLanguage = normalizeOperatorLanguage(field.value);
     applyOperatorLanguage();
     await saveProductionState();
-    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter, activeBoardCompanyFilter));
     renderCalendar();
     renderAnalytics();
     renderTemplates();
@@ -3849,7 +4079,7 @@ async function handleSettingsChange(event) {
     state.beginnerMode = field.checked;
     applyBeginnerMode();
     await saveProductionState();
-    renderBoard(buildPostBoardView(buildProductionPostModel(state)));
+    renderBoard(buildPlatformDraftBoardView(buildProductionPostModel(state), activeBoardPlatformFilter, activeBoardCompanyFilter));
     renderCalendar();
     renderSettings();
     reopenActiveDetail();
@@ -5605,7 +5835,9 @@ function openDetail(postPackage, drafts) {
   const newAutoTags = autoTagNames.filter((t) => !existingLower.has(t.toLowerCase()));
   document.querySelector("#post-tags").value = [...newAutoTags, ...existingTags].join(", ");
   const styleSelect = document.querySelector("#generation-style");
-  if (styleSelect) styleSelect.value = postPackage.generationStyle || "Default";
+  // Map "Default" (and absent) to "" so the "Select Voice" placeholder shows.
+  const savedStyle = postPackage.generationStyle;
+  if (styleSelect) styleSelect.value = (savedStyle && savedStyle !== "Default") ? savedStyle : "";
   // Seed Company/Brand/Campaign scope selects from the post package context.
   const detailCompany = document.querySelector("#detail-company");
   const detailBrand = document.querySelector("#detail-brand");
@@ -5758,20 +5990,73 @@ function renderPlatformPreview(draft, hidden = false) {
       ${renderDraftMediaList(draft)}
       ${renderContextHelpCard(draft, preflight, plan)}
       ${renderWorkflowChecklist(draft, preflight, plan)}
-      ${renderPlatformActionRow(draft, preflight, plan)}
       ${renderDraftReliability(draft, preflight)}
       ${renderStagingPlan(draft, plan)}
       ${renderDraftProofPanel(draft)}
       <div class="platform-note">${escapeHtml(plan.manualFinish)}</div>
-      <div class="social-preview">
-        <div class="avatar"></div>
-        <div>
-          <strong>Your Name</strong>
-          <p>Your headline<br>now</p>
-        </div>
-        <p>${escapeHtml(draft.text)}</p>
-      </div>
+      ${renderSocialPreview(draft, preflight)}
     </article>
+  `;
+}
+
+function accountLoginName(account) {
+  // Handle is explicitly set by the user in the Handle field.
+  // Do not extract from accountUrl — the URL changes as they browse
+  // and would produce wrong values (e.g. "home", "settings", or old
+  // brand-derived slugs that were stored there before v0.1.68).
+  return account?.handle || "";
+}
+
+function localFileUrl(filePath) {
+  // Convert a local filesystem path to a file:// URL for use in <img src>.
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  const withSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
+  return `file://${withSlash}`;
+}
+
+function renderSocialPreview(draft, preflight) {
+  const account = preflight.account || accountForDraft(draft);
+  const loginName = accountLoginName(account);
+  const displayHandle = loginName ? (loginName.startsWith("@") ? loginName : `@${loginName}`) : "No account set";
+  const initial = (loginName?.replace(/^@/, "")[0] || "?").toUpperCase();
+  const stageUrl = draft.stageUrl || "";
+  const openLink = stageUrl
+    ? `<a class="social-preview-open" href="${escapeHtml(stageUrl)}" target="_blank" rel="noopener noreferrer" title="Open staged compose page">Open compose page →</a>`
+    : "";
+  const media = draft.media || [];
+  const inspections = mediaInspectionMap(draft);
+  const mediaHtml = media.length
+    ? `<div class="social-preview-media">
+        ${media.slice(0, 4).map((filePath) => {
+          const item = inspections.get(filePath) || mediaPathFallback(filePath);
+          if (item.kind === "image") {
+            return `<img class="social-preview-thumb" src="${escapeHtml(localFileUrl(filePath))}" alt="${escapeHtml(item.name)}" loading="lazy">`;
+          }
+          if (item.kind === "video") {
+            return `<div class="social-preview-thumb social-preview-video-thumb" title="${escapeHtml(item.name)}">▶ ${escapeHtml(item.name)}</div>`;
+          }
+          return `<div class="social-preview-thumb social-preview-file-thumb" title="${escapeHtml(item.name)}">📎 ${escapeHtml(item.name)}</div>`;
+        }).join("")}
+        ${media.length > 4 ? `<div class="social-preview-media-overflow">+${media.length - 4} more</div>` : ""}
+      </div>`
+    : "";
+  return `
+    <section class="social-preview" aria-label="Post preview">
+      <header class="social-preview-header">
+        <strong>Preview</strong>
+        ${openLink}
+      </header>
+      <div class="social-preview-card">
+        <div class="avatar" aria-hidden="true">${escapeHtml(initial)}</div>
+        <div class="social-preview-body">
+          <div class="social-preview-meta">
+            <strong class="social-preview-handle">${escapeHtml(displayHandle)}</strong>
+          </div>
+          <p class="social-preview-text">${escapeHtml(draft.text || "(no content yet)")}</p>
+          ${mediaHtml}
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -6005,24 +6290,34 @@ function workflowHelpForDraft(draft, preflight, plan) {
 
 function renderWorkflowChecklist(draft, preflight, plan) {
   const checklist = workflowChecklistForDraft(draft, preflight, plan);
-  const completeCount = checklist.filter((item) => item.complete).length;
-  const nextStep = nextWorkflowStep(checklist);
+  const forwardItems = checklist.filter((item) => !item.danger);
+  const completeCount = forwardItems.filter((item) => item.complete).length;
+  const nextStep = nextWorkflowStep(forwardItems);
   return `
     <section class="workflow-checklist-card" aria-label="${escapeHtml(platformLabel(draft.platform))} workflow checklist">
       <header>
         <strong>Workflow checklist</strong>
-        <span>${completeCount}/${checklist.length} done</span>
+        <span>${completeCount}/${forwardItems.length} done</span>
       </header>
       ${nextStep ? `<p class="workflow-next-step"><strong>Next:</strong> ${escapeHtml(nextStep.label)}. ${escapeHtml(nextStep.detail)}</p>` : `<p class="workflow-next-step complete"><strong>Complete:</strong> This draft has reached the posted state.</p>`}
       <ol>
         ${checklist.map((item, index) => {
-          const badge = item.complete ? "Done" : item === nextStep ? "Next" : "Open";
-          const isEvaluateJump = item.label === "Evaluate" && item === nextStep && !item.complete;
-          const badgeHtml = isEvaluateJump
-            ? `<button type="button" class="workflow-jump-btn" data-workflow-jump="platform-previews">${escapeHtml(badge)}</button>`
-            : `<em>${escapeHtml(badge)}</em>`;
+          let badgeHtml;
+          if (item.complete) {
+            badgeHtml = `<em class="workflow-badge done">${item.danger ? "Abandoned" : "Done"}</em>`;
+          } else if (item.action) {
+            const isCurrent = !item.danger && item === nextStep;
+            const dangerClass = item.danger ? " workflow-action-btn--danger" : "";
+            badgeHtml = `<button type="button"
+              class="workflow-action-btn${isCurrent ? " workflow-action-btn--next" : ""}${dangerClass}"
+              data-platform-action="${escapeHtml(item.action)}"
+              data-platform-draft-id="${escapeHtml(draft.id)}"
+              title="${escapeHtml(item.detail)}">${escapeHtml(item.label)}</button>`;
+          } else {
+            badgeHtml = `<em class="workflow-badge open">Open</em>`;
+          }
           return `
-          <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${item === nextStep ? "current" : ""}">
+          <li class="workflow-checklist-item ${item.complete ? "complete" : "pending"} ${!item.danger && item === nextStep ? "current" : ""} ${item.danger ? "danger-item" : ""}">
             <span class="workflow-step-number">${index + 1}</span>
             <div>
               <strong>${escapeHtml(item.label)}</strong>
@@ -6052,11 +6347,13 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     || ["approved", "scheduled", "staged", "published", "posted", "blocked", "needs_review"].includes(status)
   );
   const approved = ["approved", "scheduled", "staged", "published", "posted"].includes(status) || Boolean(draft.approvedAt);
+  const scheduled = ["scheduled", "staged", "published", "posted"].includes(status) || Boolean(draft.scheduledAt);
   const mediaReady = !plan.mediaRequired || Boolean((draft.media || []).length);
   const staged = ["staged", "published", "posted", "needs_manual_finish"].includes(status)
     || Boolean(draft.stagedAt || draft.stageUrl || draft.stageResult?.openedUrl);
   const published = ["published", "posted"].includes(status) || Boolean(draft.publishedAt);
   const proofed = Boolean(draft.proofCapturedAt || draft.proofKind || draft.lastProofRunId);
+  const abandoned = status === "abandoned";
   return [
     {
       label: "Confirm target",
@@ -6066,51 +6363,72 @@ function workflowChecklistForDraft(draft, preflight, plan) {
     },
     {
       label: "Evaluate",
+      action: "evaluate",
       complete: evaluated,
-      detail: "Click Evaluate so Diamond checks the text, brand fit, claims, and risk.",
+      detail: "Run Evaluate — Diamond checks the text, brand fit, claims, and risk.",
       doneDetail: "This draft has an evaluation record.",
     },
     {
       label: "Approve",
+      action: "approve",
       complete: approved,
-      detail: "Click Approve only after the evaluation is clean enough to continue.",
+      detail: "Approve only after the evaluation is clean enough to continue.",
       doneDetail: "This draft is approved for staging or has moved beyond approval.",
     },
     {
+      label: "Schedule",
+      action: "schedule",
+      complete: scheduled,
+      detail: "Put this draft on the calendar so it stages at the planned time.",
+      doneDetail: "This draft is scheduled or has moved to staging.",
+    },
+    {
       label: "Add media if needed",
+      action: "add-media",
       complete: mediaReady,
       detail: plan.mediaRequired ? `${plan.label} needs media before staging.` : "Media is optional for this platform.",
       doneDetail: plan.mediaRequired ? "Required media is attached." : "No required media is missing.",
     },
     {
       label: "Stage in browser",
+      action: "stage",
       complete: staged,
-      detail: "Click Stage so Diamond opens the platform composer and prepares the post.",
-      doneDetail: "The platform composer has been staged or opened for manual finish.",
+      detail: "Opens the platform composer with your post pre-filled. Review it, then click Post when ready.",
+      doneDetail: "The browser composer was opened. Use 'Open compose page' in the preview below to return to it.",
     },
     {
       label: "Publish manually",
       complete: published,
-      detail: "Review the platform composer yourself, then publish inside the social site.",
+      detail: "In the browser composer, review the post and click the Post button to publish it.",
       doneDetail: "This draft is marked as published.",
     },
     {
       label: "Capture proof",
+      action: "proof",
       complete: proofed,
       detail: "Capture a screenshot or URL proof so the run has a record.",
       doneDetail: "Proof has been captured for this draft.",
     },
     {
       label: "Mark posted",
+      action: "posted",
       complete: published,
       detail: "After the post is live, click Mark Posted so queues and metrics stay correct.",
       doneDetail: "Diamond has moved this draft into the posted state.",
+    },
+    {
+      label: "Abandon",
+      action: "abandoned",
+      danger: true,
+      complete: abandoned,
+      detail: "Stop this draft if you decide not to publish it.",
+      doneDetail: "This draft has been abandoned.",
     },
   ];
 }
 
 function nextWorkflowStep(checklist) {
-  return checklist.find((item) => !item.complete) || null;
+  return checklist.find((item) => !item.complete && !item.danger) || null;
 }
 
 function renderDraftProofPanel(draft) {
@@ -6201,7 +6519,7 @@ function renderDraftReliability(draft, preflight = platformDraftPreflight(draft)
   const account = accountForDraft(draft);
   const rows = [
     ["Platform", platformLabel(draft.platform)],
-    ["Account", account?.handle || account?.id || "Missing"],
+    ["Account", accountLoginName(account) || account?.id || "Missing"],
     ["Session", statusLabel(account?.sessionStatus || "unknown")],
     ["Approval", statusLabel(draft.status || "draft")],
     ["Schedule", draft.scheduledAt ? formatDateTime(draft.scheduledAt) : "Not scheduled"],
@@ -6620,7 +6938,7 @@ async function requestPlatformGeneration() {
     applyGenerationResult(drafts, result, postPackage);
     updatePostPackageFromDrafts(activePostPackageId);
     await saveProductionState();
-    board = buildPostBoardView(prototypeModel);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
     renderBoard(board);
     reopenActiveDetail();
   } finally {
@@ -6674,7 +6992,7 @@ async function requestCampaignGeneration() {
     updatePostPackageFromDrafts(activePostPackageId);
     // Rebuild board variable so clicking Back shows updated cards — no renderBoard call here
     // because the user is still in detail view; Back button will call renderBoard(board).
-    board = buildPostBoardView(prototypeModel);
+    board = buildPlatformDraftBoardView(prototypeModel, activeBoardPlatformFilter, activeBoardCompanyFilter);
     await saveProductionState();
     reopenActiveDetail();
   } finally {

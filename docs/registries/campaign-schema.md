@@ -74,13 +74,108 @@ Configuration for post text generation (existing, not task #9 scope).
 
 ---
 
-## `videoGenerationSettings`
+## `videoGenerationSettings` (NEW for Task #10)
 
-Per-platform video generation configuration (future, task #10 scope; placeholder here).
+Per-campaign video generation configuration.
 
-**Type:** object, keyed by platform name (similar structure to imageGenerationSettings)
+**Type:** object (optional, default: videoGenerationEnabled = false)
 
-**Status:** ⚠ deferred — planned for task #10, not task #9
+**Schema:**
+```typescript
+{
+  videoGenerationEnabled: boolean
+  videoGenerationPlatforms: {
+    tiktok: { enabled: boolean, videoDurationSeconds: 15, format: 'mp4', aspectRatio: '9:16' }
+    youtube: { enabled: boolean, videoDurationSeconds: 60, format: 'mp4', aspectRatio: '16:9' }
+    x: { enabled: boolean, videoDurationSeconds: 30, format: 'mp4', aspectRatio: '16:9' }
+    instagram: { enabled: boolean, videoDurationSeconds: 30, format: 'mp4', aspectRatio: '1:1' }
+    linkedin: { enabled: boolean, videoDurationSeconds: 30, format: 'mp4', aspectRatio: '16:9' }
+    facebook: { enabled: boolean, videoDurationSeconds: 30, format: 'mp4', aspectRatio: '16:9' }
+    reddit: { enabled: boolean, videoDurationSeconds: 30, format: 'mp4', aspectRatio: '16:9' }
+  }
+  videoQualitySize: 'low' | 'medium' | 'high'
+  videoPromptGuidance: string
+}
+```
+
+**Producers**
+- `src/renderer/campaign-settings-ui.js` — settings form save
+
+**Consumers**
+- `src/renderer/posts-prototype.js` — display settings
+- `src/post-package.js` — read defaults
+- `src/content-generation.js` — decide generation
+
+**Status:** ⚠ NEW — task #10 creates this field
+
+---
+
+## `postVideoOverrides` (NEW for Task #10)
+
+Per-post overrides to campaign video generation defaults. Stored at post level (in `postDrafts` collection).
+
+**Type:** object (optional, default: all fields null = use campaign defaults)
+
+**Schema:**
+```typescript
+{
+  videoGenerationOverride: boolean | null          // null = use campaign default, true = force on, false = force off
+  videoGenerationPlatforms?: {
+    [platformName: string]: {
+      enabled: boolean | null                      // null = use campaign default
+      videoDurationSeconds?: number                // Override duration if non-null
+      promptOverride?: string                      // Custom prompt per platform
+    }
+  }
+  videoQualitySizeOverride?: 'low' | 'medium' | 'high' | null
+  videoPromptOverride?: string                     // Custom prompt for entire post
+}
+```
+
+**Constraints:**
+- Platform keys must match `PLATFORMS` constant
+- `null` in any field means "inherit campaign value"
+- `true`/`false` explicitly overrides campaign setting
+
+**Examples:**
+
+_Disable video for this post only:_
+```json
+{
+  "videoGenerationOverride": false
+}
+```
+
+_Custom prompt without changing enable/disable:_
+```json
+{
+  "videoGenerationOverride": null,
+  "videoPromptOverride": "Make this video about sustainable fashion"
+}
+```
+
+_Per-platform TikTok override (20-second duration):_
+```json
+{
+  "videoGenerationOverride": null,
+  "videoGenerationPlatforms": {
+    "tiktok": {
+      "enabled": true,
+      "videoDurationSeconds": 20,
+      "promptOverride": "Fast-paced TikTok version"
+    }
+  }
+}
+```
+
+**Producers**
+- `src/renderer/posts-prototype.js` — post creation form
+
+**Consumers**
+- `src/post-package.js` — merge with campaign defaults
+- `src/content-generation.js` — read final config
+
+**Status:** ⚠ NEW — task #10 creates this field
 
 ---
 
@@ -127,9 +222,14 @@ Campaign last modification timestamp.
 | **`imageGenerationEnabled`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js, posts-prototype.js** | **✓ wired (task #9)** |
 | **`imageGenerationPlatforms`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js, posts-prototype.js** | **✓ wired (task #9)** |
 | **`imagePromptGuidance`** | **posts-prototype.js:saveCampaignWorkspace** | **image-generation-integration.js:buildImagePrompt** | **✓ wired (task #9)** |
-| `videoGenerationSettings` | (deferred) | (deferred) | ⚠ deferred (task #10) |
+| **`videoGenerationSettings`** | **campaign-settings-ui.js** | **posts-prototype.js, post-package.js, content-generation.js** | **⚠ NEW (task #10)** |
+| **`postVideoOverrides`** | **posts-prototype.js** | **post-package.js, content-generation.js** | **⚠ NEW (task #10)** |
 | `createdAt` | seed.js, account-setup.js | posts-prototype.js | ✓ |
 | `updatedAt` | (all updates) | posts-prototype.js, firebase-sync.js | ✓ |
+
+**New fields for task #10:** 2 (videoGenerationSettings, postVideoOverrides)
+
+**Total new schema fields:** 20 across all collections (postDrafts=12, campaigns=4, postPackages=2, postRuns=2)
 
 ---
 
@@ -140,14 +240,16 @@ Campaign last modification timestamp.
 **Boundaries checked:** Campaign document top-level fields and sub-objects
 
 **Evidence recorded:**
-- 6 entries total (5 existing + 1 NEW)
+- 8 entries total (5 existing + 3 NEW across tasks #9 and #10)
 - 5 entries with complete producer/consumer pairs ✓
-- 3 NEW entries (imageGenerationEnabled, imageGenerationPlatforms, imagePromptGuidance) — all wired ✓
+- 3 NEW entries (imageGenerationEnabled, imageGenerationPlatforms, imagePromptGuidance) — all wired ✓ (task #9)
+- 2 NEW entries (videoGenerationSettings, postVideoOverrides) — defined, pending implementation ⚠ (task #10)
 - New identifiers introduced on task #9: `imageGenerationEnabled`, `imageGenerationPlatforms` (7-platform object), `imagePromptGuidance`
 - Producers and consumers confirmed: posts-prototype.js writes; image-generation-integration.js reads
 - Field name corrected from earlier planning doc (`imageGenerationSettings` → `imageGenerationPlatforms`) to match implementation
 
 **Gaps identified:**
-- ℹ `videoGenerationSettings` — Placeholder for task #10; deferred
+- ℹ `videoGenerationSettings` — NEW for task #10; full schema defined
+- ℹ `postVideoOverrides` — NEW for task #10; full schema defined
 
-**Status:** Audit complete — all task #9 campaign fields wired with confirmed producers and consumers
+**Status:** Audit complete — all task #9 campaign fields wired with confirmed producers and consumers; task #10 fields defined pending implementation
