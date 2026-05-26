@@ -992,6 +992,18 @@ textarea {
   margin: 4px 0 0;
 }
 
+.image-gen-preview-row {
+  margin-top: 8px;
+}
+
+.image-gen-preview {
+  border-radius: 6px;
+  display: block;
+  max-height: 320px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 /* Campaign image generation section */
 .image-gen-campaign-section header {
   align-items: center;

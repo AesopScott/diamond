@@ -6261,9 +6261,10 @@ function renderImageGenerationSection(draft) {
           title="Generate image via Replicate Flux Pro"
         >🖼 ${isGenerating ? "Generating…" : "Generate image"}</button>
         ${statusBadge}
-        ${draft.generatedImageUrl ? `<a class="image-gen-link" href="${escapeHtml(draft.generatedImageUrl)}" target="_blank" rel="noopener">View image ↗</a>` : ""}
+        ${draft.generatedImageUrl ? `<button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open in browser ↗</button>` : ""}
       </div>
       ${errorLine}
+      ${draft.generatedImageUrl ? `<div class="image-gen-preview-row"><img class="image-gen-preview" src="${escapeHtml(draft.generatedImageUrl)}" alt="Generated image" /></div>` : ""}
     </div>
   `;
 }
@@ -6989,6 +6990,11 @@ async function handlePlatformDraftAction(event) {
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") await schedulePlatformDraft(draft);
   if (action === "generate-image") { await generateDraftImage(draft); return; }
+  if (action === "open-generated-image") {
+    const url = draft.generatedImageUrl;
+    if (url && window.diamond?.openExternal) window.diamond.openExternal(url);
+    return;
+  }
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
   if (action === "stage-browser") {
