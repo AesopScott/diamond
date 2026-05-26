@@ -925,6 +925,67 @@ textarea {
   outline: none;
 }
 
+/* Image generation section — per-post */
+.image-prompt-header {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.image-prompt-label-text {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.image-prompt-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.image-gen-btn {
+  flex-shrink: 0;
+}
+
+.image-gen-status {
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 7px;
+}
+
+.image-gen-status.generating {
+  background: rgba(255, 200, 40, 0.15);
+  color: #c8940a;
+}
+
+.image-gen-status.complete {
+  background: rgba(50, 200, 100, 0.15);
+  color: #1a8f4a;
+}
+
+.image-gen-status.failed {
+  background: rgba(240, 60, 60, 0.12);
+  color: #c03030;
+}
+
+.image-gen-link {
+  color: #5b9bd5;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.image-gen-link:hover {
+  text-decoration: underline;
+}
+
 /* Campaign image generation section */
 .image-gen-campaign-section header {
   align-items: center;

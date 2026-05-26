@@ -6216,99 +6216,93 @@ function renderPlatformPreviews(drafts) {
   });
 }
 
-// Renders the per-post image prompt textarea when image generation is effectively on.
-function renderImagePromptRow(draft) {
+// Renders the image prompt row + Generate button. Always visible in the draft panel.
+// Prompt is pre-filled from campaign guidance; post override takes priority.
+function renderImageGenerationSection(draft) {
   const campaign = (state.campaigns || []).find(
     (item) => item.id === (draft.campaignId || draft.context?.campaignId)
   );
-  const isEnabled = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
-    ? Boolean(draft.imageGenerationEnabled)
-    : Boolean(campaign?.imageGenerationEnabled);
-  if (!isEnabled) return "";
   const campaignPrompt = campaign?.imagePromptGuidance || "";
   const postPrompt = draft.imagePromptOverride || "";
+  const status = draft.imageGenerationStatus;
+  const isGenerating = status === "generating";
+
+  const statusBadge = status === "generating"
+    ? `<span class="image-gen-status generating">Generating…</span>`
+    : status === "complete"
+      ? `<span class="image-gen-status complete">✓ Generated</span>`
+      : status === "failed"
+        ? `<span class="image-gen-status failed" title="${escapeHtml(draft.imageGenerationError || "")}"">✗ Failed</span>`
+        : "";
+
   return `
     <div class="image-prompt-row">
-      <label class="image-prompt-label">
-        <span>Post image prompt</span>
-        ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign: ${escapeHtml(campaignPrompt.length > 60 ? campaignPrompt.slice(0, 57) + "…" : campaignPrompt)}</span>` : ""}
-        <textarea
-          class="image-prompt-textarea"
-          data-image-prompt-draft-id="${escapeHtml(draft.id)}"
-          rows="6"
-          placeholder="${escapeHtml(campaignPrompt || "Describe the image to generate for this post…")}"
-        >${escapeHtml(postPrompt)}</textarea>
-      </label>
+      <div class="image-prompt-header">
+        <span class="image-prompt-label-text">Image prompt</span>
+        ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign default: ${escapeHtml(campaignPrompt.length > 60 ? campaignPrompt.slice(0, 57) + "…" : campaignPrompt)}</span>` : ""}
+      </div>
+      <textarea
+        class="image-prompt-textarea"
+        data-image-prompt-draft-id="${escapeHtml(draft.id)}"
+        rows="6"
+        placeholder="${escapeHtml(campaignPrompt || "Describe the image to generate for this post…")}"
+      >${escapeHtml(postPrompt)}</textarea>
+      <div class="image-prompt-actions">
+        <button
+          type="button"
+          class="media-button image-gen-btn"
+          data-platform-action="generate-image"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          ${isGenerating ? "disabled" : ""}
+          title="Generate image via Replicate Flux Pro"
+        >🖼 ${isGenerating ? "Generating…" : "Generate image"}</button>
+        ${statusBadge}
+        ${draft.generatedImageUrl ? `<a class="image-gen-link" href="${escapeHtml(draft.generatedImageUrl)}" target="_blank" rel="noopener">View image ↗</a>` : ""}
+      </div>
     </div>
   `;
 }
 
-// Always renders a 🖼 Image toggle. Post-level override takes priority;
-// when null/undefined the post inherits from the campaign (defaults to false).
+// Renders the header-row 🖼 Image button — a compact indicator showing generation status.
 function renderImageGenerationToggle(draft) {
-  const campaign = (state.campaigns || []).find(
-    (item) => item.id === (draft.campaignId || draft.context?.campaignId)
-  );
   const status = draft.imageGenerationStatus;
-  // Effective state: post override → campaign default → false
-  const isEnabled = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
-    ? Boolean(draft.imageGenerationEnabled)
-    : Boolean(campaign?.imageGenerationEnabled);
-  const statusSuffix = status === "generating" ? " (generating…)"
-    : status === "complete" ? " ✓"
-    : status === "failed" ? " ✗"
-    : "";
-  const activeClass = isEnabled ? " media-button--active" : "";
-  const tip = isEnabled
-    ? "Image generation on — click to disable for this post"
-    : "Enable image generation for this post";
+  const label = status === "generating" ? "🖼 Generating…"
+    : status === "complete" ? "🖼 Image ✓"
+    : status === "failed" ? "🖼 Image ✗"
+    : "🖼 Image";
+  const activeClass = status === "complete" ? " media-button--active" : "";
   return `<button
     type="button"
     class="media-button${activeClass}"
-    data-platform-action="toggle-image-generation"
+    data-platform-action="generate-image"
     data-platform-draft-id="${escapeHtml(draft.id)}"
-    title="${escapeHtml(tip)}"
-  >🖼 Image${escapeHtml(statusSuffix)}</button>`;
+    title="Scroll to image prompt"
+    ${status === "generating" ? "disabled" : ""}
+  >${escapeHtml(label)}</button>`;
 }
 
-async function toggleDraftImageGeneration(draft) {
+async function generateDraftImage(draft) {
   const campaign = (state.campaigns || []).find(
     (item) => item.id === (draft.campaignId || draft.context?.campaignId)
   );
-  // No campaign gate — the post can always override independently.
-  // Effective current = post override ?? campaign default ?? false.
-  // Toggle flips that effective value: on → off, off → on.
-  const effectiveCurrent = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
-    ? Boolean(draft.imageGenerationEnabled)
-    : Boolean(campaign?.imageGenerationEnabled);
-  const nextEnabled = !effectiveCurrent;
-  let updatedDraft = { ...draft, imageGenerationEnabled: nextEnabled, updatedAt: new Date().toISOString() };
-  if (!nextEnabled) {
-    prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
-      (d) => (d.id === draft.id ? updatedDraft : d)
-    );
-    await saveProductionState();
-    reopenActiveDetail();
-    return;
-  }
-  // Explicitly enabled — start generation immediately
-  updatedDraft = { ...updatedDraft, imageGenerationStatus: "generating", imageGenerationError: null };
+  // Mark as generating immediately so the button disables and status shows.
+  const generatingDraft = { ...draft, imageGenerationStatus: "generating", imageGenerationError: null, updatedAt: new Date().toISOString() };
   prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
-    (d) => (d.id === draft.id ? updatedDraft : d)
+    (d) => (d.id === draft.id ? generatingDraft : d)
   );
   await saveProductionState();
   reopenActiveDetail();
+
   const postPackage = (state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
   const replicateApiKey = window.diamond?.getReplicateApiKey
     ? await window.diamond.getReplicateApiKey()
     : undefined;
-  const result = await integrateImageGenerationIntoPostCreation(postPackage, updatedDraft, campaign, { replicateApiKey });
-  // Always resolve to a terminal status — never leave the draft stuck at "generating".
-  // result.updatedDraft carries the authoritative fields when the API returned a result;
-  // when it's absent (early-exit / no API call), we still force a terminal status.
+  const result = await integrateImageGenerationIntoPostCreation(postPackage, generatingDraft, campaign, { replicateApiKey });
+
+  // Always resolve to a terminal status — never leave stuck at "generating".
   const resultDraft = result.updatedDraft || {};
   const finalDraft = {
-    ...updatedDraft,
+    ...generatingDraft,
     imageGenerationStatus: resultDraft.imageGenerationStatus || (result.ok ? "complete" : "failed"),
     generatedImageUrl:      resultDraft.generatedImageUrl    ?? null,
     generatedImageMetadata: resultDraft.generatedImageMetadata ?? null,
@@ -6345,7 +6339,7 @@ function renderPlatformPreview(draft, hidden = false) {
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       ${charCount}
-      ${renderImagePromptRow(draft)}
+      ${renderImageGenerationSection(draft)}
       ${renderDraftEvaluation(draft)}
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
@@ -6989,7 +6983,7 @@ async function handlePlatformDraftAction(event) {
   }
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") await schedulePlatformDraft(draft);
-  if (action === "toggle-image-generation") { await toggleDraftImageGeneration(draft); return; }
+  if (action === "generate-image") { await generateDraftImage(draft); return; }
   if (action === "add-media") await attachMediaToDraft(draft);
   if (action === "copy-media") await copyDraftMediaPaths(draft);
   if (action === "stage-browser") {
