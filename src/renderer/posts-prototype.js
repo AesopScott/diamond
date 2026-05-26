@@ -6313,6 +6313,10 @@ function renderImageGenerationSection(draft) {
           ${busy ? "disabled" : ""}
           title="Generate video via Kling AI"
         >🎬 ${vidGenerating ? "Generating…" : "Generate video"}</button>
+        <label class="audio-toggle-label" title="Enable AI-generated audio/voice. Increases generation cost.">
+          <input type="checkbox" data-audio-toggle-draft-id="${escapeHtml(draft.id)}" ${draft.enableAudio ? "checked" : ""} />
+          🔊 Audio
+        </label>
         ${imgBadge}${vidBadge}
         ${draft.generatedImageUrl ? `
           <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open image ↗</button>
@@ -6492,11 +6496,11 @@ async function generateDraftProviderVideo(draft, provider) {
       heygenApiKey: heygenConfig?.apiKey || "",
       heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
       heygenAvatarId: heygenConfig?.avatarId || undefined,
-      heygenVoiceId: heygenConfig?.voiceId || undefined,
+      heygenVoiceId: draft.enableAudio ? (heygenConfig?.voiceId || undefined) : null,
       klingApiKey: klingConfig?.apiKey || "",
       klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
       klingModel: klingConfig?.model || undefined,
-      klingEnableAudio: Boolean(klingConfig?.enableAudio),
+      klingEnableAudio: draft.enableAudio === true,
     }
   );
 
@@ -7774,6 +7778,17 @@ function handlePlatformDraftTextInput(event) {
     const draft = prototypeModel.platformDrafts.find((item) => item.id === styleSelect.dataset.mediaPromptStyle);
     if (draft) {
       draft.mediaContentType = styleSelect.value || null;
+      draft.updatedAt = new Date().toISOString();
+      saveProductionState();
+    }
+    return;
+  }
+  // Audio toggle
+  const audioToggle = event.target.closest("[data-audio-toggle-draft-id]");
+  if (audioToggle) {
+    const draft = prototypeModel.platformDrafts.find((item) => item.id === audioToggle.dataset.audioToggleDraftId);
+    if (draft) {
+      draft.enableAudio = audioToggle.checked;
       draft.updatedAt = new Date().toISOString();
       saveProductionState();
     }
