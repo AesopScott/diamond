@@ -6232,8 +6232,12 @@ function renderImageGenerationSection(draft) {
     : status === "complete"
       ? `<span class="image-gen-status complete">✓ Generated</span>`
       : status === "failed"
-        ? `<span class="image-gen-status failed" title="${escapeHtml(draft.imageGenerationError || "")}"">✗ Failed</span>`
+        ? `<span class="image-gen-status failed">✗ Failed</span>`
         : "";
+
+  const errorLine = status === "failed" && draft.imageGenerationError
+    ? `<p class="image-gen-error">${escapeHtml(draft.imageGenerationError)}</p>`
+    : "";
 
   return `
     <div class="image-prompt-row">
@@ -6259,6 +6263,7 @@ function renderImageGenerationSection(draft) {
         ${statusBadge}
         ${draft.generatedImageUrl ? `<a class="image-gen-link" href="${escapeHtml(draft.generatedImageUrl)}" target="_blank" rel="noopener">View image ↗</a>` : ""}
       </div>
+      ${errorLine}
     </div>
   `;
 }
