@@ -195,7 +195,7 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {
   assert.strictEqual(url, "https://example.test/v1/videos/text2video", "Should call Kling text-to-video endpoint");
   const payload = JSON.parse(options.body);
-  assert.strictEqual(payload.model, "kling-v2.6-pro", "Should use default Kling model");
+  assert.strictEqual(payload.model, "kling-v1-6", "Should use default Kling model");
   assert.strictEqual(payload.duration, "10", "Should send Kling duration as string");
   assert.strictEqual(payload.aspect_ratio, "16:9", "Should pass supported aspect ratio");
   return {

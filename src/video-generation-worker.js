@@ -169,7 +169,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
 
   const duration = String(normalizeKlingDuration(videoRequest.duration));
   const body = {
-    model: config.klingModel || envValue("KLING_MODEL") || "kling-v2.6-pro",
+    model: config.klingModel || envValue("KLING_MODEL") || "kling-v1-6",
     prompt: videoRequest.prompt,
     duration,
     aspect_ratio: normalizeKlingAspectRatio(videoRequest.aspectRatio),
@@ -181,6 +181,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
   if (config.klingEnableAudio != null) body.sound = Boolean(config.klingEnableAudio);
   if (config.klingImageUrl || videoRequest.imageUrl) body.image_url = config.klingImageUrl || videoRequest.imageUrl;
 
+  console.log("[diamond] Kling request body:", JSON.stringify(body));
   try {
     const response = await fetch(`${apiEndpoint}/videos/text2video`, {
       method: "POST",
