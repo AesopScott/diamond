@@ -441,11 +441,35 @@ function hydrateSavedWorkspace(saved) {
     postRuns: saved.postRuns || [],
     platformProofs: saved.platformProofs || defaults.platformProofs || [],
     postPackages: saved.postPackages || [],
-    platformDrafts: saved.platformDrafts || [],
+    platformDrafts: resetStuckGeneratingDrafts(saved.platformDrafts || []),
     context: saved.context || defaults.context,
   });
   workspace.beginnerMode = normalizeBeginnerMode(saved.beginnerMode ?? defaults.beginnerMode);
   return ensurePlatformProofRecords(workspace);
+}
+
+/**
+ * Any draft saved while a generation was in-flight will reload with
+ * status "generating" and permanently disable the buttons. Reset those
+ * to "failed" at load time so the user can immediately retry.
+ */
+function resetStuckGeneratingDrafts(drafts) {
+  return drafts.map((d) => {
+    const stuck = d.videoGenerationStatus === "generating"
+      || d.imageGenerationStatus === "generating";
+    if (!stuck) return d;
+    return {
+      ...d,
+      videoGenerationStatus: d.videoGenerationStatus === "generating" ? "failed" : d.videoGenerationStatus,
+      videoGenerationError: d.videoGenerationStatus === "generating"
+        ? { code: "interrupted", message: "Generation was interrupted — app restarted mid-run. Try again." }
+        : d.videoGenerationError,
+      imageGenerationStatus: d.imageGenerationStatus === "generating" ? "failed" : d.imageGenerationStatus,
+      imageGenerationError: d.imageGenerationStatus === "generating"
+        ? "Generation was interrupted — app restarted mid-run. Try again."
+        : d.imageGenerationError,
+    };
+  });
 }
 
 function buildProductionPostModel(workspace) {
@@ -6348,6 +6372,8 @@ function renderImageGenerationSection(draft) {
           🔊 Audio
         </label>
         ${imgBadge}${klingBadge}${heygenBadge}
+        ${vidGenerating ? `<button type="button" class="image-gen-clear-btn" data-platform-action="clear-video-generating" data-platform-draft-id="${escapeHtml(draft.id)}" title="Cancel / clear stuck generation">× Clear</button>` : ""}
+        ${imgGenerating ? `<button type="button" class="image-gen-clear-btn" data-platform-action="clear-image-generating" data-platform-draft-id="${escapeHtml(draft.id)}" title="Cancel / clear stuck generation">× Clear</button>` : ""}
         ${draft.generatedImageUrl ? `
           <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open image ↗</button>
           <button type="button" class="image-gen-link" data-platform-action="copy-generated-image-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy image URL</button>
@@ -7310,6 +7336,34 @@ async function handlePlatformDraftAction(event) {
       window.diamond.writeClipboard(url);
       const btn = event.target.closest("[data-platform-action]");
       if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy video URL"; }, 2000); }
+    }
+    return;
+  }
+  if (action === "clear-video-generating") {
+    const idx = prototypeModel.platformDrafts.findIndex((d) => d.id === draft.id);
+    if (idx !== -1) {
+      prototypeModel.platformDrafts[idx] = {
+        ...prototypeModel.platformDrafts[idx],
+        videoGenerationStatus: "failed",
+        videoGenerationError: { code: "cancelled", message: "Cleared by user." },
+        updatedAt: new Date().toISOString(),
+      };
+      await saveProductionState();
+      reopenActiveDetail();
+    }
+    return;
+  }
+  if (action === "clear-image-generating") {
+    const idx = prototypeModel.platformDrafts.findIndex((d) => d.id === draft.id);
+    if (idx !== -1) {
+      prototypeModel.platformDrafts[idx] = {
+        ...prototypeModel.platformDrafts[idx],
+        imageGenerationStatus: "failed",
+        imageGenerationError: "Cleared by user.",
+        updatedAt: new Date().toISOString(),
+      };
+      await saveProductionState();
+      reopenActiveDetail();
     }
     return;
   }

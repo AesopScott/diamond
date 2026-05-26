@@ -1086,6 +1086,22 @@ textarea {
   flex-shrink: 0;
 }
 
+.image-gen-clear-btn {
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.image-gen-clear-btn:hover {
+  border-color: #c03030;
+  color: #c03030;
+}
+
 .image-gen-preview-row {
   margin-top: 8px;
 }
