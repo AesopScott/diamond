@@ -147,7 +147,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
     };
   }
 
-  const duration = normalizeKlingDuration(videoRequest.duration);
+  const duration = String(normalizeKlingDuration(videoRequest.duration));
   const body = {
     model: config.klingModel || envValue("KLING_MODEL") || "kling-v2.6-pro",
     prompt: videoRequest.prompt,
