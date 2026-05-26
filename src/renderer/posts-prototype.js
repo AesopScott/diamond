@@ -66,6 +66,7 @@ import {
 } from "./posts-scope-helpers.js";
 import { IMAGE_SPECS_BY_PLATFORM, CAMPAIGN_IMAGE_GENERATION_FIELDS } from "../constants.js";
 import { integrateImageGenerationIntoPostCreation } from "../image-generation-integration.js";
+import { integrateVideoGenerationIntoPostCreation } from "../video-generation-integration.js";
 
 const PROFESSIONAL_THEMES = [
   {
@@ -6217,39 +6218,53 @@ function renderPlatformPreviews(drafts) {
 }
 
 // Renders the image prompt row + Generate button. Always visible in the draft panel.
-// Prompt is pre-filled from campaign guidance; post override takes priority.
+// Unified image + video prompt section. One shared prompt textarea drives both generators.
 function renderImageGenerationSection(draft) {
   const campaign = (state.campaigns || []).find(
     (item) => item.id === (draft.campaignId || draft.context?.campaignId)
   );
-  const campaignPrompt = campaign?.imagePromptGuidance || "";
+  const campaignPrompt = campaign?.imagePromptGuidance || campaign?.videoPromptGuidance || "";
   const postPrompt = draft.imagePromptOverride || "";
-  const status = draft.imageGenerationStatus;
-  const isGenerating = status === "generating";
 
-  const statusBadge = status === "generating"
-    ? `<span class="image-gen-status generating">Generating…</span>`
-    : status === "complete"
-      ? `<span class="image-gen-status complete">✓ Generated</span>`
-      : status === "failed"
-        ? `<span class="image-gen-status failed">✗ Failed</span>`
+  // Image status
+  const imgStatus = draft.imageGenerationStatus;
+  const imgGenerating = imgStatus === "generating";
+  const imgBadge = imgStatus === "generating"
+    ? `<span class="image-gen-status generating">Generating image…</span>`
+    : imgStatus === "complete"
+      ? `<span class="image-gen-status complete">✓ Image ready</span>`
+      : imgStatus === "failed"
+        ? `<span class="image-gen-status failed">✗ Image failed</span>`
         : "";
+  const imgError = imgStatus === "failed" && draft.imageGenerationError
+    ? `<p class="image-gen-error">${escapeHtml(draft.imageGenerationError)}</p>` : "";
 
-  const errorLine = status === "failed" && draft.imageGenerationError
-    ? `<p class="image-gen-error">${escapeHtml(draft.imageGenerationError)}</p>`
-    : "";
+  // Video status
+  const vidStatus = draft.videoGenerationProvider === "kling" ? draft.videoGenerationStatus : null;
+  const vidGenerating = vidStatus === "generating";
+  const vidBadge = vidStatus === "generating"
+    ? `<span class="image-gen-status generating">Generating video…</span>`
+    : vidStatus === "success"
+      ? `<span class="image-gen-status complete">✓ Video ready</span>`
+      : vidStatus === "failed"
+        ? `<span class="image-gen-status failed">✗ Video failed</span>`
+        : "";
+  const vidError = vidStatus === "failed" && draft.videoGenerationError
+    ? `<p class="image-gen-error">${escapeHtml(draft.videoGenerationError?.message || String(draft.videoGenerationError || ""))}</p>` : "";
+
+  const busy = imgGenerating || vidGenerating;
 
   return `
     <div class="image-prompt-row">
       <div class="image-prompt-header">
-        <span class="image-prompt-label-text">Image prompt</span>
-        ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign default: ${escapeHtml(campaignPrompt.length > 60 ? campaignPrompt.slice(0, 57) + "…" : campaignPrompt)}</span>` : ""}
+        <span class="image-prompt-label-text">Image &amp; video prompt</span>
+        ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign: ${escapeHtml(campaignPrompt.length > 55 ? campaignPrompt.slice(0, 52) + "…" : campaignPrompt)}</span>` : ""}
       </div>
       <textarea
         class="image-prompt-textarea"
         data-image-prompt-draft-id="${escapeHtml(draft.id)}"
         rows="6"
-        placeholder="${escapeHtml(campaignPrompt || "Describe the image to generate for this post…")}"
+        placeholder="${escapeHtml(campaignPrompt || "Describe the image or video to generate for this post…")}"
       >${escapeHtml(postPrompt)}</textarea>
       <div class="image-prompt-actions">
         <button
@@ -6257,16 +6272,28 @@ function renderImageGenerationSection(draft) {
           class="media-button image-gen-btn"
           data-platform-action="generate-image"
           data-platform-draft-id="${escapeHtml(draft.id)}"
-          ${isGenerating ? "disabled" : ""}
+          ${busy ? "disabled" : ""}
           title="Generate image via Replicate Flux Pro"
-        >🖼 ${isGenerating ? "Generating…" : "Generate image"}</button>
-        ${statusBadge}
+        >🖼 ${imgGenerating ? "Generating…" : "Generate image"}</button>
+        <button
+          type="button"
+          class="media-button kling-gen-btn"
+          data-platform-action="generate-kling-video"
+          data-platform-draft-id="${escapeHtml(draft.id)}"
+          ${busy ? "disabled" : ""}
+          title="Generate video via Kling AI"
+        >🎬 ${vidGenerating ? "Generating…" : "Generate video"}</button>
+        ${imgBadge}${vidBadge}
         ${draft.generatedImageUrl ? `
-          <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open in browser ↗</button>
-          <button type="button" class="image-gen-link" data-platform-action="copy-generated-image-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy URL</button>
+          <button type="button" class="image-gen-link" data-platform-action="open-generated-image" data-platform-draft-id="${escapeHtml(draft.id)}">Open image ↗</button>
+          <button type="button" class="image-gen-link" data-platform-action="copy-generated-image-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy image URL</button>
+        ` : ""}
+        ${draft.generatedVideoUrl ? `
+          <button type="button" class="image-gen-link" data-platform-action="open-generated-video" data-platform-draft-id="${escapeHtml(draft.id)}">Open video ↗</button>
+          <button type="button" class="image-gen-link" data-platform-action="copy-generated-video-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy video URL</button>
         ` : ""}
       </div>
-      ${errorLine}
+      ${imgError}${vidError}
       ${draft.generatedImageUrl ? `<div class="image-gen-preview-row"><img class="image-gen-preview" src="${escapeHtml(draft.generatedImageUrl)}" alt="Generated image" /></div>` : ""}
     </div>
   `;
@@ -6288,6 +6315,51 @@ function renderImageGenerationToggle(draft) {
     title="Scroll to image prompt"
     ${status === "generating" ? "disabled" : ""}
   >${escapeHtml(label)}</button>`;
+}
+
+function renderVideoGenerationToggle(draft) {
+  const status = draft.videoGenerationProvider !== "kling" ? draft.videoGenerationStatus : null;
+  const label = status === "generating" ? "Video Generating..."
+    : status === "success" ? "Video ✓"
+    : status === "failed" ? "Video ✕"
+    : "Video";
+  const activeClass = status === "success" ? " media-button--active" : "";
+  return `<button
+    type="button"
+    class="media-button video-gen-btn${activeClass}"
+    data-platform-action="generate-video"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="Generate a video for this draft"
+    ${status === "generating" ? "disabled" : ""}
+  >${escapeHtml(label)}</button>`;
+}
+
+function renderKlingGenerationToggle(draft) {
+  const status = draft.videoGenerationProvider === "kling" ? draft.videoGenerationStatus : null;
+  const label = status === "generating" ? "Kling Generating..."
+    : status === "success" ? "Kling Video ✓"
+    : status === "failed" ? "Kling Video ✕"
+    : "Kling";
+  const activeClass = status === "success" ? " media-button--active" : "";
+  return `<button
+    type="button"
+    class="media-button kling-gen-btn${activeClass}"
+    data-platform-action="generate-kling-video"
+    data-platform-draft-id="${escapeHtml(draft.id)}"
+    title="Generate a Kling AI video for this draft"
+    ${status === "generating" ? "disabled" : ""}
+  >${escapeHtml(label)}</button>`;
+}
+
+function renderGeneratedVideoActions(draft) {
+  if (!draft.generatedVideoUrl) return "";
+  return `
+    <div class="image-prompt-actions">
+      <span class="image-gen-status complete">Video generated</span>
+      <button type="button" class="image-gen-link" data-platform-action="open-generated-video" data-platform-draft-id="${escapeHtml(draft.id)}">Open video</button>
+      <button type="button" class="image-gen-link" data-platform-action="copy-generated-video-url" data-platform-draft-id="${escapeHtml(draft.id)}">Copy video URL</button>
+    </div>
+  `;
 }
 
 async function generateDraftImage(draft) {
@@ -6324,6 +6396,77 @@ async function generateDraftImage(draft) {
   reopenActiveDetail();
 }
 
+async function generateDraftVideo(draft) {
+  return generateDraftProviderVideo(draft, "heygen");
+}
+
+async function generateDraftKlingVideo(draft) {
+  return generateDraftProviderVideo(draft, "kling");
+}
+
+async function generateDraftProviderVideo(draft, provider) {
+  const campaign = (state.campaigns || []).find(
+    (item) => item.id === (draft.campaignId || draft.context?.campaignId)
+  ) || {};
+  const now = new Date().toISOString();
+  const isKling = provider === "kling";
+  const generatingDraft = {
+    ...draft,
+    videoGenerationProvider: provider,
+    videoGenerationOverride: true,
+    videoGenerationStatus: "generating",
+    videoGenerationError: null,
+    generatedVideoPrompt: draft.imagePromptOverride || draft.videoGenerationPrompt || campaign.videoPromptGuidance || draft.text || "",
+    updatedAt: now,
+  };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? generatingDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+
+  const postPackage = (prototypeModel.postPackages || state.postPackages || []).find((pkg) => pkg.id === draft.postPackageId) || {};
+  const klingConfig = isKling && window.diamond?.getKlingVideoConfig
+    ? await window.diamond.getKlingVideoConfig()
+    : {};
+  const heygenConfig = !isKling && window.diamond?.getHeyGenVideoConfig
+    ? await window.diamond.getHeyGenVideoConfig()
+    : {};
+  const result = await integrateVideoGenerationIntoPostCreation(
+    postPackage,
+    generatingDraft,
+    { ...campaign, videoGenerationEnabled: true, videoGenerationProvider: provider },
+    {
+      provider,
+      heygenApiKey: heygenConfig?.apiKey || "",
+      heygenApiEndpoint: heygenConfig?.apiEndpoint || undefined,
+      heygenAvatarId: heygenConfig?.avatarId || undefined,
+      heygenVoiceId: heygenConfig?.voiceId || undefined,
+      klingApiKey: klingConfig?.apiKey || "",
+      klingApiEndpoint: klingConfig?.apiEndpoint || undefined,
+      klingModel: klingConfig?.model || undefined,
+      klingEnableAudio: Boolean(klingConfig?.enableAudio),
+    }
+  );
+
+  const resultDraft = result.updatedDraft || {};
+  const finalDraft = {
+    ...generatingDraft,
+    ...resultDraft,
+    videoGenerationProvider: provider,
+    videoGenerationStatus: resultDraft.videoGenerationStatus || (result.ok ? "success" : "failed"),
+    videoGenerationError: resultDraft.videoGenerationError ?? (result.ok ? null : { code: `${provider}_generation_failed`, message: result.reason || "Video generation failed" }),
+    generatedVideoUrl: resultDraft.generatedVideoUrl ?? generatingDraft.generatedVideoUrl ?? null,
+    videoGenerationRetryable: resultDraft.videoGenerationRetryable ?? !result.ok,
+    updatedAt: new Date().toISOString(),
+  };
+  prototypeModel.platformDrafts = prototypeModel.platformDrafts.map(
+    (d) => (d.id === draft.id ? finalDraft : d)
+  );
+  await saveProductionState();
+  reopenActiveDetail();
+}
+
 function renderPlatformPreview(draft, hidden = false) {
   const account = accountForDraft(draft);
   const partition = account ? accountBrowserPartition(account) : "";
@@ -6344,11 +6487,14 @@ function renderPlatformPreview(draft, hidden = false) {
           <button class="media-button draft-evaluate-btn" type="button" data-platform-action="evaluate" data-platform-draft-id="${escapeHtml(draft.id)}">Evaluate</button>
           <button class="media-button draft-add-media-btn" type="button" data-platform-action="add-media" data-platform-draft-id="${escapeHtml(draft.id)}">+ Media</button>
           ${renderImageGenerationToggle(draft)}
+          ${renderVideoGenerationToggle(draft)}
+          ${renderKlingGenerationToggle(draft)}
         </div>
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       ${charCount}
       ${renderImageGenerationSection(draft)}
+      ${renderGeneratedVideoActions(draft)}
       ${renderDraftEvaluation(draft)}
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
@@ -6993,6 +7139,8 @@ async function handlePlatformDraftAction(event) {
   if (action === "approve") approvePlatformDraft(draft);
   if (action === "schedule") await schedulePlatformDraft(draft);
   if (action === "generate-image") { await generateDraftImage(draft); return; }
+  if (action === "generate-video") { await generateDraftVideo(draft); return; }
+  if (action === "generate-kling-video") { await generateDraftKlingVideo(draft); return; }
   if (action === "open-generated-image") {
     const url = draft.generatedImageUrl;
     if (!url) return;
@@ -7005,12 +7153,32 @@ async function handlePlatformDraftAction(event) {
     }
     return;
   }
+  if (action === "open-generated-video") {
+    const url = draft.generatedVideoUrl;
+    if (!url) return;
+    if (window.diamond?.openExternal) {
+      window.diamond.openExternal(url).catch(() => {});
+    } else {
+      window.diamond?.writeClipboard?.(url);
+      alert("Could not open browser automatically. URL copied to clipboard.");
+    }
+    return;
+  }
   if (action === "copy-generated-image-url") {
     const url = draft.generatedImageUrl;
     if (url && window.diamond?.writeClipboard) {
       window.diamond.writeClipboard(url);
       const btn = event.target.closest("[data-platform-action]");
       if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy URL"; }, 2000); }
+    }
+    return;
+  }
+  if (action === "copy-generated-video-url") {
+    const url = draft.generatedVideoUrl;
+    if (url && window.diamond?.writeClipboard) {
+      window.diamond.writeClipboard(url);
+      const btn = event.target.closest("[data-platform-action]");
+      if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy video URL"; }, 2000); }
     }
     return;
   }
