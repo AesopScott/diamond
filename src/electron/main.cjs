@@ -1,9 +1,28 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, session, webContents } = require("electron");
 const { execFile } = require("child_process");
+const { createHmac } = require("crypto");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { pathToFileURL } = require("url");
+
+/**
+ * Build a short-lived HS256 JWT for the Kling AI API.
+ * Valid 30 min; generate fresh on each IPC call so the renderer
+ * never holds the secret key.
+ */
+function buildKlingJwt(accessKey, secretKey) {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const payload = Buffer.from(JSON.stringify({
+    iss: accessKey,
+    exp: now + 1800,
+    nbf: now - 5,
+  })).toString("base64url");
+  const unsigned = `${header}.${payload}`;
+  const sig = createHmac("sha256", secretKey).update(unsigned).digest("base64url");
+  return `${unsigned}.${sig}`;
+}
 const { fetchFirebaseLicense } = require("../firebase-license.cjs");
 const { generatePostDrafts, evaluateDraftWithLlm, rewriteDraftWithSuggestions, generateMediaPrompt } = require("../content-generation-llm.cjs");
 
@@ -623,14 +642,20 @@ ipcMain.handle("diamond:get-heygen-video-config", () => ({
   avatarId: process.env.HEYGEN_AVATAR_ID || null,
   voiceId: process.env.HEYGEN_VOICE_ID || null,
 }));
-ipcMain.handle("diamond:get-kling-video-config", () => ({
-  accessKey: process.env.KLING_ACCESS_KEY || null,
-  secretKey: process.env.KLING_SECRET_KEY || null,
-  apiKey: process.env.KLING_API_KEY || null,          // legacy plain-token fallback
-  apiEndpoint: process.env.KLING_API_ENDPOINT || null,
-  model: process.env.KLING_MODEL || null,
-  enableAudio: process.env.KLING_ENABLE_AUDIO === "true",
-}));
+ipcMain.handle("diamond:get-kling-video-config", () => {
+  const accessKey = process.env.KLING_ACCESS_KEY || null;
+  const secretKey = process.env.KLING_SECRET_KEY || null;
+  // Generate a fresh JWT in the main process — secret key never leaves Node context.
+  const token = (accessKey && secretKey)
+    ? buildKlingJwt(accessKey, secretKey)
+    : (process.env.KLING_API_KEY || null);
+  return {
+    token,
+    apiEndpoint: process.env.KLING_API_ENDPOINT || null,
+    model: process.env.KLING_MODEL || null,
+    enableAudio: process.env.KLING_ENABLE_AUDIO === "true",
+  };
+});
 
 ipcMain.handle("diamond:stage-with-playwright", async (_event, input = {}) => {
   ensureAppDir();

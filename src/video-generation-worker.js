@@ -1,29 +1,14 @@
-import { createHmac } from "crypto";
 import { VIDEO_SPECS_BY_PLATFORM } from "./constants.js";
 
 /**
- * Build a short-lived HS256 JWT for the official Kling AI API.
- * Tokens are valid 30 min; generate fresh on every request.
+ * Resolve a Bearer token from config.
+ * The main process (main.cjs) generates the JWT and passes it as klingToken.
+ * Falls back to a plain klingApiKey for legacy/proxy setups.
  */
-function buildKlingJwt(accessKey, secretKey) {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const now = Math.floor(Date.now() / 1000);
-  const payload = Buffer.from(JSON.stringify({
-    iss: accessKey,
-    exp: now + 1800,
-    nbf: now - 5,
-  })).toString("base64url");
-  const unsigned = `${header}.${payload}`;
-  const sig = createHmac("sha256", secretKey).update(unsigned).digest("base64url");
-  return `${unsigned}.${sig}`;
-}
-
-/** Resolve a Bearer token: JWT if access+secret are present, else plain apiKey. */
 function resolveKlingToken(config) {
-  const accessKey = configValue(config, "klingAccessKey", "KLING_ACCESS_KEY");
-  const secretKey = configValue(config, "klingSecretKey", "KLING_SECRET_KEY");
-  if (accessKey && secretKey) return buildKlingJwt(accessKey, secretKey);
-  return configValue(config, "klingApiKey", "KLING_API_KEY") || null;
+  return configValue(config, "klingToken", "KLING_TOKEN")
+    || configValue(config, "klingApiKey", "KLING_API_KEY")
+    || null;
 }
 
 export async function requestVideoGeneration(postDraft, campaign, options = {}) {
@@ -145,7 +130,7 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
     return {
       ok: false,
       status: "failed",
-      error: { code: "missing_api_key", message: "KLING_ACCESS_KEY + KLING_SECRET_KEY (or KLING_API_KEY) not configured" },
+      error: { code: "missing_api_key", message: "Kling token not configured" },
     };
   }
 
@@ -312,7 +297,7 @@ export async function pollKlingVideoGeneration(videoId, config = {}, options = {
     return {
       ok: false,
       status: "failed",
-      error: { code: "missing_api_key", message: "KLING_ACCESS_KEY + KLING_SECRET_KEY (or KLING_API_KEY) not configured" },
+      error: { code: "missing_api_key", message: "Kling token not configured" },
     };
   }
 
