@@ -881,6 +881,79 @@ textarea {
   color: #8bbcff;
 }
 
+/* Per-post image prompt row (shown when image generation is on for the draft) */
+.image-prompt-row {
+  margin-top: 10px;
+}
+
+.image-prompt-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.image-prompt-label > span:first-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.image-prompt-hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-prompt-textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.image-prompt-textarea:focus {
+  border-color: #8bbcff;
+  outline: none;
+}
+
+/* Campaign image generation section */
+.image-gen-campaign-section header {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.toggle-label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 6px;
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 .generate-button {
   background: #4d5bff;
   border: 1px solid #4d5bff;

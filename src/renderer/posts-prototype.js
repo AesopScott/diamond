@@ -3433,8 +3433,33 @@ function renderCampaigns() {
     </aside>
     <section class="brand-panels" aria-label="Campaign strategy">
       ${renderGuidanceModuleBar(modules, "campaign")}
+      ${renderImageGenerationCampaignSection(campaign)}
       ${modules.filter((module) => module.enabled !== false).map((module) => renderGuidanceModulePanel(module, "campaign")).join("") || `<div class="empty-column">No guidance modules enabled for this campaign.</div>`}
     </section>
+  `;
+}
+
+function renderImageGenerationCampaignSection(campaign = {}) {
+  const enabled = Boolean(campaign.imageGenerationEnabled);
+  const prompt = campaign.imagePromptGuidance || "";
+  return `
+    <article class="brand-panel editable-brand-panel image-gen-campaign-section">
+      <header>
+        <h3>Image Generation</h3>
+        <label class="toggle-label">
+          <input type="checkbox" data-campaign-field="imageGenerationEnabled" ${enabled ? "checked" : ""}>
+          Enable for this campaign
+        </label>
+      </header>
+      <label class="field-label">
+        Campaign image prompt
+        <textarea
+          data-campaign-field="imagePromptGuidance"
+          rows="4"
+          placeholder="Describe the visual style, brand colours, composition, and mood to use when generating images for posts in this campaign."
+        >${escapeHtml(prompt)}</textarea>
+      </label>
+    </article>
   `;
 }
 
@@ -3485,7 +3510,7 @@ async function handleCampaignWorkspaceChange(event) {
     renderCampaigns();
     return;
   }
-  if (field && ["videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
+  if (field && ["imageGenerationEnabled", "imagePromptGuidance", "videoGenerationEnabled", "videoQualitySize", "videoPromptGuidance"].includes(field.dataset.campaignField)) {
     saveCampaignWorkspace();
     await saveProductionState();
     renderCampaigns();
@@ -3616,6 +3641,8 @@ function saveCampaignWorkspace() {
     campaign.name = valueFor("campaignName") || campaign.name;
     campaign.status = normalizeId(valueFor("campaignStatus") || campaign.status, "campaignStatus");
     campaign.postTags = valueFor("campaignPostTags").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    campaign.imageGenerationEnabled = checkedFor("imageGenerationEnabled");
+    campaign.imagePromptGuidance = valueFor("imagePromptGuidance");
     campaign.videoGenerationEnabled = checkedFor("videoGenerationEnabled");
     campaign.videoQualitySize = valueFor("videoQualitySize") || campaign.videoQualitySize || "high";
     campaign.videoPromptGuidance = valueFor("videoPromptGuidance") || campaign.videoPromptGuidance || "";
@@ -6189,6 +6216,33 @@ function renderPlatformPreviews(drafts) {
   });
 }
 
+// Renders the per-post image prompt textarea when image generation is effectively on.
+function renderImagePromptRow(draft) {
+  const campaign = (state.campaigns || []).find(
+    (item) => item.id === (draft.campaignId || draft.context?.campaignId)
+  );
+  const isEnabled = (draft.imageGenerationEnabled !== null && draft.imageGenerationEnabled !== undefined)
+    ? Boolean(draft.imageGenerationEnabled)
+    : Boolean(campaign?.imageGenerationEnabled);
+  if (!isEnabled) return "";
+  const campaignPrompt = campaign?.imagePromptGuidance || "";
+  const postPrompt = draft.imagePromptOverride || "";
+  return `
+    <div class="image-prompt-row">
+      <label class="image-prompt-label">
+        <span>Post image prompt</span>
+        ${campaignPrompt ? `<span class="image-prompt-hint" title="${escapeHtml(campaignPrompt)}">Campaign: ${escapeHtml(campaignPrompt.length > 60 ? campaignPrompt.slice(0, 57) + "…" : campaignPrompt)}</span>` : ""}
+        <textarea
+          class="image-prompt-textarea"
+          data-image-prompt-draft-id="${escapeHtml(draft.id)}"
+          rows="2"
+          placeholder="${escapeHtml(campaignPrompt || "Describe the image to generate for this post…")}"
+        >${escapeHtml(postPrompt)}</textarea>
+      </label>
+    </div>
+  `;
+}
+
 // Always renders a 🖼 Image toggle. Post-level override takes priority;
 // when null/undefined the post inherits from the campaign (defaults to false).
 function renderImageGenerationToggle(draft) {
@@ -6288,6 +6342,7 @@ function renderPlatformPreview(draft, hidden = false) {
       </header>
       <textarea rows="${draft.platform === "x" ? 4 : 7}" data-draft-text="${escapeHtml(draft.id)}">${escapeHtml(draft.text)}</textarea>
       ${charCount}
+      ${renderImagePromptRow(draft)}
       ${renderDraftEvaluation(draft)}
       <div class="draft-media-row">
         <button type="button" class="media-button" data-platform-action="copy-media" data-platform-draft-id="${escapeHtml(draft.id)}">Copy paths</button>
@@ -7430,6 +7485,18 @@ function handleGenerationStyleChange(event) {
 }
 
 function handlePlatformDraftTextInput(event) {
+  // Per-post image prompt
+  const promptTextarea = event.target.closest("[data-image-prompt-draft-id]");
+  if (promptTextarea) {
+    const draft = prototypeModel.platformDrafts.find((item) => item.id === promptTextarea.dataset.imagePromptDraftId);
+    if (draft) {
+      draft.imagePromptOverride = promptTextarea.value;
+      draft.updatedAt = new Date().toISOString();
+      saveProductionState();
+    }
+    return;
+  }
+  // Post body text
   const textarea = event.target.closest("[data-draft-text]");
   if (!textarea) return;
   const draft = prototypeModel.platformDrafts.find((item) => item.id === textarea.dataset.draftText);

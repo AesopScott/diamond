@@ -40,11 +40,15 @@ export function resolveImageGenerationEnabled(draft, campaign, platform) {
 }
 
 /**
- * Build the image prompt for a draft, combining the campaign guidance with the
- * post text so the model has full context.
+ * Build the image prompt for a draft.
+ * Priority: per-post override → campaign guidance → post text.
+ * The post override fully replaces the campaign guidance when set.
+ * The post text is appended as context in both cases.
  */
 export function buildImagePrompt(draft, campaign) {
-  const guidance = campaign?.imagePromptGuidance?.trim() || "";
+  const postOverride = draft.imagePromptOverride?.trim() || "";
+  const campaignGuidance = campaign?.imagePromptGuidance?.trim() || "";
+  const guidance = postOverride || campaignGuidance;
   const postText = draft.text?.trim() || "";
   if (guidance && postText) return `${guidance}\n\nPost: ${postText}`;
   return guidance || postText;
