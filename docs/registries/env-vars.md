@@ -97,6 +97,70 @@ HeyGen voice ID for video narration.
 
 ---
 
+## Kling Video Generation
+
+### `KLING_API_KEY`
+
+Kling API authentication key for the per-draft Kling button.
+
+**Type:** string (secret)
+**Required:** yes (if using the Kling button)
+**Default:** (none)
+**Location:** .env.local or production secret manager
+
+**Consumers**
+- `src/video-generation-worker.js` - constructs Authorization header
+- `src/electron/main.cjs` - passes config to the renderer through a narrow IPC method
+
+**Status:** optional provider - augments existing HeyGen video generation
+
+---
+
+### `KLING_API_ENDPOINT`
+
+Kling-compatible API base URL.
+
+**Type:** string (URL)
+**Required:** no
+**Default:** `https://api.klingapi.com/v1`
+
+**Consumers**
+- `src/video-generation-worker.js` - base URL for Kling API calls
+
+**Status:** optional provider - endpoint can be overridden for approved Kling gateways
+
+---
+
+### `KLING_MODEL`
+
+Kling model ID to use for generation.
+
+**Type:** string
+**Required:** no
+**Default:** `kling-v2.6-pro`
+
+**Consumers**
+- `src/video-generation-worker.js` - included in Kling generation requests
+
+**Status:** optional provider setting
+
+---
+
+### `KLING_ENABLE_AUDIO`
+
+Whether Kling requests should ask for native audio when the configured model/endpoint supports it.
+
+**Type:** boolean string (`true`/`false`)
+**Required:** no
+**Default:** `false`
+
+**Consumers**
+- `src/electron/main.cjs` - exposes a boolean to renderer generation calls
+
+**Status:** optional provider setting
+
+---
+
 ## Email Notifications (Task #10)
 
 ### `NOTIFICATION_EMAIL_FROM`
