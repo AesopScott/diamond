@@ -24,7 +24,7 @@ export async function requestVideoGeneration(postDraft, campaign, options = {}) 
   const prompt = postDraft.videoGenerationPrompt || campaign.videoPromptGuidance || postDraft.text;
   const qualitySize = postDraft.videoQualitySizeOverride || campaign.videoQualitySize || "high";
   const heygenQuality = HEYGEN_QUALITY_MAP[qualitySize] || "hd";
-  const klingMode = KLING_QUALITY_MODE_MAP[qualitySize] || "professional";
+  const klingMode = KLING_QUALITY_MODE_MAP[qualitySize] || "pro";
 
   const platform = postDraft.platform || null;
   const platformConfig =
@@ -168,15 +168,20 @@ export async function generateVideoWithKling(videoRequest, config = {}) {
   }
 
   const duration = String(normalizeKlingDuration(videoRequest.duration));
-  // Kling v1 text2video uses `model_name`, not `model`.
-  // `sound` is not a v1 text2video field — omit it to avoid body validation errors.
+  // model_name must be a valid Kling API model identifier. Default to kling-v2 (known valid).
+  // Override via KLING_MODEL env var (e.g. "kling-v1" for cost savings).
+  const modelName = config.klingModel || envValue("KLING_MODEL") || "kling-v2";
   const body = {
-    model_name: config.klingModel || envValue("KLING_MODEL") || "kling-v1-6",
+    model_name: modelName,
     prompt: videoRequest.prompt,
     duration,
     aspect_ratio: normalizeKlingAspectRatio(videoRequest.aspectRatio),
     mode: config.klingMode || videoRequest.klingMode || "pro",
   };
+  // enable_audio is supported on kling-v2; skip for v1 models to avoid validation errors.
+  if (config.klingEnableAudio != null && !modelName.startsWith("kling-v1")) {
+    body.enable_audio = Boolean(config.klingEnableAudio);
+  }
 
   const negativePrompt = config.klingNegativePrompt || envValue("KLING_NEGATIVE_PROMPT");
   if (negativePrompt) body.negative_prompt = negativePrompt;
